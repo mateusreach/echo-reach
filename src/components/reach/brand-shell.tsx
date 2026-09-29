@@ -1,32 +1,35 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { BrandSidebar } from "./sidebar";
-import { BrandTopbar } from "./topbar";
-import { EchoTopbar } from "@/components/echo/shell";
-import { ViewAsBanner } from "@/components/echo/layout";
-import { CommandPalette } from "./command-palette";
-import { ModuleNavPanel } from "./module-nav";
-import { cn } from "@/lib/utils";
-import { getModuleNav } from "@/lib/nav";
-import { applyBrandColors, applyTheme, getStoredTheme } from "@/lib/branding";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { EchoLayout, EchoSubnav } from "@/components/echo/layout";
+import { ClientLogo, EmptyState, Skeleton } from "@/components/echo/primitives";
+import { Icon } from "@/components/echo/icon";
+import { applyBrandColors } from "@/lib/branding";
 import { brandModules, getBrandBySlug, getBrandMembership, logBrandAccess, type Brand, type BrandModules } from "@/lib/reach-data";
 import { getAccess, modulePermissionKey } from "@/lib/agency-data";
+import { isDemoMode } from "@/lib/home-data";
+import { setClientContext } from "@/lib/ecosystem";
 
+/**
+ * Moldura do Brand: barra do Echo, cliente em contexto e navegação do ambiente.
+ * Controla o acesso: equipe entra em tudo; cliente só nos módulos contratados
+ * e liberados nas permissões dele.
+ */
 export function BrandShell({
   children,
   basePath,
-  displayName = "Você",
   primaryColor,
   accentColor,
+  brandName,
+  brandLogoUrl,
 }: {
   children: ReactNode;
   basePath: string;
   displayName?: string;
   primaryColor?: string | null;
   accentColor?: string | null;
+  brandName?: string | null;
+  brandLogoUrl?: string | null;
 }) {
-  const [expanded, setExpanded] = useState(true);
-  const [paletteOpen, setPaletteOpen] = useState(false);
   const [brand, setBrand] = useState<Brand | null>(null);
   const [modules, setModules] = useState<BrandModules | null>(null);
   const [isAgencyUser, setIsAgencyUser] = useState(false);
@@ -34,17 +37,8 @@ export function BrandShell({
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const slug = basePath.split("/").filter(Boolean)[1] ?? "";
-  // A Biblioteca já expõe suas seções no menu lateral global.
-  const currentNav = getModuleNav(basePath, pathname);
-  const moduleNav = currentNav && (currentNav.key === "plano" || currentNav.key === "biblioteca") ? null : currentNav;
-  // Chave de permissão do módulo atual — configuracoes usa "administrar",
-  // os demais módulos do cliente usam "visualizar" como piso de acesso.
-  const moduleKey = currentNav?.key;
-  const requiredPermission = moduleKey ? modulePermissionKey(moduleKey, moduleKey === "configuracoes" ? "administrar" : "visualizar") : null;
-
-  useEffect(() => {
-    applyTheme(getStoredTheme());
-  }, []);
+  const moduleKey = pathname.includes("/configuracoes") ? "configuracoes" : pathname.includes("/plano") ? "plano" : "biblioteca";
+  const requiredPermission = modulePermissionKey(moduleKey, moduleKey === "configuracoes" ? "administrar" : "visualizar");
 
   useEffect(() => {
     applyBrandColors(primaryColor, accentColor);
@@ -54,115 +48,59 @@ export function BrandShell({
   useEffect(() => {
     let alive = true;
     if (!slug) return;
+    setClientContext(slug);
+    if (isDemoMode()) {
+      setIsAgencyUser(true);
+      setModules({ biblioteca: true, plano: true, workspace: true, espaco360: true, like: true } as BrandModules);
+      setGate("allowed");
+      return;
+    }
     getBrandBySlug(slug)
       .then(async (b) => {
         if (!alive) return;
-        if (!b) {
-          // RLS não devolveu nenhuma marca com esse slug para este usuário —
-          // ou não existe, ou ele não tem vínculo algum com ela.
-          setGate("blocked");
-          return;
-        }
+        if (!b) { setGate("blocked"); return; }
         setBrand(b);
         setModules(brandModules(b));
         logBrandAccess(b.id, "acesso", b.name).catch(() => undefined);
-
         const access = await getAccess();
         if (!alive) return;
-        if (access.isAgency) {
-          setIsAgencyUser(true);
-          if (pathname === basePath || pathname === `${basePath}/`) {
-            navigate({ to: "/b/$brandSlug/biblioteca", params: { brandSlug: slug }, search: { tab: undefined } });
-            return;
-          }
-          setGate("allowed");
-          return;
-        }
-        setIsAgencyUser(false);
+        if (access.isAgency) { setIsAgencyUser(true); setGate("allowed"); return; }
         const membership = await getBrandMembership(b.id);
         if (!alive) return;
-        if (!membership) {
-          setGate("blocked");
-          return;
-        }
-        const visible = (key: "plano" | "biblioteca" | "espaco360") =>
-          membership.isAdmin || membership.permissions.includes(modulePermissionKey(key, "visualizar"));
-        setModules({ ...brandModules(b), plano: brandModules(b).plano && visible("plano"), biblioteca: brandModules(b).biblioteca && visible("biblioteca"), espaco360: false, workspace: false });
-        if (pathname === basePath || pathname === `${basePath}/`) {
-          if (brandModules(b).biblioteca && visible("biblioteca")) {
-            navigate({ to: "/b/$brandSlug/biblioteca", params: { brandSlug: slug }, search: { tab: undefined } });
-            return;
-          }
-          if (brandModules(b).espaco360 && visible("espaco360")) {
-            navigate({ to: "/e360/$brandSlug", params: { brandSlug: slug }, search: { tab: undefined, filtro: undefined } });
-            return;
-          }
-          setGate("blocked");
-          return;
-        }
-        if (membership.isAdmin || !requiredPermission || membership.permissions.includes(requiredPermission)) {
-          setGate("allowed");
-        } else {
-          setGate("blocked");
-        }
+        if (!membership) { setGate("blocked"); return; }
+        const visible = (key: "plano" | "biblioteca") => membership.isAdmin || membership.permissions.includes(modulePermissionKey(key, "visualizar"));
+        const m = brandModules(b);
+        setModules({ ...m, plano: m.plano && visible("plano"), biblioteca: m.biblioteca && visible("biblioteca"), espaco360: false, workspace: false });
+        if (!m.biblioteca && !m.plano && m.espaco360) { navigate({ to: "/e360/$brandSlug", params: { brandSlug: slug }, search: { tab: undefined, filtro: undefined } }); return; }
+        setGate(membership.isAdmin || membership.permissions.includes(requiredPermission) ? "allowed" : "blocked");
       })
-      .catch(() => {
-        if (alive) setGate("blocked");
-      });
-    return () => {
-      alive = false;
-    };
+      .catch(() => { if (alive) setGate("blocked"); });
+    return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, requiredPermission]);
 
-  return (
-    <div className="relative min-h-screen">
-      <BrandSidebar
-        basePath={basePath}
-        displayName={displayName}
-        expanded={expanded}
-        modules={modules}
-        isAgencyUser={isAgencyUser}
-        brandName={brand?.name ?? null}
-        brandLogoUrl={brand?.logo_url ?? null}
-        brandLogoFrame={(brand as any)?.logo_frame ?? null}
-        onToggleExpanded={() => setExpanded((v) => !v)}
-        onOpenPalette={() => setPaletteOpen(true)}
-      />
-      {isAgencyUser && <CommandPalette basePath={basePath} open={paletteOpen} onClose={() => setPaletteOpen(false)} />}
+  const name = brandName ?? brand?.name ?? "";
+  const logo = brandLogoUrl ?? brand?.logo_url ?? null;
+  const p = { brandSlug: slug };
+  const items = [
+    modules?.biblioteca !== false && { to: "/b/$brandSlug/biblioteca", params: p, search: { tab: undefined }, label: "Biblioteca", icon: "layers" as const },
+    modules?.plano !== false && { to: "/b/$brandSlug/plano", params: p, search: {}, label: "Plano", icon: "target" as const },
+    isAgencyUser && { to: "/b/$brandSlug/configuracoes", params: p, search: {}, label: "Configurações", icon: "sliders" as const },
+  ].filter(Boolean) as never[];
 
-      <main
-        className={cn(
-          "relative z-10 min-h-screen px-8 py-6 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-          expanded ? "pl-[248px]" : "pl-[88px]",
-        )}
-      >
-        <div style={{ margin: "-12px -8px 8px" }}><EchoTopbar activeEnv="brand" /></div>
-        <ViewAsBanner />
-        {/* Cliente em contexto e atalhos do Brand (barra do piloto, dentro da moldura do Echo). */}
-        <BrandTopbar
-          basePath={basePath}
-          brandName={brand?.name ?? null}
-          brandLogoUrl={brand?.logo_url ?? null}
-          brandLogoFrame={(brand as any)?.logo_frame ?? null}
-          modules={modules}
-          isAgencyUser={isAgencyUser}
-          onOpenPalette={() => setPaletteOpen(true)}
-        />
-        <div className="flex gap-6">
-          {gate === "allowed" && moduleNav && <ModuleNavPanel basePath={basePath} nav={moduleNav} />}
-          <div className="animate-fade-up min-w-0 flex-1 pb-16">
-            {gate === "loading" && <div className="py-16 text-center text-sm text-muted-foreground">Carregando…</div>}
-            {gate === "blocked" && (
-              <div className="surface mx-auto mt-10 max-w-md space-y-2 rounded-2xl p-6 text-center">
-                <h2 className="text-sm font-semibold">Acesso não autorizado</h2>
-                <p className="text-sm text-muted-foreground">Você não tem permissão para acessar esta área.</p>
-              </div>
-            )}
-            {gate === "allowed" && children}
-          </div>
-        </div>
-      </main>
-    </div>
+  return (
+    <EchoLayout
+      env="brand"
+      wide
+      demoData
+      eyebrow={isAgencyUser ? <Link to="/clientes" className="e-link" style={{ fontSize: "inherit", fontWeight: 500 }}><Icon name="chevLeft" size="sm" /> Clientes</Link> : "Brand"}
+      title={name ? <span className="brand-title">{<ClientLogo name={name} logoUrl={logo} size="sm" />}{name}</span> as never : "Brand"}
+      titleAside={isAgencyUser && slug ? <Link to={`/clientes/${slug}` as never} className="e-btn ghost sm"><Icon name="briefcase" size="sm" /> Hub do cliente</Link> : undefined}
+      nav={<EchoSubnav label="Áreas do Brand" items={items} />}
+    >
+      {gate === "loading" && <div className="stack-lg" aria-busy="true"><Skeleton h={48} r={16} /><Skeleton h={320} r={24} /></div>}
+      {gate === "blocked" && <div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState icon="lock" title="Acesso não autorizado" text="Você não tem permissão para abrir esta área deste cliente. Fale com a equipe se precisar de acesso." /></div>}
+      {gate === "allowed" && children}
+    </EchoLayout>
   );
 }
