@@ -55,7 +55,7 @@ export function TextArea({ label, help, error, optional, max, className = "", va
 
 // ----- Popover com saída animada -------------------------------------------------
 
-function usePopover() {
+export function usePopover() {
   const [open, setOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);

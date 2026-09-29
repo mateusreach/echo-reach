@@ -9,3 +9,4 @@ export * from "./appearance";
 export * from "./shell";
 export * from "./layout";
 export * from "./session";
+export * from "./people";

@@ -347,3 +347,72 @@ a.env-block:focus-visible { box-shadow: var(--e-ring); }
 .hub-activity span { color: var(--ink-2); }
 @media (max-width: 1100px) { .hub-envs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .hub-envs { grid-template-columns: 1fr; } .hub-id { padding: 0 16px 16px; } }
+
+/* ---------- Equipe ---------- */
+.team-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 28px; }
+.team-stat { display: grid; gap: 2px; }
+.team-stat b { font-size: 26px; font-weight: 500; letter-spacing: -.02em; line-height: 1.1; }
+.team-stat span { font-size: 12.5px; color: var(--ink-3); }
+.team-filters { display: grid; gap: 12px; padding: 14px; border-radius: var(--r-xl); }
+.team-sep { width: 1px; height: 20px; background: var(--line-2); margin: 0 4px; }
+.member-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.member-card { display: grid; gap: 12px; align-content: start; padding: 16px; border-radius: var(--r-xl); text-align: left; color: var(--ink); font: inherit; border: 0; cursor: pointer; transition: transform var(--dur-3) var(--ease-out), box-shadow var(--dur-3) ease; }
+div.member-card { cursor: default; }
+@media (hover: hover) and (pointer: fine) { button.member-card:hover { transform: translateY(-2px); box-shadow: var(--glass-inset), var(--sh-3); } }
+button.member-card:active { transform: scale(.985); }
+button.member-card:focus-visible { outline: none; box-shadow: var(--e-ring); }
+.member-card.inactive { opacity: .62; }
+.member-card.inactive .e-av { filter: grayscale(.8); }
+.member-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; }
+.member-name { font-size: 15px; font-weight: 600; }
+.member-lead { color: var(--warn); display: inline-grid; }
+.member-sectors { display: flex; flex-wrap: wrap; gap: 6px; }
+.member-tag { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; background: var(--hover); color: var(--ink-2); }
+.member-avail { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; margin-left: auto; }
+.member-avail.on { color: var(--ok); background: color-mix(in oklab, var(--ok) 12%, transparent); }
+.member-avail.away { color: var(--warn); background: color-mix(in oklab, var(--warn) 12%, transparent); }
+.member-avail.busy { color: var(--danger); background: color-mix(in oklab, var(--danger) 12%, transparent); }
+.member-avail.off { color: var(--ink-3); background: var(--hover); }
+.member-load { display: grid; gap: 6px; }
+.member-clients { display: flex; align-items: center; gap: 6px; }
+.invite-row { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 14px; background: var(--hover); font-size: 13.5px; flex-wrap: wrap; }
+.team-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 14px; background: var(--hover); font-size: 13.5px; }
+.team-due { font-size: 12px; color: var(--ink-3); min-width: 40px; text-align: right; }
+.team-due.late { color: var(--danger); font-weight: 600; }
+.person-hero { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
+.palette-pick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.palette-opt { display: grid; justify-items: center; gap: 6px; padding: 10px 6px; border-radius: 14px; border: 0; background: var(--hover); color: var(--ink-2); font: inherit; font-size: 12.5px; cursor: pointer; transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) ease; }
+.palette-opt i { width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 0 1px 0 rgba(255,255,255,.45); }
+.palette-opt[aria-checked="true"] { color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--e-accent); }
+.palette-opt:active { transform: scale(.96); }
+.palette-opt:focus-visible { outline: none; box-shadow: var(--e-ring); }
+/* Matriz de permissões */
+.perm-all { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; font-size: 13px; color: var(--ok); background: color-mix(in oklab, var(--ok) 10%, transparent); }
+.perm-wrap { overflow-x: auto; border-radius: 16px; background: var(--hover); padding: 4px; }
+.perm-table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 12.5px; }
+.perm-table th, .perm-table td { padding: 6px 4px; text-align: center; }
+.perm-table thead th { font-weight: 500; color: var(--ink-3); font-size: 11.5px; cursor: help; }
+.perm-table tbody tr + tr { border-top: 1px solid var(--line); }
+.perm-table tbody th { text-align: left; }
+.perm-table td.na { color: var(--ink-4, var(--ink-3)); opacity: .5; }
+.perm-table .e-check { justify-content: center; }
+.perm-row-btn { border: 0; background: none; font: inherit; font-weight: 500; color: var(--ink); cursor: pointer; padding: 4px 6px; border-radius: 8px; text-align: left; }
+.perm-row-btn:hover:not(:disabled) { background: var(--hover); }
+.perm-row-btn:disabled { cursor: default; }
+.perm-help { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 4px 14px; margin: 0; font-size: 12px; }
+.perm-help div { display: flex; gap: 6px; }
+.perm-help dt { font-weight: 600; color: var(--ink-2); }
+.perm-help dd { margin: 0; color: var(--ink-3); }
+/* PeoplePicker */
+.picker-pop { width: min(380px, 92vw); padding: 6px; }
+.picker-search { display: flex; align-items: center; gap: 8px; padding: 6px 10px; margin-bottom: 4px; border-radius: 10px; background: var(--hover); color: var(--ink-3); }
+.picker-search input { flex: 1; border: 0; background: none; outline: none; font: inherit; font-size: 13.5px; color: var(--ink); }
+.picker-sectors { display: flex; gap: 4px; overflow-x: auto; padding: 4px 2px 6px; }
+.picker-list { max-height: 300px; overflow-y: auto; }
+.picker-item { gap: 10px; }
+.picker-item.on { background: color-mix(in oklab, var(--e-accent) 10%, transparent); }
+.picker-load { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
+.picker-load.late { color: var(--danger); }
+.picker-foot { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px 4px; border-top: 1px solid var(--line); margin-top: 4px; }
+.picker-chosen { display: inline-flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+@media (max-width: 560px) { .palette-pick { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

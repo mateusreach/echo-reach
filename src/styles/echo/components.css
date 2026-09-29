@@ -457,7 +457,7 @@ button { cursor: pointer; }
   box-shadow: var(--glass-inset), 0 0 0 1px var(--line), var(--sh-4);
 }
 .e-drawer-head { padding: 22px 24px 16px; display: flex; gap: 12px; align-items: start; border-bottom: 1px solid var(--line); }
-.e-drawer-body { padding: 20px 24px; overflow: auto; flex: 1; display: grid; gap: 18px; align-content: start; }
+.e-drawer-body { padding: 20px 24px; overflow: auto; flex: 1; display: grid; grid-auto-rows: max-content; gap: 18px; align-content: start; }
 .e-drawer-foot { padding: 16px 24px; border-top: 1px solid var(--line); display: flex; gap: 10px; justify-content: flex-end; }
 .e-ico-tile { width: 44px; height: 44px; flex: none; border-radius: 14px; display: grid; place-items: center; color: #fff; background: var(--grad); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -6px 12px -6px rgba(0,0,0,.25), 0 8px 18px -8px color-mix(in oklab, var(--p1) 70%, transparent); }
 .e-ico-tile.danger { background: linear-gradient(140deg, #E23D57, #F26A5E); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 8px 18px -8px rgba(226,61,87,.6); }
