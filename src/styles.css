@@ -1,0 +1,598 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Reach Brand OS design system.
+ * Dark-first. Orange -> pink accent gradient (Reach brand).
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-muted: var(--primary-muted);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-brand: var(--brand);
+  --color-brand-pink: var(--brand-pink);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-overlay: var(--overlay);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.988 0.003 255);
+  --foreground: oklch(0.22 0.02 265);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.02 265);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.02 265);
+  --primary: #2f6be0;
+  --primary-foreground: oklch(1 0 0);
+  --primary-soft: color-mix(in oklab, #2f6be0 8%, oklch(1 0 0));
+  --primary-muted: color-mix(in oklab, #2f6be0 5%, oklch(1 0 0));
+  --primary-hover: color-mix(in oklab, #2f6be0 88%, oklch(0.2 0.03 265));
+  --secondary: oklch(0.968 0.004 260);
+  --secondary-foreground: oklch(0.3 0.02 265);
+  --muted: oklch(0.968 0.004 260);
+  --muted-foreground: oklch(0.56 0.015 262);
+  --accent: color-mix(in oklab, #2f6be0 7%, oklch(1 0 0));
+  --accent-foreground: oklch(0.3 0.02 265);
+  --destructive: oklch(0.62 0.18 25);
+  --destructive-foreground: oklch(0.99 0.003 248);
+  --border: oklch(0.925 0.006 262);
+  --input: oklch(0.925 0.006 262);
+  --ring: color-mix(in oklab, #2f6be0 35%, transparent);
+  /* Véu de modais/drawers — separa profundidade sem pintar a página de
+     cinza. O destaque do modal vem da própria elevação (sombra/borda), não
+     de escurecer o fundo — por isso a opacidade aqui é baixa de propósito. */
+  --overlay: oklch(0.22 0.02 265 / 14%);
+  --shadow-modal: 0 2px 6px oklch(0.22 0.02 265 / 6%), 0 24px 48px -20px oklch(0.22 0.02 265 / 30%);
+  --brand: #2f6be0;
+  --brand-pink: #6ba6ff;
+  --success: oklch(0.66 0.12 160);
+  --warning: oklch(0.74 0.12 80);
+  --chart-1: #2f6be0;
+  --chart-2: #7a4ce0;
+  --chart-3: oklch(0.68 0.11 160);
+  --chart-4: oklch(0.76 0.12 80);
+  --chart-5: #e5399b;
+  --sidebar: oklch(1 0 0 / 80%);
+  --sidebar-foreground: oklch(0.22 0.02 265);
+  --sidebar-primary: #2f6be0;
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.968 0.004 260);
+  --sidebar-accent-foreground: oklch(0.22 0.02 265);
+  --sidebar-border: oklch(0.93 0.006 262);
+  --sidebar-ring: #2f6be0;
+
+  --gradient-brand: linear-gradient(135deg, #2f6be0, #4f86ea);
+  /* Atmosfera ambiental quase imperceptível — mesma lógica do Reach Workspace. */
+  --gradient-app: radial-gradient(
+      1200px 760px at 6% -14%,
+      color-mix(in oklab, var(--brand) 4%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      1000px 640px at 100% -8%,
+      color-mix(in oklab, #b99cff 4%, transparent),
+      transparent 58%
+    ),
+    radial-gradient(
+      900px 620px at 32% 112%,
+      color-mix(in oklab, #ff8bc4 3%, transparent),
+      transparent 60%
+    );
+  --surface: oklch(1 0 0);
+  --surface-elevated: oklch(1 0 0);
+  --surface-sunken: oklch(0.972 0.004 260);
+  --info: #2f6be0;
+  --glass-bg: color-mix(in oklab, oklch(1 0 0) 82%, transparent);
+  --glass-border: oklch(0.925 0.006 262);
+  --shadow-soft: 0 1px 2px oklch(0.22 0.02 265 / 4%), 0 8px 24px -18px oklch(0.22 0.02 265 / 18%);
+  --shadow-glow: 0 6px 18px -10px color-mix(in oklab, var(--brand) 35%, transparent);
+}
+
+.dark {
+  --background: oklch(0.17 0.018 265);
+  --foreground: oklch(0.96 0.005 260);
+  --card: oklch(0.215 0.02 265);
+  --card-foreground: oklch(0.96 0.005 260);
+  --popover: oklch(0.215 0.02 265);
+  --popover-foreground: oklch(0.96 0.005 260);
+  --primary: #6ba6ff;
+  --primary-foreground: oklch(0.18 0.02 265);
+  --primary-soft: color-mix(in oklab, #6ba6ff 14%, transparent);
+  --primary-muted: color-mix(in oklab, #6ba6ff 8%, transparent);
+  --primary-hover: color-mix(in oklab, #6ba6ff 85%, oklch(1 0 0));
+  --secondary: oklch(0.26 0.022 265);
+  --secondary-foreground: oklch(0.96 0.005 260);
+  --muted: oklch(0.26 0.022 265);
+  --muted-foreground: oklch(0.72 0.015 262);
+  --accent: color-mix(in oklab, #6ba6ff 12%, transparent);
+  --accent-foreground: oklch(0.96 0.005 260);
+  --destructive: oklch(0.66 0.16 24);
+  --destructive-foreground: oklch(0.98 0.005 250);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: color-mix(in oklab, #6ba6ff 40%, transparent);
+  --overlay: oklch(0.06 0.01 265 / 35%);
+  --shadow-modal: 0 2px 6px oklch(0 0 0 / 20%), 0 28px 56px -20px oklch(0 0 0 / 55%);
+  --brand: #6ba6ff;
+  --brand-pink: #b99cff;
+  --success: oklch(0.72 0.12 160);
+  --warning: oklch(0.8 0.12 82);
+  --chart-1: #6ba6ff;
+  --chart-2: #b99cff;
+  --chart-3: oklch(0.72 0.12 160);
+  --chart-4: oklch(0.8 0.12 82);
+  --chart-5: #ff8bc4;
+  --sidebar: oklch(0.2 0.02 265 / 80%);
+  --sidebar-foreground: oklch(0.96 0.005 260);
+  --sidebar-primary: #6ba6ff;
+  --sidebar-primary-foreground: oklch(0.18 0.02 265);
+  --sidebar-accent: oklch(0.26 0.022 265);
+  --sidebar-accent-foreground: oklch(0.96 0.005 260);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: #6ba6ff;
+
+  --gradient-brand: linear-gradient(135deg, #2f6be0, #6ba6ff);
+  --gradient-app: radial-gradient(
+      1100px 700px at 10% -12%,
+      color-mix(in oklab, var(--brand) 8%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 640px at 100% -5%,
+      color-mix(in oklab, var(--brand-pink) 6%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(800px 600px at 50% 110%, oklch(0.3 0.05 285 / 20%), transparent 60%);
+  --surface: oklch(0.215 0.02 265);
+  --surface-elevated: oklch(0.245 0.021 265);
+  --surface-sunken: oklch(0.19 0.019 265);
+  --info: #6ba6ff;
+  --glass-bg: color-mix(in oklab, oklch(0.225 0.02 265) 88%, transparent);
+  --glass-border: oklch(1 0 0 / 9%);
+  --shadow-soft: 0 1px 2px oklch(0 0 0 / 22%), 0 12px 32px -24px oklch(0 0 0 / 55%);
+  --shadow-glow: 0 6px 18px -10px color-mix(in oklab, var(--brand) 35%, transparent);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    background-image: var(--gradient-app);
+    background-attachment: fixed;
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+@utility surface {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Véu de modais/drawers/painéis. Deliberadamente sutil: o destaque do modal
+   vem da própria elevação (shadow-modal) e não de escurecer a página — o
+   app continua nitidamente reconhecível atrás, só secundário. Usar em vez
+   de bg-background/NN. */
+@utility overlay-scrim {
+  background: var(--overlay);
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+}
+
+/* Elevação dedicada a modais/drawers — mais presente que shadow-soft (usada
+   em cards comuns) porque aqui o overlay não pode "fazer esse trabalho". */
+@utility shadow-modal {
+  box-shadow: var(--shadow-modal);
+}
+
+@utility gradient-brand {
+  background-image: var(--gradient-brand);
+}
+
+@utility text-gradient-brand {
+  background-image: var(--gradient-brand);
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@utility shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+
+@utility shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+/* ============================================================
+   Reach Brand — camada visual portada do protótipo de estrutura
+   (reach-brand.zip). Convive com os tokens/utilities acima;
+   usada pelas páginas multi-tenant novas (Início, Fundação,
+   Planejamento, Espaço 360, Conhecimento, Biblioteca,
+   Resultados, Configurações).
+   ============================================================ */
+
+@theme inline {
+  /* Paleta oficial Reach (mesma linguagem do Reach Your Space) */
+  --color-reach-blue-900: #1b3a8b;
+  --color-reach-blue-500: #2f6be0;
+  --color-reach-blue-300: #6ba6ff;
+  --color-reach-blue-100: #dcebff;
+  --color-reach-pink-900: #7a1e52;
+  --color-reach-pink-500: #e5399b;
+  --color-reach-pink-300: #ff8bc4;
+  --color-reach-pink-100: #ffe1ef;
+  --color-reach-purple-900: #3d1f7a;
+  --color-reach-purple-500: #7a4ce0;
+  --color-reach-purple-300: #b99cff;
+  --color-reach-purple-100: #eae0ff;
+  --color-reach-orange-900: #8b2a16;
+  --color-reach-orange-500: #e85d3a;
+  --color-reach-orange-300: #ffa07a;
+  --color-reach-orange-100: #ffdac7;
+
+  /* Papéis semânticos — resolvidos a partir da paleta oficial acima */
+  --color-reach-coral: var(--reach-coral);
+  --color-reach-coral-soft: var(--reach-coral-soft);
+  --color-reach-violet: var(--reach-violet);
+  --color-reach-violet-soft: var(--reach-violet-soft);
+  --color-reach-blue: var(--reach-blue);
+  --color-reach-blue-soft: var(--reach-blue-soft);
+  --color-reach-amber: var(--reach-amber);
+  --color-reach-amber-soft: var(--reach-amber-soft);
+  --color-reach-mint: var(--reach-mint);
+  --color-reach-mint-soft: var(--reach-mint-soft);
+  --color-reach-rose: var(--reach-rose);
+  --color-reach-rose-soft: var(--reach-rose-soft);
+  --color-glass-1: var(--glass-1);
+  --color-glass-2: var(--glass-2);
+  --color-glass-3: var(--glass-3);
+  --font-display: "Inter Tight", "SF Pro Display", -apple-system, system-ui, sans-serif;
+}
+
+:root.dark {
+  /* tons 300 da paleta oficial: legíveis sobre fundo escuro, em baixa saturação */
+  --reach-coral: #6ba6ff;
+  --reach-coral-soft: color-mix(in oklab, #6ba6ff 12%, transparent);
+  --reach-violet: #b99cff;
+  --reach-violet-soft: color-mix(in oklab, #b99cff 12%, transparent);
+  --reach-blue: #6ba6ff;
+  --reach-blue-soft: color-mix(in oklab, #6ba6ff 12%, transparent);
+  --reach-rose: #ff8bc4;
+  --reach-rose-soft: color-mix(in oklab, #ff8bc4 12%, transparent);
+  --reach-amber: oklch(0.8 0.1 70);
+  --reach-amber-soft: oklch(0.8 0.1 70 / 0.12);
+  --reach-mint: oklch(0.78 0.1 165);
+  --reach-mint-soft: oklch(0.78 0.1 165 / 0.12);
+  --glass-1: oklch(1 0 0 / 0.03);
+  --glass-2: oklch(1 0 0 / 0.05);
+  --glass-3: oklch(1 0 0 / 0.07);
+  --shadow-glass: 0 12px 32px oklch(0 0 0 / 0.28);
+}
+
+:root {
+  /* papéis de accent — pastéis suaves sobre superfícies brancas */
+  --reach-coral: #2f6be0;
+  --reach-coral-soft: color-mix(in oklab, #2f6be0 8%, oklch(1 0 0));
+  --reach-violet: #7a4ce0;
+  --reach-violet-soft: color-mix(in oklab, #7a4ce0 8%, oklch(1 0 0));
+  --reach-blue: #2f6be0;
+  --reach-blue-soft: color-mix(in oklab, #2f6be0 8%, oklch(1 0 0));
+  --reach-rose: #e5399b;
+  --reach-rose-soft: color-mix(in oklab, #e5399b 8%, oklch(1 0 0));
+  --reach-amber: oklch(0.6 0.08 72);
+  --reach-amber-soft: color-mix(in oklab, oklch(0.72 0.1 72) 8%, oklch(1 0 0));
+  --reach-mint: oklch(0.56 0.08 168);
+  --reach-mint-soft: color-mix(in oklab, oklch(0.66 0.1 168) 8%, oklch(1 0 0));
+  --glass-1: oklch(1 0 0 / 0.6);
+  --glass-2: oklch(1 0 0 / 0.75);
+  --glass-3: oklch(1 0 0 / 0.9);
+  --shadow-glass: 0 1px 2px oklch(0.22 0.02 265 / 4%), 0 10px 28px -22px oklch(0.22 0.02 265 / 22%);
+}
+
+
+@utility glass-1 {
+  background: var(--glass-1);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+@utility glass-2 {
+  background: var(--glass-2);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-glass);
+}
+@utility glass-3 {
+  background: var(--glass-3);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-glass);
+}
+
+@utility text-display {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 2.2vw, 2.25rem);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+@utility text-title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+}
+@utility text-label {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+@utility text-caption {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+
+@utility bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+@keyframes reach-blob {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.05; }
+  25%      { transform: translate(40px, -30px) scale(1.08); opacity: 0.08; }
+  50%      { transform: translate(-20px, 50px) scale(0.94); opacity: 0.06; }
+  75%      { transform: translate(60px, 20px) scale(1.05); opacity: 0.08; }
+}
+
+@utility reach-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  animation: reach-blob 22s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@utility animate-fade-up {
+  animation: fade-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@utility input-reach {
+  width: 100%;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 0.5rem 0.75rem;
+  min-height: 2.375rem;
+  font-size: 13.5px;
+  @media (max-width: 639px) {
+    min-height: 2.75rem;
+    font-size: 16px;
+  }
+  color: var(--foreground);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  &::placeholder {
+    color: var(--muted-foreground);
+  }
+  &:focus {
+    border-color: color-mix(in oklab, var(--primary) 55%, transparent);
+    box-shadow: 0 0 0 3px var(--ring);
+  }
+}
+
+/* ============================================================
+   Temas Oficiais Reach — mesma linguagem visual do Reach Workspace.
+   Quatro paletas (Blue, Pink, Purple, Orange) que remapeiam os papéis
+   semânticos de destaque. Aplicadas via data-reach-theme no <html>,
+   funcionam tanto no tema claro quanto no escuro.
+   ============================================================ */
+
+:root[data-reach-theme="blue"] {
+  --brand: #2f6be0;
+  --brand-pink: #6ba6ff;
+  --primary: #2f6be0;
+  --primary-foreground: #ffffff;
+  --primary-soft: color-mix(in oklab, #2f6be0 8%, oklch(1 0 0));
+  --primary-muted: color-mix(in oklab, #2f6be0 5%, oklch(1 0 0));
+  --primary-hover: #285dc6;
+  --accent: color-mix(in oklab, #2f6be0 7%, oklch(1 0 0));
+  --ring: color-mix(in oklab, #2f6be0 32%, transparent);
+  --reach-coral: #2f6be0;
+  --reach-coral-soft: color-mix(in oklab, #2f6be0 8%, oklch(1 0 0));
+  --gradient-brand: linear-gradient(135deg, #2f6be0, #4f86ea);
+  --sidebar-primary: #2f6be0;
+  --sidebar-ring: #2f6be0;
+}
+:root[data-reach-theme="blue"].dark {
+  --primary: #6ba6ff;
+  --primary-foreground: #0e1a33;
+  --primary-soft: color-mix(in oklab, #6ba6ff 14%, transparent);
+  --accent: color-mix(in oklab, #6ba6ff 12%, transparent);
+  --reach-coral: #6ba6ff;
+  --reach-coral-soft: color-mix(in oklab, #6ba6ff 12%, transparent);
+  --gradient-brand: linear-gradient(135deg, #2f6be0, #6ba6ff);
+  --primary-muted: color-mix(in oklab, #6ba6ff 8%, transparent);
+  --primary-hover: color-mix(in oklab, #6ba6ff 88%, oklch(1 0 0));
+  --sidebar-ring: #6ba6ff;
+  --ring: color-mix(in oklab, #6ba6ff 40%, transparent);
+  --brand: #6ba6ff;
+  --sidebar-primary: #6ba6ff;
+}
+
+:root[data-reach-theme="pink"] {
+  --brand: #e5399b;
+  --brand-pink: #ff8bc4;
+  --primary: #d43a94;
+  --primary-foreground: #ffffff;
+  --primary-soft: color-mix(in oklab, #e5399b 8%, oklch(1 0 0));
+  --primary-muted: color-mix(in oklab, #e5399b 5%, oklch(1 0 0));
+  --primary-hover: #bd3183;
+  --accent: color-mix(in oklab, #e5399b 7%, oklch(1 0 0));
+  --ring: color-mix(in oklab, #e5399b 32%, transparent);
+  --reach-coral: #d43a94;
+  --reach-coral-soft: color-mix(in oklab, #e5399b 8%, oklch(1 0 0));
+  --gradient-brand: linear-gradient(135deg, #d43a94, #ef6cb4);
+  --sidebar-primary: #d43a94;
+  --sidebar-ring: #d43a94;
+}
+:root[data-reach-theme="pink"].dark {
+  --primary: #ff8bc4;
+  --primary-foreground: #2a0c1c;
+  --primary-soft: color-mix(in oklab, #ff8bc4 14%, transparent);
+  --accent: color-mix(in oklab, #ff8bc4 12%, transparent);
+  --reach-coral: #ff8bc4;
+  --reach-coral-soft: color-mix(in oklab, #ff8bc4 12%, transparent);
+  --gradient-brand: linear-gradient(135deg, #e5399b, #ff8bc4);
+  --primary-muted: color-mix(in oklab, #ff8bc4 8%, transparent);
+  --primary-hover: color-mix(in oklab, #ff8bc4 88%, oklch(1 0 0));
+  --sidebar-ring: #ff8bc4;
+  --ring: color-mix(in oklab, #ff8bc4 40%, transparent);
+  --brand: #ff8bc4;
+  --sidebar-primary: #ff8bc4;
+}
+
+:root[data-reach-theme="purple"] {
+  --brand: #7a4ce0;
+  --brand-pink: #b99cff;
+  --primary: #7a4ce0;
+  --primary-foreground: #ffffff;
+  --primary-soft: color-mix(in oklab, #7a4ce0 8%, oklch(1 0 0));
+  --primary-muted: color-mix(in oklab, #7a4ce0 5%, oklch(1 0 0));
+  --primary-hover: #6a41c4;
+  --accent: color-mix(in oklab, #7a4ce0 7%, oklch(1 0 0));
+  --ring: color-mix(in oklab, #7a4ce0 32%, transparent);
+  --reach-coral: #7a4ce0;
+  --reach-coral-soft: color-mix(in oklab, #7a4ce0 8%, oklch(1 0 0));
+  --gradient-brand: linear-gradient(135deg, #7a4ce0, #9a75ea);
+  --sidebar-primary: #7a4ce0;
+  --sidebar-ring: #7a4ce0;
+}
+:root[data-reach-theme="purple"].dark {
+  --primary: #b99cff;
+  --primary-foreground: #1b1030;
+  --primary-soft: color-mix(in oklab, #b99cff 14%, transparent);
+  --accent: color-mix(in oklab, #b99cff 12%, transparent);
+  --reach-coral: #b99cff;
+  --reach-coral-soft: color-mix(in oklab, #b99cff 12%, transparent);
+  --gradient-brand: linear-gradient(135deg, #7a4ce0, #b99cff);
+  --primary-muted: color-mix(in oklab, #b99cff 8%, transparent);
+  --primary-hover: color-mix(in oklab, #b99cff 88%, oklch(1 0 0));
+  --sidebar-ring: #b99cff;
+  --ring: color-mix(in oklab, #b99cff 40%, transparent);
+  --brand: #b99cff;
+  --sidebar-primary: #b99cff;
+}
+
+:root[data-reach-theme="orange"] {
+  --brand: #e85d3a;
+  --brand-pink: #ffa07a;
+  --primary: #d9542f;
+  --primary-foreground: #ffffff;
+  --primary-soft: color-mix(in oklab, #e85d3a 8%, oklch(1 0 0));
+  --primary-muted: color-mix(in oklab, #e85d3a 5%, oklch(1 0 0));
+  --primary-hover: #c34926;
+  --accent: color-mix(in oklab, #e85d3a 7%, oklch(1 0 0));
+  --ring: color-mix(in oklab, #e85d3a 32%, transparent);
+  --reach-coral: #d9542f;
+  --reach-coral-soft: color-mix(in oklab, #e85d3a 8%, oklch(1 0 0));
+  --gradient-brand: linear-gradient(135deg, #d9542f, #ef8158);
+  --sidebar-primary: #d9542f;
+  --sidebar-ring: #d9542f;
+}
+:root[data-reach-theme="orange"].dark {
+  --primary: #ffa07a;
+  --primary-foreground: #2b1008;
+  --primary-soft: color-mix(in oklab, #ffa07a 14%, transparent);
+  --accent: color-mix(in oklab, #ffa07a 12%, transparent);
+  --reach-coral: #ffa07a;
+  --reach-coral-soft: color-mix(in oklab, #ffa07a 12%, transparent);
+  --gradient-brand: linear-gradient(135deg, #e85d3a, #ffa07a);
+  --primary-muted: color-mix(in oklab, #ffa07a 8%, transparent);
+  --primary-hover: color-mix(in oklab, #ffa07a 88%, oklch(1 0 0));
+  --sidebar-ring: #ffa07a;
+  --ring: color-mix(in oklab, #ffa07a 40%, transparent);
+  --brand: #ffa07a;
+  --sidebar-primary: #ffa07a;
+}

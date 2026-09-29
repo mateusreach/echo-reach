@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.dispatch_brand_item_to_workspace(uuid, text, text, uuid, text, text, text, uuid, text, date, integer, text, text) FROM anon;
