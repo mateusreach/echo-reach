@@ -32,7 +32,7 @@ function History() {
   const [ready, setReady] = useState(false);
   const [viewAs, setViewAs] = useState(false);
   useEffect(() => { setReady(true); setViewAs(isViewingAsClient()); }, []);
-  const team = !!isTeam && !viewAs;
+  const team = ready && !!isTeam && !viewAs;
   const brand = useQuery({ queryKey: ["brand-info", brandSlug], queryFn: () => loadBrandInfo(brandSlug), enabled: ready });
   const items = useQuery({ queryKey: ["like-items", brandSlug, viewAs], queryFn: () => listItems({ brandSlug }), enabled: ready });
   const space = useQuery({ queryKey: ["space", brandSlug], queryFn: () => loadSpace(brandSlug), enabled: ready });
@@ -103,7 +103,7 @@ function History() {
                 <li key={d.id}>
                   <span className={`hr-ic t-${m.tone}`}><Icon name={m.icon} size="sm" /></span>
                   <div>
-                    <div className="hr-line"><Avatar name={d.deciderName ?? "?"} size="xs" /><b>{d.deciderName}</b> {m.label.toLowerCase()} <Link to={`/like/${brandSlug}/m/${d.itemId}${v !== (d.item.current?.number ?? 1) ? `?v=${v}` : ""}` as never} className="e-link">{d.item.title}</Link> <span className="e-caption">· {KIND_LABEL[d.item.kind]} · v{v}</span></div>
+                    <div className="hr-line"><Avatar name={d.deciderName ?? "?"} size="xs" /><b>{d.deciderName}</b>{d.deciderKind === "guest" && <span className="e-caption">(convidado{d.guestEmail ? ` · ${d.guestEmail}` : ""})</span>} {m.label.toLowerCase()} <Link to={`/like/${brandSlug}/m/${d.itemId}${v !== (d.item.current?.number ?? 1) ? `?v=${v}` : ""}` as never} className="e-link">{d.item.title}</Link> <span className="e-caption">· {KIND_LABEL[d.item.kind]} · v{v}</span></div>
                     {d.phrases.length > 0 && <div className="hr-phrases">{d.phrases.map((p) => <span key={p}>{p}</span>)}</div>}
                     {d.note && <p className="hr-note">{d.note}</p>}
                     {d.via === "outro_canal" && <p className="hr-note"><Icon name="info" size="sm" /> Registrado pela equipe (outro canal){team && d.justification ? `: ${d.justification}` : ""}</p>}

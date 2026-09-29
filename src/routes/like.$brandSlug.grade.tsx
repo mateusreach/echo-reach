@@ -32,7 +32,7 @@ function FeedGrid() {
   const [ready, setReady] = useState(false);
   const [viewAs, setViewAs] = useState(false);
   useEffect(() => { setReady(true); setViewAs(isViewingAsClient()); }, []);
-  const team = !!isTeam && !viewAs;
+  const team = ready && !!isTeam && !viewAs;
   const brand = useQuery({ queryKey: ["brand-info", brandSlug], queryFn: () => loadBrandInfo(brandSlug), enabled: ready });
   const items = useQuery({ queryKey: ["like-items", brandSlug, viewAs], queryFn: () => listItems({ brandSlug }), enabled: ready });
   const [channel, setChannel] = useState<Channel>("feed");

@@ -64,6 +64,7 @@ export function LikeBrandNav({ slug, team }: { slug: string; team?: boolean }) {
       { to: `/like/${slug}/grade`, label: "Grade", icon: "grid" },
       { to: `/like/${slug}/calendario`, label: "Calendário", icon: "calendar" },
       { to: `/like/${slug}/historico`, label: "Histórico", icon: "history" },
+      { to: `/like/${slug}/configuracoes`, label: "Configurações", icon: "sliders" },
     ]} secondary={team ? [{ to: `/like/${slug}/enviar`, label: "Enviar", icon: "send" }, { to: "/like/painel", label: "Painel", icon: "kanban" }] : undefined} />
   );
 }

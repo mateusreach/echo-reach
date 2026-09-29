@@ -11,6 +11,7 @@
 // do Workspace, da Biblioteca e do Espaço 360.
 // ---------------------------------------------------------------------------
 import { supabase } from "@/integrations/supabase/client";
+import { demoNotify, demoPrefsOf, inQuiet } from "./notify-data";
 import { isDemoMode } from "@/lib/home-data";
 import { isViewingAsClient } from "@/lib/view-as";
 import { addDays, frontPeriod, frontRisk, toISO, today } from "@/lib/workspace-data";
@@ -42,7 +43,7 @@ export type ScriptSection = { nome: string; tempo?: string; texto: string; off?:
 export type Version = { id: string; itemId: string; number: number; assets: Asset[]; caption: string | null; hashtags: string | null; cta: string | null; script: ScriptSection[]; textBody: string | null; changesNote: string | null; sent: boolean; createdBy: string | null; createdAt: string };
 export type Anchor = { type: "point"; slide: number; x: number; y: number } | { type: "time"; t: number } | { type: "text"; field: "caption" | "script" | "text_body"; start: number; end: number; quote: string };
 export type Comment = { id: string; itemId: string; versionId: string | null; parentId: string | null; authorId: string | null; authorName: string; authorKind: ActorKind; body: string; mentions: string[]; anchor: Anchor | null; internal: boolean; resolvedAt: string | null; resolvedBy: string | null; editedAt: string | null; deletedAt: string | null; createdAt: string };
-export type DecisionRow = { id: string; itemId: string; versionId: string; decision: Decision; decidedBy: string | null; deciderName: string | null; deciderKind: ActorKind; note: string | null; phrases: string[]; via: "like" | "outro_canal"; justification: string | null; undoes: string | null; createdAt: string };
+export type DecisionRow = { id: string; itemId: string; versionId: string; decision: Decision; decidedBy: string | null; deciderName: string | null; deciderKind: ActorKind; note: string | null; phrases: string[]; via: "like" | "outro_canal"; justification: string | null; undoes: string | null; createdAt: string; guestEmail?: string | null };
 export type Item = {
   id: string; brandId: string; brandSlug: string; brandName: string; roundId: string | null; title: string; kind: ItemKind;
   channelId: string | null; channelName: string | null; presetId: string | null; presetDimension: string | null;
@@ -57,7 +58,7 @@ export type Round = { id: string; brandId: string; brandSlug: string; brandName:
 export type Approver = { userId: string; name: string; email: string | null; role: "aprovador" | "revisor" | "observador"; orderIndex: number };
 export type Settings = { rule: "qualquer" | "todos" | "sequencial"; decisionDays: number; remindBefore: boolean; remindOnDay: boolean; remindLate: boolean; requireCommentOnAdjust: boolean; allowDownload: boolean; watermark: boolean; allowShareLinks: boolean; timezone: string };
 export type Activity = { id: string; itemId: string | null; roundId: string | null; actorName: string | null; event: string; payload: Record<string, unknown>; createdAt: string };
-export type Actor = { id: string; name: string; kind: ActorKind; isAdmin?: boolean };
+export type Actor = { id: string; name: string; kind: ActorKind; isAdmin?: boolean; email?: string };
 
 export const DEFAULT_SETTINGS: Settings = { rule: "qualquer", decisionDays: 2, remindBefore: true, remindOnDay: true, remindLate: true, requireCommentOnAdjust: true, allowDownload: false, watermark: true, allowShareLinks: false, timezone: "America/Sao_Paulo" };
 
@@ -123,6 +124,11 @@ function seed(): Store {
   return s;
 }
 const S = () => (store ??= seed());
+// Destinatários no demo (as mesmas regras de like_client_recipients / like_team_recipients).
+const TEAM_IDS = ["u-helena", "u-marina"];
+const clientIds = (brandId: string) => (S().approvers.get(brandId) ?? []).filter((a) => a.role !== "observador").map((a) => a.userId);
+const itemLink = (i: Item) => `/like/${i.brandSlug}/m/${i.id}`;
+const today10 = () => nowISO().slice(0, 10);
 const libConteudos = (slug: string) => demoLibraryStore(slug)?.conteudos ?? [];
 
 // Integrações no exemplo: as mesmas que o banco faz nas funções like_*.
@@ -315,6 +321,8 @@ export async function sendItems(itemIds: string[], roundId?: string | null): Pro
       setTask(it, "Avaliação externa");
       if (it.solicitacaoId) { const r = demoSpaceStore(it.brandSlug).requests.find((x) => x.id === it.solicitacaoId); if (r) r.status = "aguardando_cliente"; }
       log(it, it.roundId, wasDraft ? "enviado" : "nova_versao", demoActor());
+      if (wasDraft) demoNotify(clientIds(it.brandId), { brandSlug: it.brandSlug, kind: "like.nova_rodada", title: "Novos materiais para aprovar", body: `${it.brandName}: a Reach enviou materiais para você revisar.`, link: `/like/${it.brandSlug}${it.roundId ? `/rodada/${it.roundId}` : ""}`, dedupeKey: `rodada:${it.roundId ?? it.id}:${today10()}` }, demoActor().id);
+      else demoNotify(clientIds(it.brandId), { brandSlug: it.brandSlug, kind: "like.nova_versao", title: `Nova versão: ${it.title}`, body: v.changesNote, link: itemLink(it) }, demoActor().id);
       n++;
     }
     if (roundId) { const r = S().rounds.find((x) => x.id === roundId); if (r) { r.sentAt = r.sentAt ?? nowISO(); updateRound(roundId); } }
@@ -399,6 +407,15 @@ export async function addComment(itemId: string, input: { body: string; anchor?:
     const c: Comment = { id: uid("lc"), itemId, versionId: input.versionId ?? it.currentVersionId, parentId: input.parentId ?? null, authorId: actor.id, authorName: actor.name, authorKind: actor.kind, body: input.body.trim(), mentions: [], anchor: input.anchor ?? null, internal: !!input.internal, resolvedAt: null, resolvedBy: null, editedAt: null, deletedAt: null, createdAt: nowISO() };
     S().comments.push(c);
     if (actor.kind !== "agency" && !c.internal && ["aguardando", "nova_versao"].includes(it.status)) it.status = "em_revisao";
+    if (!c.internal) {
+      if (actor.kind !== "agency") demoNotify(TEAM_IDS, { brandSlug: it.brandSlug, kind: "like.comentario", title: `${actor.name} comentou em ${it.title}`, body: c.body.slice(0, 180), link: itemLink(it) }, actor.id);
+      const parent = c.parentId ? S().comments.find((x) => x.id === c.parentId) : null;
+      if (parent && parent.authorKind === "client" && parent.authorId) demoNotify([parent.authorId], { brandSlug: it.brandSlug, kind: "like.resposta", title: `${actor.name} respondeu seu comentário`, body: c.body.slice(0, 180), link: itemLink(it) }, actor.id);
+      const people = [...(S().approvers.get(it.brandId) ?? []).map((a) => ({ id: a.userId, name: a.name })), { id: "u-helena", name: "Helena Duarte" }, { id: "u-marina", name: "Marina Lopes" }];
+      const mentioned = people.filter((p) => c.body.includes(`@${p.name}`) || c.body.includes(`@${p.name.split(" ")[0]} `));
+      c.mentions = mentioned.map((p) => p.id);
+      if (mentioned.length) demoNotify(c.mentions, { brandSlug: it.brandSlug, kind: "like.mencao", title: `${actor.name} mencionou você`, body: c.body.slice(0, 180), link: itemLink(it) }, actor.id);
+    }
     log(it, it.roundId, "comentado", actor, { internal: c.internal });
     return clone(c);
   }
@@ -438,7 +455,7 @@ export class LikeRuleError extends Error {}
  * por “outro canal”, admin, com justificativa); pedir ajuste exige motivo quando
  * configurado; aprovar de novo a mesma versão não duplica nada.
  */
-export async function decide(itemId: string, versionId: string, decision: Exclude<Decision, "undone">, opts: { note?: string; phrases?: string[]; via?: "like" | "outro_canal"; justification?: string; actor?: Actor } = {}): Promise<{ status: ItemStatus; decisionId: string | null }> {
+export async function decide(itemId: string, versionId: string, decision: Exclude<Decision, "undone">, opts: { note?: string; phrases?: string[]; via?: "like" | "outro_canal"; justification?: string; actor?: Actor; guestLink?: boolean } = {}): Promise<{ status: ItemStatus; decisionId: string | null }> {
   const via = opts.via ?? "like";
   if (isDemoMode()) {
     const s = S();
@@ -450,6 +467,7 @@ export async function decide(itemId: string, versionId: string, decision: Exclud
       if (actor.kind !== "agency" || !actor.isAdmin) throw new LikeRuleError("Só um administrador da agência registra aprovação por outro canal.");
       if ((opts.justification ?? "").trim().length < 10) throw new LikeRuleError("Explique como o cliente aprovou (mínimo de 10 caracteres).");
     } else if (actor.kind === "agency") throw new LikeRuleError("A decisão é do cliente, no Like.");
+    else if (actor.kind === "guest") { if (!opts.guestLink) throw new LikeRuleError("Convidados decidem só pelo link de aprovação."); }
     else if (!(s.approvers.get(it.brandId) ?? []).some((a) => a.userId === actor.id && a.role === "aprovador")) throw new LikeRuleError("Você não está entre os aprovadores deste cliente.");
     if (!PENDING.includes(it.status)) {
       if (["aprovado", "agendado"].includes(it.status) && decision === "approved") return { status: it.status, decisionId: null };
@@ -460,16 +478,17 @@ export async function decide(itemId: string, versionId: string, decision: Exclud
     if (decision === "changes_requested" && settings.requireCommentOnAdjust && !(opts.note ?? "").trim() && !(opts.phrases ?? []).length && !openComments)
       throw new LikeRuleError("Diga o que ajustar: comente no material ou escolha uma frase.");
     const prior = demoPrior(it);
-    const row = { id: uid("ld"), itemId, versionId, decision, decidedBy: actor.id, deciderName: actor.name, deciderKind: actor.kind, note: opts.note?.trim() || null, phrases: opts.phrases ?? [], via, justification: opts.justification?.trim() || null, undoes: null, createdAt: nowISO(), prior };
+    const row = { id: uid("ld"), itemId, versionId, decision, decidedBy: actor.id, deciderName: actor.name, deciderKind: actor.kind, note: opts.note?.trim() || null, phrases: opts.phrases ?? [], via, justification: opts.justification?.trim() || null, undoes: null, createdAt: nowISO(), prior, guestEmail: actor.kind === "guest" ? actor.email ?? null : null };
     s.decisions.push(row);
     log(it, it.roundId, "decidido", actor, { decision, decisionId: row.id });
+    demoNotify(TEAM_IDS, { brandSlug: it.brandSlug, kind: decision === "changes_requested" ? "like.ajuste" : "like.decisao", title: `${actor.name}${decision === "approved" ? " aprovou " : decision === "changes_requested" ? " pediu ajustes em " : " reprovou "}${it.title}`, body: [...(opts.phrases ?? []), opts.note].filter(Boolean).join(" · ") || null, link: itemLink(it) }, actor.id);
     const v = s.versions.find((x) => x.id === versionId)!;
     // Espelho no histórico de indicadores do 360.
     likeDecisionsDemo(it.brandSlug).push({ id: row.id, material: it.title, front: it.frontName ?? KIND_LABEL[it.kind], decision: decision === "approved" ? "aprovado" : "ajustes", sentAt: it.sentAt ?? it.createdAt, decidedAt: row.createdAt, round: v.number });
     if (decision === "approved") {
       const approvers = (s.approvers.get(it.brandId) ?? []).filter((a) => a.role === "aprovador");
       const done = new Set(s.decisions.filter((d) => d.itemId === itemId && d.versionId === versionId && d.decision === "approved" && !s.decisions.some((u) => u.undoes === d.id)).map((d) => d.decidedBy));
-      const ok = settings.rule === "qualquer" || via === "outro_canal" || approvers.every((a) => done.has(a.userId));
+      const ok = settings.rule === "qualquer" || via === "outro_canal" || actor.kind === "guest" || approvers.every((a) => done.has(a.userId));
       if (ok) applyApproval(it, v); else it.status = "em_revisao";
     } else if (decision === "changes_requested") {
       it.status = "ajustes"; it.decidedAt = nowISO();
@@ -545,7 +564,15 @@ export async function markViewed(itemId: string, versionId: string, actor: Actor
 export async function remindApprovers(itemIds: string[], actor: Actor = demoActor()): Promise<number> {
   if (isDemoMode()) {
     let n = 0;
-    for (const id of itemIds) { const it = S().items.find((x) => x.id === id); if (it && PENDING.includes(it.status)) { log(it, it.roundId, "lembrete", actor); n++; } }
+    for (const id of itemIds) {
+      const it = S().items.find((x) => x.id === id);
+      if (!it || !PENDING.includes(it.status)) continue;
+      log(it, it.roundId, "lembrete", actor);
+      // No máximo 1 lembrete por pessoa por dia, fora do horário silencioso (A4).
+      const who = (S().approvers.get(it.brandId) ?? []).filter((a) => a.role === "aprovador" && !inQuiet(demoPrefsOf(a.userId))).map((a) => a.userId);
+      demoNotify(who, { brandSlug: it.brandSlug, kind: "like.lembrete", title: "Materiais esperando sua aprovação", body: it.title, link: `/like/${it.brandSlug}`, dedupeKey: `lembrete:${today10()}` }, actor.id);
+      n++;
+    }
     return n;
   }
   const { data } = await db.from("like_items").select("id, brand_id, round_id").in("id", itemIds).in("status", PENDING);
@@ -654,7 +681,7 @@ function mapItemFull(i: any): ItemFull {
     currentVersionId: i.current_version_id, priority: i.priority, orderIndex: i.order_index, sentAt: i.sent_at, decidedAt: i.decided_at, publishedLink: i.published_link, isExample: i.is_example, createdAt: i.created_at, coverTone: i.cover_tone ?? null,
     versions, current: versions.find((v) => v.id === i.current_version_id) ?? versions[versions.length - 1] ?? null,
     comments: ((i.like_comments ?? []) as any[]).filter((c) => !c.deleted_at).map(mapComment),
-    decisions: ((i.like_decisions ?? []) as any[]).map((d) => ({ id: d.id, itemId: d.item_id, versionId: d.version_id, decision: d.decision, decidedBy: d.decided_by, deciderName: d.decider_name, deciderKind: d.decider_kind, note: d.note, phrases: d.phrases ?? [], via: d.via, justification: d.justification, undoes: d.undoes, createdAt: d.created_at })),
+    decisions: ((i.like_decisions ?? []) as any[]).map((d) => ({ id: d.id, itemId: d.item_id, versionId: d.version_id, decision: d.decision, decidedBy: d.decided_by, deciderName: d.decider_name, deciderKind: d.decider_kind, note: d.note, phrases: d.phrases ?? [], via: d.via, justification: d.justification, undoes: d.undoes, createdAt: d.created_at, guestEmail: d.guest_email ?? null })),
     views: [],
   };
 }
@@ -725,4 +752,140 @@ export function embedUrl(url: string): string | null {
   const dr = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
   if (dr) return `https://drive.google.com/file/d/${dr[1]}/preview`;
   return null;
+}
+
+// ----- Links de aprovação externos (página 23) ------------------------------------------------
+
+export type ShareLink = { id: string; brandId: string; roundId: string | null; itemId: string | null; label: string | null; canComment: boolean; canDecide: boolean; email: string | null; expiresAt: string; revokedAt: string | null; lastUsedAt: string | null; uses: number; createdAt: string };
+export type LinkStatus = "ok" | "invalido" | "revogado" | "expirado" | "bloqueado";
+export type GuestView = { status: LinkStatus; brand?: string; canComment?: boolean; canDecide?: boolean; needsCode?: boolean; expiresAt?: string; items?: { id: string; title: string; kind: ItemKind; status: ItemStatus; publishAt: string | null; presetDimension: string | null; version: Version | null; comments: { authorName: string; body: string; createdAt: string }[] }[] };
+export type Guest = { name: string; email: string; code?: string };
+
+const demoLinks: (ShareLink & { tokenHash: string; failed: number; code?: { hash: string; until: number; attempts: number } })[] = [];
+async function sha256(text: string) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+const newToken = () => [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, "0")).join("");
+const mapLink = (l: any): ShareLink => ({ id: l.id, brandId: l.brand_id, roundId: l.round_id, itemId: l.item_id, label: l.label, canComment: l.can_comment, canDecide: l.can_decide, email: l.email, expiresAt: l.expires_at, revokedAt: l.revoked_at, lastUsedAt: l.last_used_at, uses: l.uses, createdAt: l.created_at });
+export const linkUrl = (token: string) => `${typeof window !== "undefined" ? window.location.origin : ""}/l/${token}`;
+
+export async function listLinks(brandId: string): Promise<ShareLink[]> {
+  if (isDemoMode()) return demoLinks.filter((l) => l.brandId === brandId).map(({ tokenHash: _t, failed: _f, code: _c, ...l }) => clone(l)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const { data } = await db.from("like_share_links").select("*").eq("brand_id", brandId).order("created_at", { ascending: false });
+  return ((data ?? []) as any[]).map(mapLink);
+}
+
+/** Gera o link. O token volta só agora (no banco fica o hash). */
+export async function createLink(input: { brandId: string; roundId?: string | null; itemId?: string | null; canComment: boolean; canDecide: boolean; days?: number; email?: string | null; label?: string | null }): Promise<{ id: string; token: string; url: string }> {
+  const days = Math.max(1, Math.min(60, input.days ?? 7));
+  if (isDemoMode()) {
+    const settings = S().settings.get(input.brandId) ?? DEFAULT_SETTINGS;
+    if (!settings.allowShareLinks) throw new Error("Links externos estão desligados para este cliente.");
+    const token = newToken();
+    const l = { id: uid("sl"), brandId: input.brandId, roundId: input.roundId ?? null, itemId: input.itemId ?? null, label: input.label ?? null, canComment: input.canComment, canDecide: input.canDecide, email: input.email?.trim().toLowerCase() || null, expiresAt: new Date(Date.now() + days * 86400e3).toISOString(), revokedAt: null, lastUsedAt: null, uses: 0, createdAt: nowISO(), tokenHash: await sha256(token), failed: 0 };
+    demoLinks.push(l);
+    return { id: l.id, token, url: linkUrl(token) };
+  }
+  const { data, error } = await db.rpc("like_link_create", { p_brand: input.brandId, p_round: input.roundId ?? null, p_item: input.itemId ?? null, p_comment: input.canComment, p_decide: input.canDecide, p_days: days, p_email: input.email ?? null, p_label: input.label ?? null });
+  if (error) throw error;
+  return { id: data.id, token: data.token, url: linkUrl(data.token) };
+}
+
+export async function revokeLink(id: string) {
+  if (isDemoMode()) { const l = demoLinks.find((x) => x.id === id); if (l) l.revokedAt = nowISO(); return; }
+  const { error } = await db.rpc("like_link_revoke", { p_id: id });
+  if (error) throw error;
+}
+
+async function demoCheck(token: string) {
+  const h = await sha256(token);
+  const l = demoLinks.find((x) => x.tokenHash === h);
+  if (!l) return { status: "invalido" as const };
+  if (l.revokedAt) return { status: "revogado" as const };
+  if (l.expiresAt < nowISO()) return { status: "expirado" as const };
+  if (l.failed >= 10) return { status: "bloqueado" as const };
+  return { status: "ok" as const, l };
+}
+const guestActor = (g: Guest): Actor => ({ id: `guest:${g.email.trim().toLowerCase()}`, name: g.name.trim(), kind: "guest", email: g.email.trim().toLowerCase() });
+function checkGuest(g: Guest) {
+  if (g.name.trim().length < 2 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(g.email.trim())) throw new LikeRuleError("Informe seu nome e e-mail.");
+}
+async function demoGuestOk(l: (typeof demoLinks)[number], g: Guest) {
+  if (!l.email) return true;
+  if (g.email.trim().toLowerCase() !== l.email || !l.code || l.code.until < Date.now() || l.code.attempts >= 5) return false;
+  if (l.code.hash !== (await sha256(`${g.code ?? ""}${l.id}`))) { l.code.attempts++; l.failed++; return false; }
+  return true;
+}
+const inLink = (l: ShareLink, it: Item) => it.id === l.itemId || (!l.itemId && it.roundId === l.roundId);
+
+/** Abre o link: revogado, expirado ou inválido não devolve nenhum material (A2). */
+export async function openLink(token: string): Promise<GuestView> {
+  if (isDemoMode()) {
+    const c = await demoCheck(token);
+    if (c.status !== "ok") return { status: c.status };
+    const l = c.l; l.uses++; l.lastUsedAt = nowISO();
+    const brand = S().items.find((i) => i.brandId === l.brandId)?.brandName ?? S().rounds.find((r) => r.brandId === l.brandId)?.brandName ?? "Cliente";
+    const items = S().items.filter((i) => inLink(l, i) && !["rascunho", "cancelado"].includes(i.status)).sort((a, b) => a.orderIndex - b.orderIndex).map((i) => ({
+      id: i.id, title: i.title, kind: i.kind, status: i.status, publishAt: i.publishAt, presetDimension: i.presetDimension,
+      version: clone(S().versions.find((v) => v.id === i.currentVersionId) ?? null),
+      comments: S().comments.filter((x) => x.itemId === i.id && !x.internal && !x.deletedAt).map((x) => ({ authorName: x.authorName, body: x.body, createdAt: x.createdAt })),
+    }));
+    return { status: "ok", brand, canComment: l.canComment, canDecide: l.canDecide, needsCode: !!l.email, expiresAt: l.expiresAt, items };
+  }
+  const { data, error } = await db.rpc("like_link_open", { p_token: token });
+  if (error) return { status: "invalido" };
+  if (data.status !== "ok") return { status: data.status };
+  return { status: "ok", brand: data.brand, canComment: data.can_comment, canDecide: data.can_decide, needsCode: data.needs_code, expiresAt: data.expires_at,
+    items: (data.items ?? []).map((i: any) => ({ id: i.id, title: i.title, kind: i.kind, status: i.status, publishAt: i.publish_at, presetDimension: i.preset_dimension, version: i.version ? mapVersion(i.version) : null, comments: (i.comments ?? []).map((c: any) => ({ authorName: c.author_name, body: c.body, createdAt: c.created_at })) })) };
+}
+
+/** Pede o código de verificação (link restrito a um e-mail). No demo, o código volta para ser mostrado na tela. */
+export async function requestLinkCode(token: string, email: string): Promise<{ sent: boolean; demoCode?: string }> {
+  if (isDemoMode()) {
+    const c = await demoCheck(token);
+    if (c.status !== "ok") throw new LikeRuleError("Este link não está mais ativo.");
+    if (!c.l.email) return { sent: true };
+    if (email.trim().toLowerCase() !== c.l.email) { c.l.failed++; return { sent: false }; }
+    const code = String(Math.floor(Math.random() * 1e6)).padStart(6, "0");
+    c.l.code = { hash: await sha256(`${code}${c.l.id}`), until: Date.now() + 15 * 60e3, attempts: 0 };
+    return { sent: true, demoCode: code };
+  }
+  const { data, error } = await supabase.functions.invoke("like-link-code", { body: { token, email } });
+  if (error) throw error;
+  return { sent: !!data?.sent };
+}
+
+export async function guestComment(token: string, g: Guest, itemId: string, body: string) {
+  checkGuest(g);
+  if (!body.trim()) throw new LikeRuleError("Escreva o comentário.");
+  if (isDemoMode()) {
+    const c = await demoCheck(token);
+    if (c.status !== "ok") throw new LikeRuleError("Este link não está mais ativo.");
+    if (!c.l.canComment) throw new LikeRuleError("Este link não permite comentar.");
+    if (!(await demoGuestOk(c.l, g))) throw new LikeRuleError("Código inválido.");
+    const it = S().items.find((i) => i.id === itemId);
+    if (!it || !inLink(c.l, it)) throw new LikeRuleError("Material fora deste link.");
+    return addComment(itemId, { body }, guestActor(g));
+  }
+  const { error } = await db.rpc("like_guest_comment", { p_token: token, p_name: g.name, p_email: g.email, p_code: g.code ?? null, p_item: itemId, p_body: body });
+  if (error) throw new LikeRuleError(error.message);
+}
+
+export async function guestDecide(token: string, g: Guest, itemId: string, decision: Exclude<Decision, "undone">, note?: string, phrases: string[] = []): Promise<ItemStatus> {
+  checkGuest(g);
+  if (isDemoMode()) {
+    const c = await demoCheck(token);
+    if (c.status !== "ok") throw new LikeRuleError("Este link não está mais ativo.");
+    if (!c.l.canDecide) throw new LikeRuleError("Este link não permite decidir.");
+    if (!(await demoGuestOk(c.l, g))) throw new LikeRuleError("Código inválido.");
+    const it = S().items.find((i) => i.id === itemId);
+    if (!it || !inLink(c.l, it)) throw new LikeRuleError("Material fora deste link.");
+    if (decision !== "approved" && !note?.trim() && !phrases.length) throw new LikeRuleError("Diga o que ajustar.");
+    const r = await decide(itemId, it.currentVersionId!, decision, { note, phrases, actor: guestActor(g), guestLink: true });
+    return r.status;
+  }
+  const { data, error } = await db.rpc("like_guest_decide", { p_token: token, p_name: g.name, p_email: g.email, p_code: g.code ?? null, p_item: itemId, p_decision: decision, p_note: note ?? null, p_phrases: phrases });
+  if (error) throw new LikeRuleError(error.message);
+  return data as ItemStatus;
 }

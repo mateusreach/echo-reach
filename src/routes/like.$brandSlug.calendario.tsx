@@ -30,7 +30,7 @@ function PublishCalendar() {
   const [ready, setReady] = useState(false);
   const [viewAs, setViewAs] = useState(false);
   useEffect(() => { setReady(true); setViewAs(isViewingAsClient()); }, []);
-  const team = !!isTeam && !viewAs;
+  const team = ready && !!isTeam && !viewAs;
   const items = useQuery({ queryKey: ["like-items", brandSlug, viewAs], queryFn: () => listItems({ brandSlug }), enabled: ready });
   const rounds = useQuery({ queryKey: ["like-rounds", brandSlug, viewAs], queryFn: () => listRounds(brandSlug), enabled: ready });
   const space = useQuery({ queryKey: ["space", brandSlug], queryFn: () => loadSpace(brandSlug), enabled: ready });

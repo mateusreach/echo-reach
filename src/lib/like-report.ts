@@ -98,8 +98,8 @@ export const fmtHours = (h: number | null) => (h === null ? "—" : h < 1 ? "men
 export function decisionsCsv(r: Report): string {
   const DEC: Record<string, string> = { approved: "aprovado", changes_requested: "ajustes", rejected: "reprovado" };
   const esc = (v: unknown) => { const s = v === null || v === undefined ? "" : String(v); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  const head = ["data", "cliente", "material", "formato", "frente", "versao", "decisao", "quem", "via", "frases", "observacao", "justificativa"];
-  const rows = r.decisions.map((d) => [d.createdAt, d.item.brandName, d.item.title, d.item.kind, d.item.frontName ?? "", d.item.versions.find((v) => v.id === d.versionId)?.number ?? "", DEC[d.decision] ?? d.decision, d.deciderName ?? "", d.via, d.phrases.join(" | "), d.note ?? "", d.justification ?? ""]);
+  const head = ["data", "cliente", "material", "formato", "frente", "versao", "decisao", "quem", "email_convidado", "via", "frases", "observacao", "justificativa"];
+  const rows = r.decisions.map((d) => [d.createdAt, d.item.brandName, d.item.title, d.item.kind, d.item.frontName ?? "", d.item.versions.find((v) => v.id === d.versionId)?.number ?? "", DEC[d.decision] ?? d.decision, d.deciderName ?? "", d.guestEmail ?? "", d.via, d.phrases.join(" | "), d.note ?? "", d.justification ?? ""]);
   return "﻿" + [head, ...rows].map((row) => row.map(esc).join(";")).join("\n");
 }
 

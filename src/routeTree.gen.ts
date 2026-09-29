@@ -40,6 +40,7 @@ import { Route as ClientesIndexRouteImport } from './routes/clientes.index'
 import { Route as ClientesBrandSlugRouteImport } from './routes/clientes.$brandSlug'
 import { Route as E360IndexRouteImport } from './routes/e360.index'
 import { Route as E360BrandSlugRouteImport } from './routes/e360.$brandSlug'
+import { Route as LTokenRouteImport } from './routes/l.$token'
 import { Route as LikeIndexRouteImport } from './routes/like.index'
 import { Route as LikeDiagnosticoRouteImport } from './routes/like.diagnostico'
 import { Route as LikePainelRouteImport } from './routes/like.painel'
@@ -68,6 +69,7 @@ import { Route as E360BrandSlugPlanoRouteImport } from './routes/e360.$brandSlug
 import { Route as E360BrandSlugResultadosRouteImport } from './routes/e360.$brandSlug.resultados'
 import { Route as LikeBrandSlugIndexRouteImport } from './routes/like.$brandSlug.index'
 import { Route as LikeBrandSlugCalendarioRouteImport } from './routes/like.$brandSlug.calendario'
+import { Route as LikeBrandSlugConfiguracoesRouteImport } from './routes/like.$brandSlug.configuracoes'
 import { Route as LikeBrandSlugEnviarRouteImport } from './routes/like.$brandSlug.enviar'
 import { Route as LikeBrandSlugGradeRouteImport } from './routes/like.$brandSlug.grade'
 import { Route as LikeBrandSlugHistoricoRouteImport } from './routes/like.$brandSlug.historico'
@@ -232,6 +234,11 @@ const E360BrandSlugRoute = E360BrandSlugRouteImport.update({
   path: '/$brandSlug',
   getParentRoute: () => E360Route,
 } as any)
+const LTokenRoute = LTokenRouteImport.update({
+  id: '/l/$token',
+  path: '/l/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LikeIndexRoute = LikeIndexRouteImport.update({
   id: '/like/',
   path: '/like/',
@@ -373,6 +380,12 @@ const LikeBrandSlugCalendarioRoute = LikeBrandSlugCalendarioRouteImport.update({
   path: '/like/$brandSlug/calendario',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LikeBrandSlugConfiguracoesRoute =
+  LikeBrandSlugConfiguracoesRouteImport.update({
+    id: '/like/$brandSlug/configuracoes',
+    path: '/like/$brandSlug/configuracoes',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LikeBrandSlugEnviarRoute = LikeBrandSlugEnviarRouteImport.update({
   id: '/like/$brandSlug/enviar',
   path: '/like/$brandSlug/enviar',
@@ -447,6 +460,7 @@ export interface FileRoutesByFullPath {
   '/agencia/modelos': typeof AgenciaModelosRoute
   '/clientes/$brandSlug': typeof ClientesBrandSlugRoute
   '/e360/$brandSlug': typeof E360BrandSlugRouteWithChildren
+  '/l/$token': typeof LTokenRoute
   '/like/diagnostico': typeof LikeDiagnosticoRoute
   '/like/painel': typeof LikePainelRoute
   '/workspace/agenda': typeof WorkspaceAgendaRoute
@@ -476,6 +490,7 @@ export interface FileRoutesByFullPath {
   '/e360/$brandSlug/plano': typeof E360BrandSlugPlanoRoute
   '/e360/$brandSlug/resultados': typeof E360BrandSlugResultadosRoute
   '/like/$brandSlug/calendario': typeof LikeBrandSlugCalendarioRoute
+  '/like/$brandSlug/configuracoes': typeof LikeBrandSlugConfiguracoesRoute
   '/like/$brandSlug/enviar': typeof LikeBrandSlugEnviarRoute
   '/like/$brandSlug/grade': typeof LikeBrandSlugGradeRoute
   '/like/$brandSlug/historico': typeof LikeBrandSlugHistoricoRoute
@@ -512,6 +527,7 @@ export interface FileRoutesByTo {
   '/agencia/modelos': typeof AgenciaModelosRoute
   '/clientes/$brandSlug': typeof ClientesBrandSlugRoute
   '/e360/$brandSlug': typeof E360BrandSlugRouteWithChildren
+  '/l/$token': typeof LTokenRoute
   '/like/diagnostico': typeof LikeDiagnosticoRoute
   '/like/painel': typeof LikePainelRoute
   '/workspace/agenda': typeof WorkspaceAgendaRoute
@@ -541,6 +557,7 @@ export interface FileRoutesByTo {
   '/e360/$brandSlug/plano': typeof E360BrandSlugPlanoRoute
   '/e360/$brandSlug/resultados': typeof E360BrandSlugResultadosRoute
   '/like/$brandSlug/calendario': typeof LikeBrandSlugCalendarioRoute
+  '/like/$brandSlug/configuracoes': typeof LikeBrandSlugConfiguracoesRoute
   '/like/$brandSlug/enviar': typeof LikeBrandSlugEnviarRoute
   '/like/$brandSlug/grade': typeof LikeBrandSlugGradeRoute
   '/like/$brandSlug/historico': typeof LikeBrandSlugHistoricoRoute
@@ -582,6 +599,7 @@ export interface FileRoutesById {
   '/agencia/modelos': typeof AgenciaModelosRoute
   '/clientes/$brandSlug': typeof ClientesBrandSlugRoute
   '/e360/$brandSlug': typeof E360BrandSlugRouteWithChildren
+  '/l/$token': typeof LTokenRoute
   '/like/diagnostico': typeof LikeDiagnosticoRoute
   '/like/painel': typeof LikePainelRoute
   '/workspace/agenda': typeof WorkspaceAgendaRoute
@@ -611,6 +629,7 @@ export interface FileRoutesById {
   '/e360/$brandSlug/plano': typeof E360BrandSlugPlanoRoute
   '/e360/$brandSlug/resultados': typeof E360BrandSlugResultadosRoute
   '/like/$brandSlug/calendario': typeof LikeBrandSlugCalendarioRoute
+  '/like/$brandSlug/configuracoes': typeof LikeBrandSlugConfiguracoesRoute
   '/like/$brandSlug/enviar': typeof LikeBrandSlugEnviarRoute
   '/like/$brandSlug/grade': typeof LikeBrandSlugGradeRoute
   '/like/$brandSlug/historico': typeof LikeBrandSlugHistoricoRoute
@@ -653,6 +672,7 @@ export interface FileRouteTypes {
     | '/agencia/modelos'
     | '/clientes/$brandSlug'
     | '/e360/$brandSlug'
+    | '/l/$token'
     | '/like/diagnostico'
     | '/like/painel'
     | '/workspace/agenda'
@@ -682,6 +702,7 @@ export interface FileRouteTypes {
     | '/e360/$brandSlug/plano'
     | '/e360/$brandSlug/resultados'
     | '/like/$brandSlug/calendario'
+    | '/like/$brandSlug/configuracoes'
     | '/like/$brandSlug/enviar'
     | '/like/$brandSlug/grade'
     | '/like/$brandSlug/historico'
@@ -718,6 +739,7 @@ export interface FileRouteTypes {
     | '/agencia/modelos'
     | '/clientes/$brandSlug'
     | '/e360/$brandSlug'
+    | '/l/$token'
     | '/like/diagnostico'
     | '/like/painel'
     | '/workspace/agenda'
@@ -747,6 +769,7 @@ export interface FileRouteTypes {
     | '/e360/$brandSlug/plano'
     | '/e360/$brandSlug/resultados'
     | '/like/$brandSlug/calendario'
+    | '/like/$brandSlug/configuracoes'
     | '/like/$brandSlug/enviar'
     | '/like/$brandSlug/grade'
     | '/like/$brandSlug/historico'
@@ -787,6 +810,7 @@ export interface FileRouteTypes {
     | '/agencia/modelos'
     | '/clientes/$brandSlug'
     | '/e360/$brandSlug'
+    | '/l/$token'
     | '/like/diagnostico'
     | '/like/painel'
     | '/workspace/agenda'
@@ -816,6 +840,7 @@ export interface FileRouteTypes {
     | '/e360/$brandSlug/plano'
     | '/e360/$brandSlug/resultados'
     | '/like/$brandSlug/calendario'
+    | '/like/$brandSlug/configuracoes'
     | '/like/$brandSlug/enviar'
     | '/like/$brandSlug/grade'
     | '/like/$brandSlug/historico'
@@ -849,6 +874,7 @@ export interface RootRouteChildren {
   ResultadosRoute: typeof ResultadosRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WorkspaceRoute: typeof WorkspaceRouteWithChildren
+  LTokenRoute: typeof LTokenRoute
   LikeDiagnosticoRoute: typeof LikeDiagnosticoRoute
   LikePainelRoute: typeof LikePainelRoute
   LikeIndexRoute: typeof LikeIndexRoute
@@ -859,6 +885,7 @@ export interface RootRouteChildren {
   BBrandSlugPlanoRoute: typeof BBrandSlugPlanoRoute
   BBrandSlugResultadosRoute: typeof BBrandSlugResultadosRoute
   LikeBrandSlugCalendarioRoute: typeof LikeBrandSlugCalendarioRoute
+  LikeBrandSlugConfiguracoesRoute: typeof LikeBrandSlugConfiguracoesRoute
   LikeBrandSlugEnviarRoute: typeof LikeBrandSlugEnviarRoute
   LikeBrandSlugGradeRoute: typeof LikeBrandSlugGradeRoute
   LikeBrandSlugHistoricoRoute: typeof LikeBrandSlugHistoricoRoute
@@ -1088,6 +1115,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof E360BrandSlugRouteImport
       parentRoute: typeof E360Route
     }
+    '/l/$token': {
+      id: '/l/$token'
+      path: '/l/$token'
+      fullPath: '/l/$token'
+      preLoaderRoute: typeof LTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/like/': {
       id: '/like/'
       path: '/like'
@@ -1284,6 +1318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LikeBrandSlugCalendarioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/like/$brandSlug/configuracoes': {
+      id: '/like/$brandSlug/configuracoes'
+      path: '/like/$brandSlug/configuracoes'
+      fullPath: '/like/$brandSlug/configuracoes'
+      preLoaderRoute: typeof LikeBrandSlugConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/like/$brandSlug/enviar': {
       id: '/like/$brandSlug/enviar'
       path: '/like/$brandSlug/enviar'
@@ -1469,6 +1510,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResultadosRoute: ResultadosRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WorkspaceRoute: WorkspaceRouteWithChildren,
+  LTokenRoute: LTokenRoute,
   LikeDiagnosticoRoute: LikeDiagnosticoRoute,
   LikePainelRoute: LikePainelRoute,
   LikeIndexRoute: LikeIndexRoute,
@@ -1479,6 +1521,7 @@ const rootRouteChildren: RootRouteChildren = {
   BBrandSlugPlanoRoute: BBrandSlugPlanoRoute,
   BBrandSlugResultadosRoute: BBrandSlugResultadosRoute,
   LikeBrandSlugCalendarioRoute: LikeBrandSlugCalendarioRoute,
+  LikeBrandSlugConfiguracoesRoute: LikeBrandSlugConfiguracoesRoute,
   LikeBrandSlugEnviarRoute: LikeBrandSlugEnviarRoute,
   LikeBrandSlugGradeRoute: LikeBrandSlugGradeRoute,
   LikeBrandSlugHistoricoRoute: LikeBrandSlugHistoricoRoute,
