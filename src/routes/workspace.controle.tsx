@@ -7,6 +7,8 @@ import { Field, Segmented, Select } from "@/components/echo/controls";
 import { Drawer } from "@/components/echo/overlays";
 import {
   ActiveFilters,
+  CoverageGantt,
+  CoverageHorizon,
   CoverageLegend,
   CoverageTimeline,
   DetailFacts,
@@ -30,6 +32,10 @@ import {
 } from "@/lib/workspace-data";
 import { demoApprove, ensureCycle, listOpsFronts, subscribeFronts } from "@/lib/ops-data";
 import { isDemoMode } from "@/lib/home-data";
+import { addDaysISO } from "@/lib/coverage-scale";
+
+const CYCLE_DAYS: Record<string, number> = { weekly: 7, biweekly: 14, monthly: 30, oneoff: 1 };
+const WINDOW = 35;
 
 export const Route = createFileRoute("/workspace/controle")({
   head: () => ({
@@ -50,6 +56,12 @@ const COLORS: Record<RiskLevel, string> = {
   orange: "var(--warn)",
   yellow: "var(--review)",
   green: "var(--ok)",
+};
+const FILLS: Record<RiskLevel, string> = {
+  red: "var(--danger-fill)",
+  orange: "var(--warn-fill)",
+  yellow: "var(--review-fill)",
+  green: "var(--ok-fill)",
 };
 const TONES = { red: "late", orange: "adjust", yellow: "review", green: "done" } as const;
 const ICONS = { red: "alert", orange: "clock", yellow: "eye", green: "checkCircle" };
@@ -85,6 +97,8 @@ function CoverageControl() {
   const [ready, setReady] = useState(false);
   const now = today();
   const [ym, setYm] = useState({ y: now.getFullYear(), m: now.getMonth() });
+  const [range, setRange] = useState<"janela" | "mes">("janela");
+  const [weekShift, setWeekShift] = useState(0);
   const [f, setF] = useState(EMPTY_FILTERS);
   const [view, setView] = useState<"timeline" | "list">("timeline");
   const [selected, setSelected] = useState<string | null>(null);
@@ -142,12 +156,17 @@ function CoverageControl() {
         a.brand.name.localeCompare(b.brand.name, "pt-BR"),
     );
   const active = all.find((x) => x.front.id === selected);
-  const isNow = ym.y === now.getFullYear() && ym.m === now.getMonth();
-  const monthLabel = new Date(ym.y, ym.m, 1).toLocaleDateString("pt-BR", {
-    month: "long",
-    year: "numeric",
-  });
+  const todayISO = toISO(now);
+  const winStart = range === "janela" ? addDaysISO(todayISO, -7 + weekShift * 7) : toISO(new Date(ym.y, ym.m, 1));
+  const winDays = range === "janela" ? WINDOW : new Date(ym.y, ym.m + 1, 0).getDate();
+  const winEnd = addDaysISO(winStart, winDays - 1);
+  const isNow = range === "janela" ? weekShift === 0 : ym.y === now.getFullYear() && ym.m === now.getMonth();
+  const fmt = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "");
+  const monthLabel = range === "janela"
+    ? `${fmt(winStart)} – ${fmt(winEnd)}`
+    : new Date(ym.y, ym.m, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   const shift = (by: number) => {
+    if (range === "janela") { setWeekShift((w) => w + by); return; }
     const d = new Date(ym.y, ym.m + by, 1);
     setYm({ y: d.getFullYear(), m: d.getMonth() });
   };
@@ -182,9 +201,12 @@ function CoverageControl() {
     nextEnd: x.period.end,
     status: RISK_LABELS[x.level],
     color: COLORS[x.level],
+    fill: FILLS[x.level],
     hint: riskHint(x),
     lead: x.front.lead_days,
     updated: flash.includes(x.front.id),
+    cycleDays: CYCLE_DAYS[x.front.recurrence] ?? 7,
+    diff: x.diff,
   }));
   const activeFilters = [
     { id: "search", label: `Busca: ${f.search}`, value: f.search },
@@ -256,9 +278,19 @@ function CoverageControl() {
             label={monthLabel[0].toUpperCase() + monthLabel.slice(1)}
             onPrevious={() => shift(-1)}
             onNext={() => shift(1)}
-            onToday={() => setYm({ y: now.getFullYear(), m: now.getMonth() })}
+            onToday={() => { setWeekShift(0); setYm({ y: now.getFullYear(), m: now.getMonth() }); }}
             current={isNow}
           />
+          <Segmented
+            label="Período"
+            value={range}
+            onChange={(v) => { setRange(v); setWeekShift(0); }}
+            items={[
+              { value: "janela", label: "5 semanas" },
+              { value: "mes", label: "Mês" },
+            ]}
+          />
+          <span style={{ flex: 1 }} />
           <Segmented
             label="Visualização da cobertura"
             value={view}
@@ -326,6 +358,20 @@ function CoverageControl() {
               </Button>
             }
           />
+        ) : view === "timeline" ? (
+          <>
+            <CoverageHorizon rows={rows} start={winStart} days={winDays} today={todayISO} />
+            <CoverageGantt
+              rows={rows}
+              start={winStart}
+              days={winDays}
+              today={todayISO}
+              busyId={busy}
+              createdIds={all.filter((x) => created.includes(cycleKey(x))).map((x) => x.front.id)}
+              onInspect={setSelected}
+              onCreate={createCycle}
+            />
+          </>
         ) : (
           <CoverageTimeline
             rows={rows}

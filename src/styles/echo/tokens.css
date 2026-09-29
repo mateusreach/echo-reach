@@ -115,6 +115,8 @@
   --e-info: #2B6FD0;     --info-soft: rgba(43, 111, 208, .11);
   --neutral: #6A6D7C;  --neutral-soft: rgba(106, 109, 124, .12);
   --review: #7A55D9;   --review-soft: rgba(122, 85, 217, .12);
+  /* Preenchimentos de status: cor viva para faixas, pílulas e barras (o texto usa --warn, --danger…). */
+  --ok-fill: #3CC48E; --warn-fill: #F5B83D; --danger-fill: #F0607A; --review-fill: #9D7FF2; --info-fill: #5A95F2;
 
   /* ---------- Caminho de cor (padrão: Íris) ---------- */
   --p1: #6B4FE8; --p2: #9C80F5; --p3: #D5C7FF;
@@ -180,6 +182,7 @@
     --e-info: #7DB3FF; --info-soft: rgba(125, 179, 255, .13);
     --neutral: #A2A5B4; --neutral-soft: rgba(162, 165, 180, .12);
     --review: #B79BFF; --review-soft: rgba(183, 155, 255, .14);
+    --ok-fill: #4FD49B; --warn-fill: #F6BD52; --danger-fill: #FF6B7E; --review-fill: #B79BFF; --info-fill: #7DB3FF;
     --accent-ink: var(--accent-ink-d);
   }
 }
@@ -207,5 +210,6 @@
   --e-info: #7DB3FF; --info-soft: rgba(125, 179, 255, .13);
   --neutral: #A2A5B4; --neutral-soft: rgba(162, 165, 180, .12);
   --review: #B79BFF; --review-soft: rgba(183, 155, 255, .14);
+  --ok-fill: #4FD49B; --warn-fill: #F6BD52; --danger-fill: #FF6B7E; --review-fill: #B79BFF; --info-fill: #7DB3FF;
   --accent-ink: var(--accent-ink-d);
 }

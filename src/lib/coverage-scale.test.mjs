@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { monthScale } from "./coverage-scale.ts";
+import { addDaysISO, daysBetween, monthScale, windowScale } from "./coverage-scale.ts";
 
 test("inclusive coverage clips at month boundaries without inventing days", () => {
   const m = monthScale(2026, 8);
@@ -40,4 +40,21 @@ test("calendar scale handles leap February and year transitions", () => {
     left: 0,
     width: (4 / 31) * 100,
   });
+});
+
+test("window scale spans months and keeps the today marker on its day", () => {
+  const w = windowScale("2026-09-22", 35);
+  assert.equal(w.dates[0], "2026-09-22");
+  assert.equal(w.dates[9], "2026-10-01");
+  assert.equal(w.marker("2026-09-29"), (7.5 / 35) * 100);
+  assert.equal(w.marker("2026-10-27"), null);
+  const iv = w.interval("2026-09-17", "2026-09-23");
+  assert.equal(iv.left, 0);
+  assert.equal(iv.clippedLeft, true);
+  assert.equal(iv.width, (2 / 35) * 100);
+});
+test("date helpers cross month and leap-year boundaries", () => {
+  assert.equal(addDaysISO("2028-02-28", 1), "2028-02-29");
+  assert.equal(addDaysISO("2026-09-30", 1), "2026-10-01");
+  assert.equal(daysBetween("2026-09-23", "2026-09-29"), 6);
 });

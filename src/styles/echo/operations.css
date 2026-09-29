@@ -88,3 +88,126 @@
   .e-coverage-cards { grid-template-columns:minmax(0,1fr); padding:12px; }
 }
 @media (prefers-reduced-motion:reduce) { .e-metric-filter { transition:none; } }
+
+/* ---------- Grade de cobertura em linhas (CoverageGantt) ---------- */
+.e-gantt { --id-w: 232px; --state-w: 196px; }
+.e-gantt { position: relative; overflow-x: auto; border-radius: var(--r-lg); background: var(--glass-strong); box-shadow: var(--glass-inset); }
+.e-gantt-head, .e-gantt-row { display: grid; grid-template-columns: var(--id-w) minmax(620px, 1fr) var(--state-w); align-items: stretch; }
+.e-gantt-head { position: sticky; top: 0; z-index: 3; background: var(--glass-strong); backdrop-filter: blur(16px); border-bottom: 1px solid var(--line); }
+.e-gantt-corner { display: flex; align-items: flex-end; padding: 0 16px 10px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.e-gantt-corner.right { justify-content: flex-end; }
+.e-gantt-scale { position: relative; display: grid; grid-template-columns: repeat(var(--days), 1fr); padding: 22px 0 10px; }
+.e-gantt-scale span { position: relative; display: grid; justify-items: center; gap: 2px; font-size: 11px; color: var(--ink-3); }
+.e-gantt-scale span small { font-size: 9.5px; letter-spacing: .04em; opacity: .75; }
+.e-gantt-scale span b { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; font-weight: 500; color: var(--ink-2); }
+.e-gantt-scale span.wk b { color: var(--ink-3); }
+.e-gantt-scale span.today b { background: var(--e-accent); color: #fff; font-weight: 700; box-shadow: 0 4px 12px -4px var(--e-accent); }
+.e-gantt-scale span.month em { position: absolute; top: -18px; left: 0; font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+.e-gantt-now-tag { position: absolute; bottom: -9px; transform: translateX(-50%); z-index: 2; font-style: normal; font-size: 9.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; color: #fff; background: var(--e-accent); }
+.e-gantt-body { position: relative; }
+.e-gantt-bg { position: absolute; top: 0; bottom: 0; left: var(--id-w); right: var(--state-w); display: grid; grid-template-columns: repeat(var(--days), 1fr); pointer-events: none; }
+.e-gantt-bg i { border-left: 1px solid color-mix(in oklab, var(--line) 70%, transparent); }
+.e-gantt-bg i.wk { background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--ink) 5%, transparent) 0 1px, transparent 1px 7px); }
+.e-gantt-now { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--e-accent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--e-accent) 14%, transparent); z-index: 1; }
+.e-gantt-row { position: relative; border-bottom: 1px solid color-mix(in oklab, var(--line) 70%, transparent); transition: background var(--dur-1) ease; }
+.e-gantt-row:last-child { border-bottom: 0; }
+.e-gantt-row:hover { background: color-mix(in oklab, var(--c) 5%, transparent); }
+.e-gantt-row.is-updated { animation: e-gantt-flash 1.6s var(--ease-out); }
+@keyframes e-gantt-flash { 0%, 30% { background: color-mix(in oklab, var(--ok) 16%, transparent); } }
+.e-gantt-id { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 0 16px; border: 0; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+.e-gantt-id > span { display: grid; min-width: 0; }
+.e-gantt-id b { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.e-gantt-id small { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
+.e-gantt-id:focus-visible { outline: none; box-shadow: inset var(--e-ring); border-radius: 12px; }
+.e-gantt-lane { position: relative; height: 60px; cursor: pointer; z-index: 2; }
+.e-gantt-lane > * { position: absolute; }
+.e-gantt-link { top: calc(50% - 1px); height: 2px; background: color-mix(in oklab, var(--c) 45%, transparent); border-radius: 2px; }
+.e-gantt-link::after { content: ""; position: absolute; right: -3px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--glass-strong); box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--c) 70%, transparent); }
+.e-gantt-pill { top: 11px; bottom: 11px; display: flex; align-items: center; gap: 7px; min-width: 0; padding: 0 12px 0 4px; border-radius: 999px; overflow: hidden; white-space: nowrap; color: #fff; background: linear-gradient(90deg, color-mix(in oklab, var(--c) 72%, white), var(--c)); box-shadow: 0 8px 18px -10px var(--c), inset 0 1px 0 rgba(255,255,255,.35); animation: e-gantt-grow .7s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 28ms); }
+.e-gantt-pill .e-logo { --sz: 30px; box-shadow: 0 0 0 2px rgba(255,255,255,.55); }
+.e-gantt-pill b { font-size: 12px; font-weight: 600; }
+.e-gantt-pill small { font-size: 11px; opacity: .9; }
+.e-gantt-pill.cut-left { border-top-left-radius: 6px; border-bottom-left-radius: 6px; padding-left: 8px; }
+.e-gantt-pill.cut-left .e-logo { display: none; }
+.e-gantt-pill.cut-right { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+@keyframes e-gantt-grow { from { clip-path: inset(0 100% 0 0 round 999px); } to { clip-path: inset(0 0 0 0 round 999px); } }
+.e-gantt-next { top: 15px; bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; overflow: hidden; white-space: nowrap; border-radius: 999px; font-size: 10.5px; font-weight: 500; color: var(--ink-2); background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--c) 10%, transparent) 0 4px, transparent 4px 8px), var(--glass-strong); box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--c) 45%, transparent); }
+.e-gantt-next.is-created { color: var(--ok); box-shadow: inset 0 0 0 1.5px var(--ok); background: color-mix(in oklab, var(--ok) 8%, var(--glass-strong)); }
+.e-gantt-gap { top: 20px; bottom: 20px; display: flex; align-items: center; border-radius: 999px; overflow: visible; background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--danger) 30%, transparent) 0 3px, transparent 3px 7px); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--danger) 40%, transparent); }
+.e-gantt-gap em { position: absolute; top: -17px; left: 6px; font-style: normal; font-size: 10.5px; font-weight: 600; color: var(--danger); white-space: nowrap; }
+.e-gantt-produce { top: 50%; width: 0; height: 0; z-index: 2; }
+.e-gantt-produce i { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 3px; transform: rotate(45deg); background: var(--warn); box-shadow: 0 0 0 2.5px var(--glass-strong), 0 4px 10px -4px var(--warn); }
+.e-gantt-produce.due i { animation: e-gantt-pulse 2.4s ease-in-out infinite; }
+@keyframes e-gantt-pulse { 50% { box-shadow: 0 0 0 2.5px var(--glass-strong), 0 0 0 7px color-mix(in oklab, var(--warn) 22%, transparent); } }
+.e-gantt-edge { left: 6px; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 500; color: var(--c); white-space: nowrap; }
+.e-gantt-state { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 0 10px 0 12px; }
+.e-gantt-days { display: inline-flex; align-items: baseline; gap: 3px; font-size: 19px; font-weight: 600; letter-spacing: -.02em; color: var(--c); min-width: 44px; justify-content: flex-end; }
+.e-gantt-days small { font-size: 10.5px; font-weight: 500; color: var(--ink-3); letter-spacing: 0; }
+.e-gantt-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 500; white-space: nowrap; color: var(--ink); background: color-mix(in oklab, var(--c) 12%, transparent); }
+.e-gantt-status i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+
+/* ---------- Horizonte de cobertura (CoverageHorizon + gráfico na grade) ---------- */
+.e-horizon { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 4px 4px 2px; }
+.e-horizon p { margin: 2px 0 0; font-size: 12.5px; color: var(--ink-3); max-width: 46ch; }
+.e-horizon dl { display: flex; gap: 24px; margin: 0; }
+.e-horizon dl div { display: grid; gap: 1px; }
+.e-horizon dt { font-size: 11px; color: var(--ink-3); }
+.e-horizon dd { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.02em; }
+.e-horizon dd small { font-size: 12px; color: var(--ink-3); font-weight: 500; }
+.e-horizon-plot { display: grid; grid-template-columns: var(--id-w) minmax(620px, 1fr) var(--state-w); height: 104px; padding-top: 14px; border-bottom: 1px solid var(--line); }
+.e-horizon-max { grid-column: 1; align-self: start; padding: 0 16px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.e-horizon-bars { grid-column: 2; display: grid; grid-template-columns: repeat(var(--days), 1fr); align-items: end; column-gap: 3px; padding: 0 2px; background: linear-gradient(to bottom, color-mix(in oklab, var(--line) 90%, transparent) 1px, transparent 1px) 0 0 / 100% 50%; }
+.e-horizon-bars span { position: relative; height: 100%; display: flex; align-items: flex-end; }
+.e-horizon-bars i { width: 100%; height: var(--h); border-radius: 7px 7px 2px 2px; transform-origin: bottom; animation: e-horizon-rise .6s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 12ms); }
+.e-horizon-bars em { position: absolute; left: 50%; bottom: calc(var(--h) + 3px); transform: translateX(-50%); font-style: normal; font-size: 9.5px; font-weight: 600; color: var(--ink-2); }
+.e-horizon-bars .full i { background: linear-gradient(180deg, color-mix(in oklab, var(--ok) 60%, white), var(--ok)); }
+.e-horizon-bars .mid i { background: linear-gradient(180deg, color-mix(in oklab, var(--e-accent) 55%, white), var(--e-accent)); }
+.e-horizon-bars .low i { background: linear-gradient(180deg, color-mix(in oklab, var(--warn) 60%, white), var(--warn)); }
+.e-horizon-bars .none i { background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--danger) 45%, transparent) 0 2px, transparent 2px 5px); }
+.e-horizon-bars .past i { opacity: .38; }
+.e-horizon-bars .today i { box-shadow: 0 0 0 2px var(--glass-strong), 0 0 0 3.5px var(--e-accent); }
+@keyframes e-horizon-rise { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.e-gantt-head { top: 0; }
+@media (max-width: 900px) {
+  .e-gantt { --id-w: 168px; --state-w: 110px; }
+  .e-gantt-status { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .e-gantt-pill, .e-horizon-bars i, .e-gantt-produce.due i, .e-gantt-row.is-updated { animation: none; }
+}
+/* Ajustes: conteúdo rolável inteiro, colunas fixas e marcador acima da pílula. */
+.e-gantt-inner { min-width: calc(var(--id-w) + 620px + var(--state-w)); }
+.e-gantt-id, .e-gantt-head .e-gantt-corner:first-child, .e-horizon-max { position: sticky; left: 0; z-index: 4; background: var(--solid); }
+.e-gantt-state, .e-gantt-head .e-gantt-corner.right { position: sticky; right: 0; z-index: 4; background: var(--solid); box-shadow: -12px 0 16px -14px rgba(0,0,0,.18); }
+.e-gantt-id { box-shadow: 12px 0 16px -14px rgba(0,0,0,.18); }
+.e-gantt-row:hover .e-gantt-id, .e-gantt-row:hover .e-gantt-state { background: color-mix(in oklab, var(--c) 5%, var(--solid)); }
+.e-gantt-pill { top: 15px; bottom: 10px; }
+.e-gantt-produce { top: 9px; }
+.e-gantt-produce i { left: -5px; top: -5px; width: 10px; height: 10px; }
+.e-gantt-produce::after { content: ""; position: absolute; left: -.5px; top: 4px; width: 1px; height: 6px; background: var(--warn); }
+/* Vidro colorido suave: preenchimento pela cor viva do status (--cf), texto na cor de contraste (--c). */
+.e-gantt-pill { color: var(--c); background: linear-gradient(90deg, color-mix(in oklab, var(--cf) 20%, var(--solid)), color-mix(in oklab, var(--cf) 34%, var(--solid))); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--cf) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.6), 0 8px 18px -12px var(--cf); }
+.e-gantt-pill::before { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 4px; background: var(--cf); }
+.e-gantt-pill .e-logo { box-shadow: 0 0 0 2px var(--solid); }
+.e-gantt-pill b { font-weight: 600; }
+.e-gantt-link { background: color-mix(in oklab, var(--cf) 55%, transparent); }
+.e-gantt-link::after { box-shadow: inset 0 0 0 2px var(--cf); }
+.e-gantt-next { background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--cf) 14%, transparent) 0 4px, transparent 4px 8px), var(--solid); box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--cf) 55%, transparent); }
+.e-gantt-produce i { background: var(--warn-fill); box-shadow: 0 0 0 2.5px var(--solid), 0 4px 10px -4px var(--warn-fill); }
+.e-gantt-produce::after { background: var(--warn-fill); }
+@keyframes e-gantt-pulse { 50% { box-shadow: 0 0 0 2.5px var(--solid), 0 0 0 7px color-mix(in oklab, var(--warn-fill) 30%, transparent); } }
+.e-gantt-gap { background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--danger-fill) 40%, transparent) 0 3px, transparent 3px 7px); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--danger-fill) 50%, transparent); }
+.e-gantt-days { color: var(--ink); }
+.e-gantt-days.neg { color: var(--danger); }
+.e-gantt-status { background: color-mix(in oklab, var(--cf) 16%, transparent); }
+.e-gantt-status i { background: var(--cf); }
+.e-horizon-bars .full i { background: linear-gradient(180deg, color-mix(in oklab, var(--ok-fill) 55%, white), var(--ok-fill)); }
+.e-horizon-bars .low i { background: linear-gradient(180deg, color-mix(in oklab, var(--warn-fill) 55%, white), var(--warn-fill)); }
+.e-horizon-bars .none i { background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--danger-fill) 55%, transparent) 0 2px, transparent 2px 5px); }
+/* Colunas de dia sempre iguais: posições em % batem com o cabeçalho. */
+.e-gantt { --day-w: 26px; --lane-min: calc(var(--days) * var(--day-w)); }
+.e-gantt-head, .e-gantt-row, .e-horizon-plot { grid-template-columns: var(--id-w) minmax(var(--lane-min), 1fr) var(--state-w); }
+.e-gantt-inner { min-width: calc(var(--id-w) + var(--lane-min) + var(--state-w)); }
+.e-gantt-scale, .e-gantt-bg, .e-horizon-bars { grid-template-columns: repeat(var(--days), minmax(0, 1fr)); }
+.e-gantt-scale span { min-width: 0; }
+.e-gantt-scale span b { width: 20px; height: 20px; font-size: 11px; }
