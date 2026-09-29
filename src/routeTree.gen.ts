@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgenciaRouteImport } from './routes/agencia'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CanaisRouteImport } from './routes/canais'
+import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as CriativaRouteImport } from './routes/criativa'
 import { Route as E360RouteImport } from './routes/e360'
 import { Route as EditorialRouteImport } from './routes/editorial'
@@ -84,6 +85,11 @@ const AuthRoute = AuthRouteImport.update({
 const CanaisRoute = CanaisRouteImport.update({
   id: '/canais',
   path: '/canais',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientesRoute = ClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CriativaRoute = CriativaRouteImport.update({
@@ -197,14 +203,14 @@ const AgenciaModelosRoute = AgenciaModelosRouteImport.update({
   getParentRoute: () => AgenciaRoute,
 } as any)
 const ClientesIndexRoute = ClientesIndexRouteImport.update({
-  id: '/clientes/',
-  path: '/clientes/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => ClientesRoute,
 } as any)
 const ClientesBrandSlugRoute = ClientesBrandSlugRouteImport.update({
-  id: '/clientes/$brandSlug',
-  path: '/clientes/$brandSlug',
-  getParentRoute: () => rootRouteImport,
+  id: '/$brandSlug',
+  path: '/$brandSlug',
+  getParentRoute: () => ClientesRoute,
 } as any)
 const E360IndexRoute = E360IndexRouteImport.update({
   id: '/',
@@ -356,6 +362,7 @@ export interface FileRoutesByFullPath {
   '/agencia': typeof AgenciaRouteWithChildren
   '/auth': typeof AuthRoute
   '/canais': typeof CanaisRoute
+  '/clientes': typeof ClientesRouteWithChildren
   '/criativa': typeof CriativaRoute
   '/e360': typeof E360RouteWithChildren
   '/editorial': typeof EditorialRoute
@@ -470,6 +477,7 @@ export interface FileRoutesById {
   '/agencia': typeof AgenciaRouteWithChildren
   '/auth': typeof AuthRoute
   '/canais': typeof CanaisRoute
+  '/clientes': typeof ClientesRouteWithChildren
   '/criativa': typeof CriativaRoute
   '/e360': typeof E360RouteWithChildren
   '/editorial': typeof EditorialRoute
@@ -530,6 +538,7 @@ export interface FileRouteTypes {
     | '/agencia'
     | '/auth'
     | '/canais'
+    | '/clientes'
     | '/criativa'
     | '/e360'
     | '/editorial'
@@ -643,6 +652,7 @@ export interface FileRouteTypes {
     | '/agencia'
     | '/auth'
     | '/canais'
+    | '/clientes'
     | '/criativa'
     | '/e360'
     | '/editorial'
@@ -702,6 +712,7 @@ export interface RootRouteChildren {
   AgenciaRoute: typeof AgenciaRouteWithChildren
   AuthRoute: typeof AuthRoute
   CanaisRoute: typeof CanaisRoute
+  ClientesRoute: typeof ClientesRouteWithChildren
   CriativaRoute: typeof CriativaRoute
   E360Route: typeof E360RouteWithChildren
   EditorialRoute: typeof EditorialRoute
@@ -717,8 +728,6 @@ export interface RootRouteChildren {
   ResultadosRoute: typeof ResultadosRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WorkspaceRoute: typeof WorkspaceRouteWithChildren
-  ClientesBrandSlugRoute: typeof ClientesBrandSlugRoute
-  ClientesIndexRoute: typeof ClientesIndexRoute
   BBrandSlugAgendaRoute: typeof BBrandSlugAgendaRoute
   BBrandSlugBibliotecaRoute: typeof BBrandSlugBibliotecaRoute
   BBrandSlugConfiguracoesRoute: typeof BBrandSlugConfiguracoesRoute
@@ -757,6 +766,13 @@ declare module '@tanstack/react-router' {
       path: '/canais'
       fullPath: '/canais'
       preLoaderRoute: typeof CanaisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clientes': {
+      id: '/clientes'
+      path: '/clientes'
+      fullPath: '/clientes'
+      preLoaderRoute: typeof ClientesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/criativa': {
@@ -915,17 +931,17 @@ declare module '@tanstack/react-router' {
     }
     '/clientes/': {
       id: '/clientes/'
-      path: '/clientes'
+      path: '/'
       fullPath: '/clientes/'
       preLoaderRoute: typeof ClientesIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ClientesRoute
     }
     '/clientes/$brandSlug': {
       id: '/clientes/$brandSlug'
-      path: '/clientes/$brandSlug'
+      path: '/$brandSlug'
       fullPath: '/clientes/$brandSlug'
       preLoaderRoute: typeof ClientesBrandSlugRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ClientesRoute
     }
     '/e360/': {
       id: '/e360/'
@@ -1149,6 +1165,20 @@ const AgenciaRouteChildren: AgenciaRouteChildren = {
 const AgenciaRouteWithChildren =
   AgenciaRoute._addFileChildren(AgenciaRouteChildren)
 
+interface ClientesRouteChildren {
+  ClientesBrandSlugRoute: typeof ClientesBrandSlugRoute
+  ClientesIndexRoute: typeof ClientesIndexRoute
+}
+
+const ClientesRouteChildren: ClientesRouteChildren = {
+  ClientesBrandSlugRoute: ClientesBrandSlugRoute,
+  ClientesIndexRoute: ClientesIndexRoute,
+}
+
+const ClientesRouteWithChildren = ClientesRoute._addFileChildren(
+  ClientesRouteChildren,
+)
+
 interface E360BrandSlugRouteChildren {
   E360BrandSlugAgendaRoute: typeof E360BrandSlugAgendaRoute
   E360BrandSlugPersonalizacaoRoute: typeof E360BrandSlugPersonalizacaoRoute
@@ -1222,6 +1252,7 @@ const rootRouteChildren: RootRouteChildren = {
   AgenciaRoute: AgenciaRouteWithChildren,
   AuthRoute: AuthRoute,
   CanaisRoute: CanaisRoute,
+  ClientesRoute: ClientesRouteWithChildren,
   CriativaRoute: CriativaRoute,
   E360Route: E360RouteWithChildren,
   EditorialRoute: EditorialRoute,
@@ -1237,8 +1268,6 @@ const rootRouteChildren: RootRouteChildren = {
   ResultadosRoute: ResultadosRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WorkspaceRoute: WorkspaceRouteWithChildren,
-  ClientesBrandSlugRoute: ClientesBrandSlugRoute,
-  ClientesIndexRoute: ClientesIndexRoute,
   BBrandSlugAgendaRoute: BBrandSlugAgendaRoute,
   BBrandSlugBibliotecaRoute: BBrandSlugBibliotecaRoute,
   BBrandSlugConfiguracoesRoute: BBrandSlugConfiguracoesRoute,

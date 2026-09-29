@@ -127,6 +127,8 @@ async function appSettingsRowId(): Promise<string> {
 }
 
 export async function fetchAppSettings(): Promise<AppSettings | null> {
+  const env = import.meta.env as Record<string, string | undefined>;
+  if (!env.VITE_SUPABASE_URL || !env.VITE_SUPABASE_PUBLISHABLE_KEY) return cachedSettings();
   const id = await appSettingsRowId();
   const { data, error } = await supabase.from("app_settings" as any).select("*").eq("id", id).maybeSingle();
   if (error) return cachedSettings();

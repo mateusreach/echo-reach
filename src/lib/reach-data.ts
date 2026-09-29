@@ -788,14 +788,17 @@ export type BrandModules = {
   plano: boolean;
   espaco360: boolean;
   workspace: boolean;
+  /** Like: aprovação de materiais pelo cliente (desligado até ser contratado). */
+  like: boolean;
 };
 
-export const DEFAULT_MODULES: BrandModules = { biblioteca: true, plano: false, espaco360: false, workspace: true };
+export const DEFAULT_MODULES: BrandModules = { biblioteca: true, plano: false, espaco360: false, workspace: true, like: false };
 
 export const MODULE_DEFS = [
   { key: "biblioteca", label: "Biblioteca de Conteúdo", description: "Banco de ideias, categorias, roteiros e conteúdos. Funciona sem Plano 360." },
   { key: "espaco360", label: "Espaço 360", description: "Plano, estratégias, campanhas, tarefas, reuniões e acompanhamento." },
   { key: "workspace", label: "Reach Workspace", description: "Integração operacional: envia criações e solicitações ao Workspace." },
+  { key: "like", label: "Like", description: "Aprovação de posts, roteiros, peças e vídeos pelo cliente." },
 ] as const satisfies readonly { key: keyof BrandModules; label: string; description: string }[];
 
 /** Lê os módulos habilitados de uma marca, com fallback seguro para marcas antigas. */
@@ -807,6 +810,7 @@ export function brandModules(brand: Pick<Brand, "id"> & { modules?: unknown } | 
     plano: raw.plano === true,
     espaco360: raw.espaco360 === true,
     workspace: raw.workspace !== false,
+    like: raw.like === true,
   };
 }
 
