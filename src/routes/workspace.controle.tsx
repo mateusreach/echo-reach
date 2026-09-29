@@ -275,6 +275,7 @@ function CoverageControl() {
       <section className="coverage-board" aria-label="Controle de cobertura">
         <div className="coverage-toolbar">
           <PeriodNavigator
+            unit={range === "janela" ? "semana" : "mês"}
             label={monthLabel[0].toUpperCase() + monthLabel.slice(1)}
             onPrevious={() => shift(-1)}
             onNext={() => shift(1)}

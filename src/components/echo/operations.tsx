@@ -11,7 +11,10 @@ export function PeriodNavigator({
   onNext,
   onToday,
   current,
+  unit = "mês",
 }: {
+  /** Usado nos rótulos acessíveis: "Mês anterior", "Semana anterior"… */
+  unit?: "mês" | "semana" | "período";
   label: string;
   onPrevious: () => void;
   onNext: () => void;
@@ -25,7 +28,7 @@ export function PeriodNavigator({
         size="sm"
         variant="ghost"
         icon="chevLeft"
-        aria-label="Mês anterior"
+        aria-label={unit === "mês" ? "Mês anterior" : unit === "semana" ? "Semana anterior" : "Período anterior"}
         onClick={onPrevious}
       />
       <span className="e-period-label" aria-live="polite">
@@ -36,7 +39,7 @@ export function PeriodNavigator({
         size="sm"
         variant="ghost"
         icon="chevRight"
-        aria-label="Próximo mês"
+        aria-label={unit === "mês" ? "Próximo mês" : unit === "semana" ? "Próxima semana" : "Próximo período"}
         onClick={onNext}
       />
       <span className="e-period-divider" />

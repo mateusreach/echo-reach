@@ -857,3 +857,23 @@ button.member-card:focus-visible { outline: none; box-shadow: var(--e-ring); }
 .cal-listday .cal-chip { font-size: 13px; padding: 7px 10px; white-space: normal; }
 @media (max-width: 760px) { .cal-cell { min-height: 64px; } .cal-chip { font-size: 0; padding: 3px; } .cal-chip i { width: 8px; height: 8px; } .cal-filters { grid-template-columns: 1fr 1fr; } }
 .cal-filters { flex: 1 1 340px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.review-log { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--hover); font-size: 13px; box-shadow: inset 3px 0 0 var(--ok-fill); }
+.review-log.ajuste { box-shadow: inset 3px 0 0 var(--warn-fill); }
+.review-log p { margin: 2px 0 0; color: var(--ink-2); }
+
+/* ---------- Workspace · Avaliações e Metas ---------- */
+.review-card { display: grid; gap: 14px; padding: 16px; border-radius: var(--r-xl); }
+.review-body { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; }
+.review-preview { display: grid; gap: 8px; align-content: start; }
+.review-frame { display: grid; place-items: center; gap: 4px; border-radius: 14px; color: var(--ink-3); background: linear-gradient(160deg, color-mix(in oklab, var(--env-brand) 16%, var(--solid)), color-mix(in oklab, var(--e-accent) 12%, var(--solid))); box-shadow: inset 0 0 0 1px var(--line); aspect-ratio: 4 / 5; }
+.review-frame.stories { aspect-ratio: 9 / 16; max-height: 320px; }
+.review-frame small { font-size: 11px; }
+.goal-card { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border: 0; border-radius: 20px; text-align: left; font: inherit; color: var(--ink); cursor: pointer; transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) ease; }
+@media (hover: hover) and (pointer: fine) { .goal-card:hover { transform: translateY(-2px); box-shadow: var(--glass-inset), var(--sh-3); } }
+.goal-card.reached { box-shadow: var(--glass-inset), inset 0 0 0 1.5px color-mix(in oklab, var(--ok-fill) 60%, transparent); }
+.goal-reward { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12.5px; color: var(--ink-2); padding: 6px 10px; border-radius: 10px; background: color-mix(in oklab, var(--warn-fill) 16%, transparent); }
+.goal-reward svg { color: var(--warn-fill); }
+.week-row { display: grid; grid-template-columns: auto minmax(100px, 180px) 1fr 32px; gap: 10px; align-items: center; font-size: 13.5px; }
+.week-bar { height: 8px; border-radius: 999px; background: var(--hover); overflow: hidden; }
+.week-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, color-mix(in oklab, var(--e-accent) 50%, white), var(--e-accent)); }
+@media (max-width: 760px) { .review-body { grid-template-columns: 1fr; } .review-frame { max-width: 220px; } }

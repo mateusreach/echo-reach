@@ -7,8 +7,6 @@ import { getFullAccess, WORKSPACE_DENY_PERMISSION } from "@/lib/agency-data";
 import { withTimeout } from "@/lib/with-timeout";
 import { isDemoMode } from "@/lib/home-data";
 
-/** Telas do Workspace que já funcionam no modo demonstração. */
-const DEMO_READY = ["/workspace", "/workspace/controle", "/workspace/demandas", "/workspace/rotinas", "/workspace/agenda", "/workspace/cronograma", "/workspace/equipe", "/workspace/configuracoes"];
 
 export const Route = createFileRoute("/workspace")({ component: WorkspaceLayout });
 
@@ -84,7 +82,6 @@ function WorkspaceLayout() {
   if (loadError) return <EchoBlocked title="Não foi possível abrir o Workspace" text={loadError} onRetry={() => setRetry((value) => value + 1)} />;
 
   if (!ready) return <EchoLoading label="Carregando Workspace…" />;
-  if (demo && !DEMO_READY.includes(path.replace(/\/$/, "")) && !path.startsWith("/workspace/cliente/")) return <EchoBlocked title="Banco não conectado" text="Esta tela do Workspace ainda depende do Supabase. No modo demonstração, abra Equipe ou Configurações." />;
 
   return (
     <EchoLayout

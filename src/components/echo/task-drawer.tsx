@@ -11,7 +11,7 @@ import { Drawer } from "./overlays";
 import { Icon } from "./icon";
 import { WORK_TONE } from "./blocks";
 import { WORK_STATUSES, type WorkStatus } from "@/lib/workspace-data";
-import { daysSince, isLateTask, patchTask, setTaskStatus, type OpsTask, type TaskPatch } from "@/lib/ops-data";
+import { daysSince, isLateTask, listTaskReviews, patchTask, setTaskStatus, type OpsTask, type TaskPatch } from "@/lib/ops-data";
 import { listPickable } from "@/lib/team-data";
 
 export function StatusMenu({ task, onChanged, size = "sm" }: { task: OpsTask; onChanged: () => void; size?: "sm" | "md" }) {
@@ -22,7 +22,13 @@ export function StatusMenu({ task, onChanged, size = "sm" }: { task: OpsTask; on
       </button>
     )} items={[
       { title: "Mover para" },
-      ...WORK_STATUSES.map((s) => ({ label: s, icon: s === task.status ? ("check" as const) : undefined, disabled: s === task.status, onSelect: async () => { await setTaskStatus(task.id, s as WorkStatus); toast.success(`Movida para ${s}`, { description: task.title }); onChanged(); } })),
+      ...WORK_STATUSES.map((s) => {
+        const blocked = task.status === "Avaliação externa" && s === "Concluído";
+        return { label: blocked ? "Concluído · decisão do cliente no Like" : s, icon: s === task.status ? ("check" as const) : blocked ? ("lock" as const) : undefined, disabled: s === task.status || blocked, onSelect: async () => {
+          try { await setTaskStatus(task.id, s as WorkStatus, { from: task.status }); toast.success(`Movida para ${s}`, { description: task.title }); onChanged(); }
+          catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível mudar a etapa."); }
+        } };
+      }),
     ]} />
   );
 }
@@ -37,6 +43,7 @@ export function TaskDrawer({ task, onClose, onChanged }: { task: OpsTask | null;
   if (task && task !== last) setLast(task);
   const t = task ?? last;
   const people = useQuery({ queryKey: ["people-pickable"], queryFn: listPickable, staleTime: 60_000 });
+  const reviews = useQuery({ queryKey: ["task-reviews", t?.id, t?.status], queryFn: () => listTaskReviews(t!.id), enabled: !!t });
   const draftOf = (x: OpsTask): Draft => ({ owner: x.owner ?? "", due: x.due ?? "", note: x.note ?? "", time: x.time ?? "", location: x.location ?? "", urgency: x.urgency ?? "", highlighted: !!x.highlighted, pinned: !!x.pinned, requiresReview: !!x.requiresReview, reviewChecklist: x.reviewChecklist ?? "", reviewText: x.reviewText ?? "" });
   useEffect(() => { if (task) { setD(draftOf(task)); setMore(!!(task.time || task.location || task.requiresReview)); setChecked([]); } }, [task?.id]);
   if (!t || !d) return <Drawer open={false} onClose={onClose} title="" />;
@@ -90,6 +97,17 @@ export function TaskDrawer({ task, onClose, onChanged }: { task: OpsTask | null;
         <Icon name="heart" />
         <span className="e-grow"><b>Material para aprovação</b><span className="e-caption" style={{ display: "block" }}>{canSendLike ? "Passou pela avaliação interna: pode seguir para o cliente." : "Fica disponível depois da avaliação interna."}</span></span>
         <Tooltip text="O envio abre no Like"><span><Button size="sm" icon="send" disabled>Enviar para aprovação</Button></span></Tooltip>
+      </div>}
+      {(reviews.data ?? []).length > 0 && <div className="e-stack" style={{ gap: 6 }}>
+        <span className="e-label">Histórico de avaliações</span>
+        {reviews.data!.map((r) => (
+          <div key={r.id} className={`review-log ${r.decision}`}>
+            <b>{r.scope === "externa_excecao" ? "Aprovado pelo cliente por outro canal" : r.scope === "externa" ? (r.decision === "aprovado" ? "Cliente aprovou" : "Cliente pediu ajustes") : r.decision === "aprovado" ? "Aprovado internamente" : "Ajuste pedido internamente"}</b>
+            <span className="e-caption">{r.reviewer ?? "Equipe"} · {new Date(r.at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+            {r.phrases.length > 0 && <span className="e-row wrap" style={{ gap: 4 }}>{r.phrases.map((p) => <span key={p} className="member-tag">{p}</span>)}</span>}
+            {r.comment && <p>{r.comment}</p>}
+          </div>
+        ))}
       </div>}
       <Link to={`/workspace/cliente/${t.brand.slug}` as never} className="e-btn ghost sm" style={{ justifySelf: "start" }}><Icon name="external" size="sm" /> Abrir operação de {t.brand.name}</Link>
     </Drawer>
