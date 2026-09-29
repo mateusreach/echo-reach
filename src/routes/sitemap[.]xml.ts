@@ -14,20 +14,9 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
+        // O Echo é uma área logada: só as entradas públicas aparecem.
         const entries: SitemapEntry[] = [
           { path: "/", changefreq: "weekly", priority: "1.0" },
-          { path: "/espaco-360", changefreq: "weekly", priority: "0.9" },
-          { path: "/estrutura", changefreq: "monthly", priority: "0.8" },
-          { path: "/editorial", changefreq: "monthly", priority: "0.8" },
-          { path: "/criativa", changefreq: "monthly", priority: "0.7" },
-          { path: "/referencias", changefreq: "monthly", priority: "0.6" },
-          { path: "/radar", changefreq: "weekly", priority: "0.6" },
-          { path: "/mercado", changefreq: "monthly", priority: "0.6" },
-          { path: "/canais", changefreq: "monthly", priority: "0.6" },
-          { path: "/resultados", changefreq: "weekly", priority: "0.6" },
-          { path: "/evolucao", changefreq: "monthly", priority: "0.6" },
-          { path: "/especialistas-ia", changefreq: "monthly", priority: "0.6" },
-          { path: "/pesquisa", changefreq: "monthly", priority: "0.4" },
           { path: "/auth", changefreq: "yearly", priority: "0.3" },
         ];
 

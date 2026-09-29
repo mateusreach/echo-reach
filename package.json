@@ -9,7 +9,10 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "check": "tsc --noEmit -p . && node scripts/check-rls.mjs && node src/lib/coverage-scale.test.mjs",
+    "test:rls": "node scripts/check-rls.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

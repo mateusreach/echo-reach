@@ -85,10 +85,10 @@ function History() {
             <section className="settings-section e-glass">
               <h3 className="e-h3" style={{ margin: 0 }}>Por frente e campanha</h3>
               {[...r.byFront.map((x) => ({ ...x, kind: "Frente" })), ...r.byCampaign.map((x) => ({ ...x, kind: "Campanha" }))].length === 0 ? <p className="e-caption" style={{ margin: 0 }}>Sem movimento neste mês.</p> : (
-                <table className="lb-table">
+                <div className="lb-table-wrap"><table className="lb-table">
                   <thead><tr><th /><th>Enviados</th><th>Aprovados</th><th>Ajustes</th></tr></thead>
                   <tbody>{[...r.byFront.map((x) => ({ ...x, kind: "Frente" })), ...r.byCampaign.map((x) => ({ ...x, kind: "Campanha" }))].map((x) => <tr key={x.kind + x.label}><td><span className="e-caption">{x.kind}</span> {x.label}</td><td className="tnum">{x.sent}</td><td className="tnum">{x.approved}</td><td className="tnum">{x.adjustments}</td></tr>)}</tbody>
-                </table>
+                </table></div>
               )}
               {r.byApprover.length > 0 && <p className="e-caption" style={{ margin: 0 }}><Icon name="lock" size="sm" /> Tempo por aprovador (interno): {r.byApprover.map((a) => `${a.name} ${fmtHours(a.avgHours)}`).join(" · ")}</p>}
             </section>
