@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "./icon";
 import { parseDimension } from "@/lib/brand-settings-data";
-import type { Asset, ItemKind, ScriptSection } from "@/lib/like-data";
+import { embedUrl, type Asset, type ItemKind, type ScriptSection } from "@/lib/like-data";
 
 export const ratioOf = (dimension: string | null | undefined, kind: ItemKind) => {
   const d = parseDimension(dimension);
@@ -34,8 +34,8 @@ export function MaterialFrame({ assets, kind, dimension, watermark, slide, onSli
   return (
     <div className="lk-frame-wrap">
       <div className="lk-frame" style={{ aspectRatio: ratio }}
-        onClick={(e) => { if (!onPointer || a.type === "video") return; const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); onPointer(i, Math.round(((e.clientX - r.left) / r.width) * 1000) / 10, Math.round(((e.clientY - r.top) / r.height) * 1000) / 10); }}>
-        {a.type === "video" ? <video ref={vref} src={a.url} poster={a.poster} controls playsInline /> : a.type === "pdf" ? <iframe title={a.name ?? "PDF"} src={a.url} /> : <img src={a.url} alt={a.name ?? `Slide ${i + 1}`} draggable={false} />}
+        onClick={(e) => { if (!onPointer || a.type === "video" || a.type === "link") return; const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); onPointer(i, Math.round(((e.clientX - r.left) / r.width) * 1000) / 10, Math.round(((e.clientY - r.top) / r.height) * 1000) / 10); }}>
+        {a.type === "link" ? (embedUrl(a.url) ? <iframe title={a.name ?? "Vídeo"} src={embedUrl(a.url)!} allow="autoplay; fullscreen" /> : <a className="lk-link" href={a.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}><Icon name="play" /><b>Abrir vídeo</b><small>{a.url.replace(/^https?:\/\//, "").slice(0, 42)}</small></a>) : a.type === "video" ? <video ref={vref} src={a.url} poster={a.poster} controls playsInline /> : a.type === "pdf" ? <iframe title={a.name ?? "PDF"} src={a.url} /> : <img src={a.url} alt={a.name ?? `Slide ${i + 1}`} draggable={false} />}
         {watermark && <span className="lk-watermark" aria-hidden="true">Prévia · não aprovado</span>}
         {overlay?.(i)}
         {assets.length > 1 && <>

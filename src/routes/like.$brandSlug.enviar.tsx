@@ -13,7 +13,7 @@ import { listOpsFronts, listOpsTasks, type OpsTask } from "@/lib/ops-data";
 import { loadLibrary } from "@/lib/library-data";
 import { loadClientOps } from "@/lib/client-ops-data";
 import {
-  KIND_LABEL, addBusinessDays, addVersion, cancelItem, createItem, createRound, getItem, getSettings, inspectFile, listApprovers, listRounds, resolveComment, sendItems, uploadAsset,
+  COVER_TONES, KIND_LABEL, addBusinessDays, coverCss, embedUrl, addVersion, cancelItem, createItem, createRound, getItem, getSettings, inspectFile, listApprovers, listRounds, resolveComment, sendItems, uploadAsset,
   type Asset, type ItemKind, type ScriptSection,
 } from "@/lib/like-data";
 
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/like/$brandSlug/enviar")({
 type FileState = Asset & { key: string; state: "ok" | "up" | "erro"; error?: string; file?: File };
 type Draft = {
   key: string; title: string; kind: ItemKind; channelId: string | null; presetId: string | null; frontId: string | null; taskId: string | null; conteudoId: string | null; workOrderId: string | null;
-  publishAt: string; assets: FileState[]; caption: string; hashtags: string; cta: string; script: ScriptSection[]; textBody: string; checks: string[];
+  publishAt: string; assets: FileState[]; coverTone: string; caption: string; hashtags: string; cta: string; script: ScriptSection[]; textBody: string; checks: string[];
 };
 const KINDS: { value: ItemKind; label: string; icon: IconName }[] = [
   { value: "post", label: "Post", icon: "image" }, { value: "carrossel", label: "Carrossel", icon: "carousel" }, { value: "video", label: "Vídeo", icon: "play" },
@@ -73,7 +73,7 @@ function SendPage() {
   const blank = (over: Partial<Draft> = {}): Draft => {
     const kind = over.kind ?? "post";
     const ch = channels.find((c) => c.id === over.channelId) ?? channels[0];
-    return { key: uid(), title: "", kind, channelId: ch?.id ?? null, presetId: presetFor(ch, kind)?.id ?? null, frontId: brandFronts.find((f) => f.front.name === "Feed")?.front.id ?? brandFronts[0]?.front.id ?? null, taskId: null, conteudoId: null, workOrderId: null, publishAt: defaultPublish(), assets: [], caption: "", hashtags: "", cta: "", script: [], textBody: "", checks: [], ...over };
+    return { key: uid(), title: "", kind, channelId: ch?.id ?? null, presetId: presetFor(ch, kind)?.id ?? null, frontId: brandFronts.find((f) => f.front.name === "Feed")?.front.id ?? brandFronts[0]?.front.id ?? null, taskId: null, conteudoId: null, workOrderId: null, publishAt: defaultPublish(), assets: [], coverTone: "roxo", caption: "", hashtags: "", cta: "", script: [], textBody: "", checks: [], ...over };
   };
   const fromTask = (t: OpsTask): Draft => {
     const kind = MATERIAL_KIND[t.likeMaterial ?? ""] ?? "post";
@@ -111,6 +111,8 @@ function SendPage() {
   const suggested = firstFront ? `${firstFront.front.name} · ${ddmm(firstFront.period.start)} a ${ddmm(firstFront.period.end)}` : `Materiais · ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`;
   const [round, setRound] = useState({ title: "", due: "", message: "Oi! Seguem os materiais para você aprovar. Qualquer ajuste, é só marcar no próprio material." });
   useEffect(() => { if (settings.data && !round.due) setRound((r) => ({ ...r, due: localInput(addBusinessDays(new Date(), settings.data!.decisionDays)) })); }, [settings.data]);
+  // Se já existe rodada aberta da mesma frente, sugerir juntar a ela.
+  useEffect(() => { const same = openRounds.find((r) => r.frontId && r.frontId === drafts[0]?.frontId); if (same && roundMode === "nova") setRoundMode(same.id); }, [rounds.data, drafts[0]?.frontId]);
   const [rule, setRule] = useState<"qualquer" | "todos" | "sequencial" | null>(null);
   const [preview, setPreview] = useState<Draft | null>(null);
   const [busy, setBusy] = useState<"draft" | "send" | null>(null);
@@ -199,7 +201,7 @@ function SendPage() {
           const c = channels.find((y) => y.id === x.channelId);
           const p = c?.presets.find((y) => y.id === x.presetId);
           const f = brandFronts.find((y) => y.front.id === x.frontId);
-          const it = await createItem({ brandId: b.id, brandSlug, brandName: b.name, title: x.title.trim(), kind: x.kind, roundId, channelId: x.channelId, channelName: c?.name ?? null, presetId: x.presetId, presetDimension: p?.dimension ?? null, frontId: x.frontId, frontName: f?.front.name ?? null, taskId: x.taskId, conteudoId: x.conteudoId, workOrderId: x.workOrderId, publishAt: x.publishAt ? new Date(x.publishAt).toISOString() : null, dueAt: round.due ? new Date(round.due).toISOString() : null },
+          const it = await createItem({ brandId: b.id, brandSlug, brandName: b.name, title: x.title.trim(), kind: x.kind, coverTone: x.coverTone, roundId, channelId: x.channelId, channelName: c?.name ?? null, presetId: x.presetId, presetDimension: p?.dimension ?? null, frontId: x.frontId, frontName: f?.front.name ?? null, taskId: x.taskId, conteudoId: x.conteudoId, workOrderId: x.workOrderId, publishAt: x.publishAt ? new Date(x.publishAt).toISOString() : null, dueAt: round.due ? new Date(round.due).toISOString() : null },
             { assets: x.assets.map(({ key: _k, state: _s, file: _f, error: _e, ...a }) => a), caption: x.caption || null, hashtags: x.hashtags || null, cta: x.cta || null, script: x.script, textBody: x.textBody || null });
           ids.push(it.id);
         }
@@ -227,7 +229,7 @@ function SendPage() {
             const m = missing(x);
             return (
               <button key={x.key} type="button" className={`send-item e-glass${x.key === d.key ? " on" : ""}`} onClick={() => setActive(x.key)}>
-                <span className="send-thumb">{x.assets.find((a) => a.state === "ok" && a.type === "image") ? <img src={x.assets.find((a) => a.state === "ok" && a.type === "image")!.url} alt="" /> : <Icon name={KINDS.find((k) => k.value === x.kind)?.icon ?? "image"} />}</span>
+                <span className="send-thumb" style={["roteiro", "texto"].includes(x.kind) ? { background: coverCss(x.coverTone) } : undefined}>{x.assets.find((a) => a.state === "ok" && a.type === "image") ? <img src={x.assets.find((a) => a.state === "ok" && a.type === "image")!.url} alt="" /> : <Icon name={KINDS.find((k) => k.value === x.kind)?.icon ?? "image"} />}</span>
                 <span className="e-grow" style={{ minWidth: 0 }}><b className="e-ellipsis" style={{ display: "block" }}>{x.title || "Sem título"}</b><span className="e-caption">{KIND_LABEL[x.kind]} · {m.length ? `${m.length} pendência${m.length > 1 ? "s" : ""}` : "pronto"}</span></span>
                 {m.length ? <Icon name="alert" size="sm" /> : <Icon name="checkCircle" size="sm" />}
               </button>
@@ -256,7 +258,7 @@ function SendPage() {
           </div>
 
           {!["roteiro", "texto"].includes(d.kind) && (
-            <UploadArea assets={d.assets} kind={d.kind} ratio={ratioOf(preset?.dimension, d.kind)} onFiles={addFiles} onRetry={(a) => uploadOne(d.key, a)} onRemove={(k) => set({ assets: d.assets.filter((a) => a.key !== k) })} onMove={moveAsset} onPoster={(k, url) => set({ assets: d.assets.map((a) => (a.key === k ? { ...a, poster: url } : a)) })} />
+            <UploadArea assets={d.assets} kind={d.kind} ratio={ratioOf(preset?.dimension, d.kind)} onFiles={addFiles} onRetry={(a) => uploadOne(d.key, a)} onRemove={(k) => set({ assets: d.assets.filter((a) => a.key !== k) })} onMove={moveAsset} onPoster={(k, url) => set({ assets: d.assets.map((a) => (a.key === k ? { ...a, poster: url } : a)) })} onLink={(url) => set({ assets: [...d.assets, { key: uid(), url, type: "link", name: url, state: "ok" }], kind: d.kind === "post" ? "video" : d.kind })} />
           )}
           {ratioWarn && <Alert kind="warn" title="Proporção diferente do formato">{ratioWarn}</Alert>}
 
@@ -270,6 +272,7 @@ function SendPage() {
               <Field label="CTA" optional value={d.cta} onChange={(e) => set({ cta: e.target.value })} />
             </div>
           </>}
+          {["roteiro", "texto"].includes(d.kind) && <div className="e-field"><span className="e-field-label">Cor da capa</span><div className="tone-pick" role="radiogroup" aria-label="Cor da capa">{COVER_TONES.map((t) => <button key={t.key} type="button" role="radio" aria-checked={d.coverTone === t.key} title={t.label} style={{ background: t.css }} onClick={() => set({ coverTone: t.key })}><span className="e-sr">{t.label}</span></button>)}</div><span className="e-help">Aparece no calendário no lugar da arte.</span></div>}
           {(d.kind === "video" || d.kind === "roteiro") && <ScriptEditor value={d.script} onChange={(script) => set({ script })} />}
           {(d.kind === "texto" || d.kind === "peca") && <TextArea label={d.kind === "texto" ? "Texto" : "Texto da peça"} optional={d.kind === "peca"} rows={8} value={d.textBody} onChange={(e) => set({ textBody: e.target.value })} />}
           {d.conteudoId && <button type="button" className="e-link" onClick={() => { const c = fromConteudo(d.conteudoId!); if (c) { set({ caption: c.caption, cta: c.cta, script: c.script }); toast.success("Texto trazido do conteúdo"); } }}><Icon name="refresh" size="sm" /> Trazer do conteúdo</button>}
@@ -329,7 +332,8 @@ function SendPage() {
   );
 }
 
-function UploadArea({ assets, kind, ratio, onFiles, onRetry, onRemove, onMove, onPoster }: { assets: FileState[]; kind: ItemKind; ratio: number; onFiles: (f: FileList) => void; onRetry: (a: FileState) => void; onRemove: (k: string) => void; onMove: (from: number, to: number) => void; onPoster: (k: string, url: string) => void }) {
+function UploadArea({ assets, kind, ratio, onFiles, onRetry, onRemove, onMove, onPoster, onLink }: { assets: FileState[]; kind: ItemKind; ratio: number; onFiles: (f: FileList) => void; onRetry: (a: FileState) => void; onRemove: (k: string) => void; onMove: (from: number, to: number) => void; onPoster: (k: string, url: string) => void; onLink: (url: string) => void }) {
+  const [link, setLink] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const cover = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
@@ -354,7 +358,7 @@ function UploadArea({ assets, kind, ratio, onFiles, onRetry, onRemove, onMove, o
         <div className="upload-grid" ref={grid}>
           {assets.map((a, i) => (
             <div key={a.key} data-k={a.key} className={`upload-tile ${a.state}`} style={{ aspectRatio: ratio }} draggable={a.state === "ok"} onDragStart={(e) => e.dataTransfer.setData("text/x-slide", String(i))} onDragOver={(e) => { if (e.dataTransfer.types.includes("text/x-slide")) e.preventDefault(); }} onDrop={(e) => { const from = Number(e.dataTransfer.getData("text/x-slide")); if (!Number.isNaN(from) && e.dataTransfer.types.includes("text/x-slide")) { e.preventDefault(); e.stopPropagation(); onMove(from, i); } }}>
-              {a.state === "ok" ? (a.type === "video" ? (a.poster ? <img src={a.poster} alt="" /> : <Icon name="play" />) : a.type === "pdf" ? <Icon name="fileText" /> : <img src={a.url} alt="" />) : a.state === "up" ? <span className="upload-spin"><Icon name="loader" /><small>Enviando…</small></span> : <span className="upload-err"><Icon name="alert" /><small>{a.error}</small><button type="button" className="e-link" onClick={() => onRetry(a)}>Tentar de novo</button></span>}
+              {a.state === "ok" ? (a.type === "link" ? <span className="upload-link"><Icon name="play" /><small>{embedUrl(a.url) ? "Vídeo incorporado" : "Link externo"}</small></span> : a.type === "video" ? (a.poster ? <img src={a.poster} alt="" /> : <Icon name="play" />) : a.type === "pdf" ? <Icon name="fileText" /> : <img src={a.url} alt="" />) : a.state === "up" ? <span className="upload-spin"><Icon name="loader" /><small>Enviando…</small></span> : <span className="upload-err"><Icon name="alert" /><small>{a.error}</small><button type="button" className="e-link" onClick={() => onRetry(a)}>Tentar de novo</button></span>}
               <span className="upload-n tnum">{i + 1}</span>
               <button type="button" className="upload-x" aria-label={`Remover ${a.name ?? "arquivo"}`} onClick={() => onRemove(a.key)}><Icon name="x" size="sm" /></button>
               {a.state === "ok" && a.width && <span className="upload-dim tnum">{a.width}×{a.height}{a.duration ? ` · ${a.duration}s` : ""}</span>}
@@ -363,6 +367,11 @@ function UploadArea({ assets, kind, ratio, onFiles, onRetry, onRemove, onMove, o
           ))}
           <button type="button" className="upload-add" style={{ aspectRatio: ratio }} onClick={() => input.current?.click()}><Icon name="upload" /><b>Adicionar arquivos</b><small>Imagens, vídeo ou PDF · arraste aqui</small></button>
         </div>
+        <form className="upload-linkform" onSubmit={(e) => { e.preventDefault(); if (!/^https?:\/\/\S+$/.test(link.trim())) { toast.error("Cole um link começando com http."); return; } onLink(link.trim()); setLink(""); }}>
+          <Icon name="link" size="sm" />
+          <input className="e-input sm e-grow" value={link} placeholder="Ou cole o link do vídeo (Drive, YouTube, Vimeo)" aria-label="Link do vídeo" onChange={(e) => setLink(e.target.value)} />
+          <Button size="sm" variant="secondary" type="submit" disabled={!link.trim()}>Adicionar link</Button>
+        </form>
         <input ref={input} type="file" multiple accept="image/*,video/*,application/pdf" hidden onChange={(e) => { if (e.target.files?.length) onFiles(e.target.files); e.target.value = ""; }} />
         <input ref={cover} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f && coverFor) onPoster(coverFor, URL.createObjectURL(f)); e.target.value = ""; }} />
       </div>

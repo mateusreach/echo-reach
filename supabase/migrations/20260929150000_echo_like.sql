@@ -47,11 +47,13 @@ CREATE TABLE IF NOT EXISTS public.like_items (
   order_index int NOT NULL DEFAULT 0,
   sent_at timestamptz, decided_at timestamptz,
   published_link text,
+  cover_tone text,
   is_example boolean NOT NULL DEFAULT false,
   created_by uuid DEFAULT auth.uid(),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE public.like_items ADD COLUMN IF NOT EXISTS cover_tone text;
 CREATE INDEX IF NOT EXISTS like_items_brand_status_idx ON public.like_items (brand_id, status);
 CREATE INDEX IF NOT EXISTS like_items_round_idx ON public.like_items (round_id);
 

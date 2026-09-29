@@ -37,7 +37,7 @@ export const STATUS_LABEL: Record<ItemStatus, string> = { rascunho: "Rascunho in
 export const PENDING: ItemStatus[] = ["aguardando", "em_revisao", "nova_versao"];
 export const LIKE_PHRASES = ["Amei!", "Aprovado como está", "Ajustar texto", "Trocar imagem", "Ajustar cores", "Rever CTA", "Mudar a data", "Falta informação"];
 
-export type Asset = { url: string; type: "image" | "video" | "pdf"; width?: number; height?: number; duration?: number; poster?: string; slide?: number; name?: string };
+export type Asset = { url: string; type: "image" | "video" | "pdf" | "link"; width?: number; height?: number; duration?: number; poster?: string; slide?: number; name?: string };
 export type ScriptSection = { nome: string; tempo?: string; texto: string; off?: string; cta?: string };
 export type Version = { id: string; itemId: string; number: number; assets: Asset[]; caption: string | null; hashtags: string | null; cta: string | null; script: ScriptSection[]; textBody: string | null; changesNote: string | null; sent: boolean; createdBy: string | null; createdAt: string };
 export type Anchor = { type: "point"; slide: number; x: number; y: number } | { type: "time"; t: number } | { type: "text"; field: "caption" | "script" | "text_body"; start: number; end: number; quote: string };
@@ -49,6 +49,8 @@ export type Item = {
   frontId: string | null; frontName: string | null; workOrderId: string | null; taskId: string | null; conteudoId: string | null; campaignId: string | null; solicitacaoId: string | null;
   publishAt: string | null; dueAt: string | null; status: ItemStatus; currentVersionId: string | null; priority: string; orderIndex: number;
   sentAt: string | null; decidedAt: string | null; publishedLink: string | null; isExample: boolean; createdAt: string;
+  /** Capa colorida para materiais sem arte (roteiro, texto). */
+  coverTone?: string | null;
 };
 export type ItemFull = Item & { versions: Version[]; current: Version | null; comments: Comment[]; decisions: DecisionRow[]; views: { userName: string; at: string }[] };
 export type Round = { id: string; brandId: string; brandSlug: string; brandName: string; title: string; frontId: string | null; campaignId: string | null; periodStart: string | null; periodEnd: string | null; dueAt: string | null; message: string | null; status: "aberta" | "concluida" | "vencida" | "cancelada"; sentAt: string | null; isExample: boolean; createdAt: string };
@@ -251,7 +253,7 @@ export async function createRound(input: { brandId: string; brandSlug: string; b
   return mapRound(data);
 }
 
-export type NewItem = Pick<Item, "brandId" | "brandSlug" | "brandName" | "title" | "kind"> & Partial<Pick<Item, "roundId" | "channelId" | "channelName" | "presetId" | "presetDimension" | "frontId" | "frontName" | "workOrderId" | "taskId" | "conteudoId" | "campaignId" | "solicitacaoId" | "publishAt" | "dueAt" | "priority" | "isExample">>;
+export type NewItem = Pick<Item, "brandId" | "brandSlug" | "brandName" | "title" | "kind"> & Partial<Pick<Item, "coverTone" | "roundId" | "channelId" | "channelName" | "presetId" | "presetDimension" | "frontId" | "frontName" | "workOrderId" | "taskId" | "conteudoId" | "campaignId" | "solicitacaoId" | "publishAt" | "dueAt" | "priority" | "isExample">>;
 export type NewVersion = { assets: Asset[]; caption?: string | null; hashtags?: string | null; cta?: string | null; script?: ScriptSection[]; textBody?: string | null; changesNote?: string | null };
 
 export async function createItem(input: NewItem, version: NewVersion): Promise<ItemFull> {
@@ -263,7 +265,7 @@ export async function createItem(input: NewItem, version: NewVersion): Promise<I
     log(it, it.roundId, "criado", demoActor());
     return fullOf(it, TEAM_ACTOR);
   }
-  const { data, error } = await db.from("like_items").insert({ brand_id: input.brandId, round_id: input.roundId ?? null, title: input.title, kind: input.kind, channel_id: input.channelId ?? null, preset_id: input.presetId ?? null, front_id: input.frontId ?? null, work_order_id: input.workOrderId ?? null, task_id: input.taskId ?? null, conteudo_id: input.conteudoId ?? null, campaign_id: input.campaignId ?? null, solicitacao_id: input.solicitacaoId ?? null, publish_at: input.publishAt ?? null, due_at: input.dueAt ?? null, priority: input.priority ?? "media", is_example: !!input.isExample }).select("id").single();
+  const { data, error } = await db.from("like_items").insert({ brand_id: input.brandId, round_id: input.roundId ?? null, title: input.title, kind: input.kind, channel_id: input.channelId ?? null, preset_id: input.presetId ?? null, front_id: input.frontId ?? null, work_order_id: input.workOrderId ?? null, task_id: input.taskId ?? null, conteudo_id: input.conteudoId ?? null, campaign_id: input.campaignId ?? null, solicitacao_id: input.solicitacaoId ?? null, publish_at: input.publishAt ?? null, due_at: input.dueAt ?? null, priority: input.priority ?? "media", cover_tone: input.coverTone ?? null, is_example: !!input.isExample }).select("id").single();
   if (error) throw error;
   await addVersion(data.id, version);
   return (await getItem(data.id))!;
@@ -589,7 +591,7 @@ function mapItemFull(i: any): ItemFull {
   return {
     id: i.id, brandId: i.brand_id, brandSlug: i.brands?.slug ?? "", brandName: i.brands?.name ?? "", roundId: i.round_id, title: i.title, kind: i.kind, channelId: i.channel_id, channelName: i.brand_identity_channels?.name ?? null, presetId: i.preset_id, presetDimension: i.brand_identity_presets?.dimension ?? null,
     frontId: i.front_id, frontName: i.workspace_fronts?.name ?? null, workOrderId: i.work_order_id, taskId: i.task_id, conteudoId: i.conteudo_id, campaignId: i.campaign_id, solicitacaoId: i.solicitacao_id, publishAt: i.publish_at, dueAt: i.due_at, status: i.status,
-    currentVersionId: i.current_version_id, priority: i.priority, orderIndex: i.order_index, sentAt: i.sent_at, decidedAt: i.decided_at, publishedLink: i.published_link, isExample: i.is_example, createdAt: i.created_at,
+    currentVersionId: i.current_version_id, priority: i.priority, orderIndex: i.order_index, sentAt: i.sent_at, decidedAt: i.decided_at, publishedLink: i.published_link, isExample: i.is_example, createdAt: i.created_at, coverTone: i.cover_tone ?? null,
     versions, current: versions.find((v) => v.id === i.current_version_id) ?? versions[versions.length - 1] ?? null,
     comments: ((i.like_comments ?? []) as any[]).filter((c) => !c.deleted_at).map(mapComment),
     decisions: ((i.like_decisions ?? []) as any[]).map((d) => ({ id: d.id, itemId: d.item_id, versionId: d.version_id, decision: d.decision, decidedBy: d.decided_by, deciderName: d.decider_name, deciderKind: d.decider_kind, note: d.note, phrases: d.phrases ?? [], via: d.via, justification: d.justification, undoes: d.undoes, createdAt: d.created_at })),
@@ -641,4 +643,26 @@ export function addBusinessDays(from: Date, days: number) {
   while (n < days) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) n++; }
   d.setHours(18, 0, 0, 0);
   return d;
+}
+
+/** Capas para materiais sem arte, nos tons da biblioteca. */
+export const COVER_TONES: { key: string; label: string; css: string }[] = [
+  { key: "lima", label: "Lima", css: "linear-gradient(135deg, #D8F27A, #9CCB3B)" },
+  { key: "pessego", label: "Pêssego", css: "linear-gradient(135deg, #FFD3B8, #F59A6B)" },
+  { key: "rosa", label: "Rosa", css: "linear-gradient(135deg, #F7B8D2, #DC3F88)" },
+  { key: "azul", label: "Azul", css: "linear-gradient(135deg, #B8D8FF, #2E7BE4)" },
+  { key: "roxo", label: "Roxo", css: "linear-gradient(135deg, #CFC2FF, #6B4FE8)" },
+  { key: "preto", label: "Preto", css: "linear-gradient(135deg, #3A3842, #111015)" },
+];
+export const coverCss = (tone?: string | null) => COVER_TONES.find((t) => t.key === tone)?.css ?? COVER_TONES[4].css;
+
+/** Transforma um link de vídeo (YouTube, Vimeo, Google Drive) em endereço incorporável. */
+export function embedUrl(url: string): string | null {
+  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
+  const vm = url.match(/vimeo\.com\/(\d+)/);
+  if (vm) return `https://player.vimeo.com/video/${vm[1]}`;
+  const dr = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+  if (dr) return `https://drive.google.com/file/d/${dr[1]}/preview`;
+  return null;
 }
