@@ -8,7 +8,7 @@ import { withTimeout } from "@/lib/with-timeout";
 import { isDemoMode } from "@/lib/home-data";
 
 /** Telas do Workspace que já funcionam no modo demonstração. */
-const DEMO_READY = ["/workspace", "/workspace/controle", "/workspace/equipe", "/workspace/configuracoes"];
+const DEMO_READY = ["/workspace", "/workspace/controle", "/workspace/demandas", "/workspace/rotinas", "/workspace/agenda", "/workspace/cronograma", "/workspace/equipe", "/workspace/configuracoes"];
 
 export const Route = createFileRoute("/workspace")({ component: WorkspaceLayout });
 

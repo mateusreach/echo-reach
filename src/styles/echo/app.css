@@ -795,3 +795,65 @@ button.member-card:focus-visible { outline: none; box-shadow: var(--e-ring); }
 .like-send b { color: var(--ink); }
 .e-logo { flex: none; }
 @media (max-width: 760px) { .step .e-badge.glass { display: none; } .delivery-head .e-badge.glass { display: none; } }
+
+/* ---------- Workspace · Demandas ---------- */
+.bulk-bar { position: sticky; top: 76px; z-index: 6; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; border-radius: 18px; box-shadow: var(--glass-inset), var(--sh-3), inset 0 0 0 1.5px color-mix(in oklab, var(--e-accent) 40%, transparent); animation: bulk-in .28s var(--ease-out); }
+@keyframes bulk-in { from { transform: translateY(-8px); opacity: 0; } }
+.dm-table { border-radius: var(--r-xl); overflow: hidden; padding: 4px; }
+.dm-row { display: grid; grid-template-columns: 36px minmax(200px, 2.2fr) minmax(140px, 1.2fr) minmax(140px, 1.2fr) 110px 150px; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; font-size: 13.5px; cursor: pointer; transition: background var(--dur-1) ease; }
+.dm-row:not(.head):hover { background: var(--hover); }
+.dm-row.sel { background: color-mix(in oklab, var(--e-accent) 9%, transparent); }
+.dm-row.done { opacity: .55; }
+.dm-row.head { cursor: default; font-size: 11.5px; color: var(--ink-3); border-bottom: 1px solid var(--line); border-radius: 0; }
+.dm-th { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; font: inherit; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); cursor: pointer; padding: 4px 0; }
+.dm-th.on { color: var(--ink); }
+.dm-title { display: grid; min-width: 0; }
+.dm-brand, .dm-owner { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dm-due { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); }
+.dm-due.late { color: var(--danger); font-weight: 600; }
+.dm-table.lista .dm-row { grid-template-columns: 36px minmax(0, 1fr) auto auto; }
+.dm-table.lista .dm-brand, .dm-table.lista .dm-owner span { display: none; }
+@media (max-width: 900px) { .dm-row { grid-template-columns: 36px minmax(0, 1fr) auto; } .dm-row .dm-brand, .dm-row .dm-owner, .dm-row .dm-due, .dm-row.head > :nth-child(n+3) { display: none; } }
+
+/* ---------- Workspace · Rotinas ---------- */
+.routine-cols { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 6px; }
+.routine-col { display: grid; gap: 8px; align-content: start; padding: 10px; border-radius: 20px; background: var(--hover); min-height: 200px; }
+.routine-col > header { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 4px; font-size: 13.5px; }
+.routine-card { display: grid; gap: 4px; padding: 12px; border-radius: 16px; font-size: 13.5px; cursor: pointer; transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) ease; }
+.routine-card b { line-height: 1.3; }
+@media (hover: hover) and (pointer: fine) { .routine-card:hover { transform: translateY(-2px); box-shadow: var(--glass-inset), var(--sh-2); } }
+.routine-card:focus-visible { outline: none; box-shadow: var(--e-ring); }
+.routine-foot { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.routine-foot .team-due { display: inline-flex; align-items: center; gap: 4px; text-align: left; min-width: 0; }
+.late-label { color: var(--danger); }
+
+/* ---------- Workspace · Calendário ---------- */
+.cal-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cal-filters { display: grid; grid-template-columns: repeat(2, minmax(170px, 220px)); gap: 8px; flex: 1; }
+.cal-month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; padding: 8px; border-radius: var(--r-xl); }
+.cal-wd { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 4px 8px; }
+.cal-cell { display: grid; align-content: start; gap: 4px; min-height: 108px; padding: 6px; border-radius: 12px; background: var(--hover); cursor: pointer; min-width: 0; transition: background var(--dur-1) ease; }
+.cal-cell:hover { background: color-mix(in oklab, var(--e-accent) 6%, var(--hover)); }
+.cal-cell.out { opacity: .4; }
+.cal-cell.past .cal-n { color: var(--ink-3); }
+.cal-cell.today { background: color-mix(in oklab, var(--e-accent) 9%, var(--hover)); box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--e-accent) 55%, transparent); }
+.cal-cell:focus-visible { outline: none; box-shadow: var(--e-ring); }
+.cal-n { font-size: 12.5px; font-weight: 600; justify-self: start; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; }
+.cal-cell.today .cal-n { background: var(--e-accent); color: #fff; }
+.cal-items { display: grid; gap: 3px; min-width: 0; }
+.cal-chip { display: flex; align-items: center; gap: 5px; min-width: 0; border: 0; font: inherit; font-size: 11.5px; text-align: left; padding: 3px 7px; border-radius: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); background: color-mix(in oklab, var(--c, var(--e-accent)) 14%, var(--solid)); cursor: pointer; }
+.cal-chip i { width: 6px; height: 6px; border-radius: 50%; flex: none; background: var(--c); }
+.cal-chip.late { box-shadow: inset 2px 0 0 var(--danger); }
+.cal-chip.publicacao { --c: var(--env-like); color: var(--env-like); cursor: default; }
+.cal-chip.reuniao { --c: var(--env-360); color: var(--env-360); cursor: default; }
+.cal-chip b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.cal-chip small { color: var(--ink-3); margin-left: 6px; }
+.cal-more { font-size: 11px; color: var(--ink-3); padding-left: 4px; }
+.cal-listday { display: flex; gap: 14px; padding: 12px 14px; border-radius: 18px; }
+.cal-listdate { display: grid; justify-items: center; width: 44px; flex: none; }
+.cal-listdate b { font-size: 22px; font-weight: 600; }
+.cal-listdate small { font-size: 11px; text-transform: uppercase; color: var(--ink-3); }
+.cal-listdate.today b { color: var(--e-accent); }
+.cal-listday .cal-chip { font-size: 13px; padding: 7px 10px; white-space: normal; }
+@media (max-width: 760px) { .cal-cell { min-height: 64px; } .cal-chip { font-size: 0; padding: 3px; } .cal-chip i { width: 8px; height: 8px; } .cal-filters { grid-template-columns: 1fr 1fr; } }
+.cal-filters { flex: 1 1 340px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
