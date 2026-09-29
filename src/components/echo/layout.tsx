@@ -10,6 +10,8 @@ import { OrbitLoader } from "./logo";
 import { Button, EmptyState } from "./primitives";
 import { EchoTopbar, type EnvDef } from "./shell";
 import { isViewingAsClient, stopViewAsClient, viewingAsClientBrandName } from "@/lib/view-as";
+import { isDemoMode } from "@/lib/home-data";
+import { useEffect, useState } from "react";
 
 export type SubnavItem = { to: string; label: string; exact?: boolean; icon?: IconName; params?: Record<string, string>; search?: Record<string, unknown> };
 
@@ -30,10 +32,25 @@ export function EchoSubnav({ items, secondary, label }: { items: SubnavItem[]; s
   );
 }
 
+/** Aviso do modo demonstração dentro dos ambientes: sem banco, as telas ficam vazias. */
+export function DemoNotice() {
+  const [demo, setDemo] = useState(false);
+  useEffect(() => setDemo(isDemoMode()), []);
+  if (!demo) return null;
+  return (
+    <div className="echo-demo" role="status" style={{ marginTop: 6, marginBottom: 12 }}>
+      <Icon name="info" size="sm" />
+      <span><b>Modo demonstração.</b> Este ambiente lê os dados do banco, que não está conectado aqui. A moldura é a do Echo; o conteúdo aparece quando o Supabase estiver configurado.</span>
+    </div>
+  );
+}
+
 /** Faixa do modo "Ver como cliente": sempre visível enquanto ativo. */
 export function ViewAsBanner() {
   const navigate = useNavigate();
-  if (typeof window === "undefined" || !isViewingAsClient()) return null;
+  const [on, setOn] = useState(false);
+  useEffect(() => setOn(isViewingAsClient()), []);
+  if (!on) return null;
   return (
     <div className="echo-viewas" role="status">
       <Icon name="eye" size="sm" />
@@ -66,6 +83,7 @@ export function EchoLayout({
       <EchoTopbar activeEnv={env} />
       <div className={`echo-frame${wide ? " wide" : ""}`}>
         <ViewAsBanner />
+        <DemoNotice />
         {(title || eyebrow) && (
           <div className="echo-envhead">
             <div style={{ minWidth: 0 }}>
@@ -94,13 +112,20 @@ export function EchoLoading({ label }: { label: string }) {
 }
 
 export function EchoBlocked({ title, text, onRetry, homeLabel = "Voltar ao Echo" }: { title: string; text: string; onRetry?: () => void; homeLabel?: string }) {
+  const [demo, setDemo] = useState(false);
+  useEffect(() => setDemo(isDemoMode()), []);
+  if (demo) {
+    title = "Banco não conectado";
+    text = "Este ambiente depende do Supabase, que não está configurado neste computador. A Home mostra o modo demonstração com dados de exemplo.";
+    onRetry = undefined;
+  }
   return (
     <div className="echo-app">
       <EchoTopbar />
       <div className="echo-center">
         <div className="e-glass" style={{ borderRadius: "var(--r-2xl)", maxWidth: 520, width: "100%" }}>
           <EmptyState
-            kind={onRetry ? "error" : "lock"}
+            kind={demo ? "empty" : onRetry ? "error" : "lock"}
             title={title}
             text={text}
             actions={

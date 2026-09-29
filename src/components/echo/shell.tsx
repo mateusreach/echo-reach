@@ -9,6 +9,17 @@ import { Avatar } from "./primitives";
 import { MIXES, PATHS, resolvedBase, useAppearance, type PathKey } from "./appearance";
 import { viewTransition } from "./motion";
 import { useEchoSession } from "./session";
+import { useQuery } from "@tanstack/react-query";
+import { isDemoMode } from "@/lib/home-data";
+
+const DEMO_CLIENTS = ["Dra. Giuliana", "Fina Fragrância", "A Emporium", "Esense", "Eliza", "Pão de Queijo da Maria", "Gaby Mota Cachos", "Gamô Ateliê", "Zelus", "Spirale", "Isabela Gomes"];
+const slugify = (n: string) => n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+async function loadClients(): Promise<{ name: string; slug: string; segment?: string | null }[]> {
+  if (isDemoMode()) return DEMO_CLIENTS.map((name) => ({ name, slug: slugify(name) }));
+  const { data } = await supabase.from("brands").select("name, slug, segment").order("name");
+  return (data ?? []) as { name: string; slug: string; segment: string | null }[];
+}
 import { supabase } from "@/integrations/supabase/client";
 
 export type EnvDef = { id: "brand" | "workspace" | "like" | "e360"; name: string; tagline: string; icon: IconName; color: string; href?: string };
@@ -144,9 +155,12 @@ export function EchoTopbar({
 }) {
   const navigate = useNavigate();
   const session = useEchoSession();
-  const sess = session.data;
-  person = person ?? { name: sess?.name || "…" };
-  envAvailability = envAvailability ?? sess?.envs;
+  // O primeiro render precisa ser igual ao do servidor: dados da sessão só depois de montar.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const sess = mounted ? session.data : undefined;
+  person = mounted && person ? person : { name: sess?.name || "…" };
+  envAvailability = mounted ? envAvailability ?? sess?.envs : undefined;
   if (!onSignOut && sess?.mode === "live" && sess.signedIn) onSignOut = async () => { await supabase.auth.signOut(); navigate({ to: "/auth" }); };
   const logo = useRef<EchoLogoHandle>(null);
   const [envOpen, setEnvOpen] = useState(false);
@@ -161,6 +175,12 @@ export function EchoTopbar({
   }, []);
 
   const [, setAppearance] = useAppearance();
+  const clients = useQuery({ queryKey: ["echo-clients"], queryFn: loadClients, enabled: paletteOpen && mounted, staleTime: 120_000 });
+  const isClient = sess?.role === "client";
+  const clientCommands: CommandItem[] = (clients.data ?? []).map((c) => ({
+    id: `cli-${c.slug}`, group: "Clientes", label: c.name, sub: c.segment ?? (isClient ? "Espaço 360" : "Hub do cliente"), icon: "briefcase",
+    run: () => navigate({ to: (isClient ? `/e360/${c.slug}` : `/clientes/${c.slug}`) as never }),
+  }));
   const envCommands: CommandItem[] = ENVS.filter((e) => e.href && (envAvailability ? envAvailability[e.id]?.available === true : true)).map((e) => ({
     id: `env-${e.id}`, group: "Ir para", label: e.name, sub: e.tagline, icon: e.icon, run: () => navigate({ to: e.href as never }),
   }));
@@ -237,7 +257,7 @@ export function EchoTopbar({
           </div>
         </div>
       </header>
-      {paletteOpen && <CommandPalette items={[...baseCommands, ...envCommands, ...commands]} onClose={() => setPaletteOpen(false)} />}
+      {paletteOpen && <CommandPalette items={[...baseCommands, ...envCommands, ...commands.filter((c) => c.group !== "Clientes"), ...clientCommands]} onClose={() => setPaletteOpen(false)} />}
     </>
   );
 }

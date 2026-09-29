@@ -100,7 +100,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR" data-reach-theme="blue">
+    <html lang="pt-BR" data-reach-theme="blue" suppressHydrationWarning>
       <head>
         {/* Aplica base e caminho de cor antes da primeira pintura. */}
         <script dangerouslySetInnerHTML={{ __html: APPEARANCE_BOOT }} />
