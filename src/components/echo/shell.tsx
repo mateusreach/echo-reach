@@ -250,7 +250,7 @@ export function EchoTopbar({
               <div className="e-pop right" role="menu" onMouseLeave={() => setMenuOpen(false)}>
                 <div className="e-menu-title" style={{ fontWeight: 600, fontSize: 13.5 }}>{person.name}</div>
                 <button type="button" role="menuitem" className="e-menu-item" onClick={() => { setMenuOpen(false); setAppearOpen(true); }}><Icon name="palette" />Aparência</button>
-                <button type="button" role="menuitem" className="e-menu-item" onClick={() => navigate({ to: "/workspace/meu-acesso" as never })}><Icon name="lock" />Meu acesso</button>
+                <button type="button" role="menuitem" className="e-menu-item" onClick={() => navigate({ to: "/meu-acesso" as never })}><Icon name="lock" />Meu acesso</button>
                 {onSignOut && (<><div className="e-menu-sep" /><button type="button" role="menuitem" className="e-menu-item" onClick={onSignOut}><Icon name="logout" />Sair</button></>)}
               </div>
             )}

@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { goToLogin } from "@/lib/login-redirect";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,7 +47,7 @@ function EchoHome() {
 
   const q = useQuery({ queryKey: ["echo-home", demo ? demoRole : "live"], queryFn: () => loadHome(demoRole), enabled: ready, staleTime: 30_000, retry: 1 });
 
-  useEffect(() => { if (q.data === "unauthenticated") navigate({ to: "/auth" }); }, [q.data, navigate]);
+  useEffect(() => { if (q.data === "unauthenticated") goToLogin(navigate as never); }, [q.data, navigate]);
 
   const data = q.data && q.data !== "unauthenticated" ? q.data : null;
   const person = data?.person ?? { name: "", firstName: "" };

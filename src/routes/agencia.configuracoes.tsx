@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { goToLogin } from "@/lib/login-redirect";
 import { useEffect, useState, type FormEvent } from "react";
 import { ArrowRight, Building2, Check, Eye, Plus, RotateCcw, Search, Settings2, Trash2, X } from "lucide-react";
 import { ReachIconAnimation } from "@/components/reach/reach-icon-animation";
@@ -107,7 +108,7 @@ function AgenciaPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const session = sessionData.session;
       if (!session) {
-        navigate({ to: "/auth" });
+        goToLogin(navigate as never);
         return;
       }
       const [p, b] = await Promise.all([getProfile(session.user.id), listBrands()]);

@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { goToLogin } from "@/lib/login-redirect";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ImagePlus, LogOut, Mail, Plus, Send, X } from "lucide-react";
 import { ReachIconAnimation } from "@/components/reach/reach-icon-animation";
@@ -46,7 +47,7 @@ export const Route = createFileRoute("/b/$brandSlug/configuracoes")({
 
 const PROFILES = ["Agência (owner)", "Estrategista", "Atendimento", "Designer", "Social Media", "Cliente"];
 const INTEGRATIONS = ["Meta", "Google", "WhatsApp", "OpenAI", "Claude", "Google Drive", "Calendário", "E-mail", "Webhooks"];
-const CLIENT_ACCESS_MODULES = CLIENT_PERMISSION_MODULES.filter((module) => ["plano", "biblioteca", "espaco360", "calendario", "referencias"].includes(module.key));
+const CLIENT_ACCESS_MODULES = CLIENT_PERMISSION_MODULES.filter((module) => ["plano", "biblioteca", "espaco360", "like", "calendario", "referencias"].includes(module.key));
 const DEFAULT_CLIENT_PERMISSIONS = [modulePermissionKey("espaco360", "visualizar")];
 
 type Member = { user_id: string; member_role: string; name: string | null; email: string | null; created_at: string | null; permissions: string[]; is_admin: boolean };
@@ -78,7 +79,7 @@ function ConfiguracoesPage() {
     const { data: sessionData } = await supabase.auth.getSession();
     const session = sessionData.session;
     if (!session) {
-      navigate({ to: "/auth" });
+      goToLogin(navigate as never);
       return;
     }
     setAccountEmail(session.user.email ?? "");

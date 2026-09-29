@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { goToLogin } from "@/lib/login-redirect";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppSettings } from "@/lib/branding";
@@ -35,7 +36,7 @@ function AgencyLayout() {
       const { data } = await withTimeout(supabase.auth.getSession(), 8000, "A verificação da sessão demorou demais.");
       if (!alive) return;
       if (!data.session) {
-        navigate({ to: "/auth" });
+        goToLogin(navigate as never);
         return;
       }
       // Guarda de rota: a área da agência é exclusiva de quem tem papel de

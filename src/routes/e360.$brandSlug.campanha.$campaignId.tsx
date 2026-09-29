@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { goToLogin } from "@/lib/login-redirect";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Plus, X } from "lucide-react";
 import { ReachIconAnimation } from "@/components/reach/reach-icon-animation";
@@ -77,7 +78,7 @@ function CampaignDetailPage() {
     const { data: sessionData } = await supabase.auth.getSession();
     const session = sessionData.session;
     if (!session) {
-      navigate({ to: "/auth" });
+      goToLogin(navigate as never);
       return;
     }
     const b = await getBrandBySlug(brandSlug);

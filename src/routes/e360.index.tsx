@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { goToLogin } from "@/lib/login-redirect";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Target } from "lucide-react";
 import { ReachBackground } from "@/components/reach/background";
@@ -18,7 +19,7 @@ function SpaceIndex() {
     let active = true;
     (async () => {
       const { data } = await supabase.auth.getSession();
-      if (!data.session) { navigate({ to: "/auth" }); return; }
+      if (!data.session) { goToLogin(navigate as never); return; }
       const access = await getAccess();
       const list = access.isAgency ? await listBrands() : await myBrands();
       if (active) setBrands(list.filter((brand) => brandModules(brand).espaco360));

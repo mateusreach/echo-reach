@@ -96,3 +96,36 @@ export function AppearanceSync() {
   }, [data]);
   return null;
 }
+
+/**
+ * Acesso da pessoa conectada: `can("modulo.acao")` responde igual às
+ * permissões gravadas (admins da agência podem tudo). A RLS do banco continua
+ * sendo a garantia; isto só decide o que a interface mostra.
+ */
+export function useAccess() {
+  const q = useEchoSession();
+  const s = q.data;
+  const can = (key: string) => !!s && s.signedIn && (s.isAdmin || s.permissions.includes(key));
+  return { ...q, session: s, can, isTeam: s?.role === "team", isClient: s?.role === "client" };
+}
+
+/** Acesso da pessoa a um cliente específico (vínculo em brand_members). */
+export function useBrandAccess(brandId: string | null | undefined) {
+  const { session } = useAccess();
+  const q = useQuery({
+    queryKey: ["echo-brand-access", brandId, session?.userId],
+    enabled: !!brandId && !!session && session.mode === "live",
+    queryFn: async () => {
+      const { getBrandMembership } = await import("@/lib/reach-data");
+      return getBrandMembership(brandId!);
+    },
+    staleTime: 60_000,
+  });
+  const canBrand = (key: string) => {
+    if (!session) return false;
+    if (session.mode === "demo" || session.role === "team") return session.isAdmin || session.mode === "demo" || session.permissions.includes(key);
+    const m = q.data;
+    return !!m && (m.isAdmin || m.permissions.includes(key));
+  };
+  return { ...q, canBrand };
+}

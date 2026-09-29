@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { goToLogin } from "@/lib/login-redirect";
 import { useEffect, useState } from "react";
 import { EchoBlocked, EchoLayout, EchoLoading, EchoSubnav } from "@/components/echo/layout";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +23,6 @@ const PRIMARY = [
 const SECONDARY = [
   { to: "/workspace/demandas", label: "Demandas" },
   { to: "/workspace/avaliacoes", label: "Avaliações" },
-  { to: "/workspace/meu-acesso", label: "Meu acesso" },
 ] as const;
 
 /**
@@ -47,7 +47,7 @@ function WorkspaceLayout() {
         );
         if (!active) return;
         if (!data.session) {
-          navigate({ to: "/auth" });
+          goToLogin(navigate as never);
           return;
         }
         const access = await withTimeout(

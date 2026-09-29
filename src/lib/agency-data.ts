@@ -536,6 +536,9 @@ export const PERMISSION_ACTIONS = [
   { key: "editar", label: "Editar" },
   { key: "excluir", label: "Excluir" },
   { key: "administrar", label: "Administrar" },
+  // Ações do Like: comentar materiais e decidir (aprovar ou pedir ajustes).
+  { key: "comentar", label: "Comentar" },
+  { key: "aprovar", label: "Aprovar" },
 ] as const;
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number]["key"];
 
@@ -550,6 +553,8 @@ export const PERMISSION_MODULES: { key: string; label: string; actions: Permissi
   { key: "calendario", label: "Calendário", actions: ["visualizar", "criar", "editar", "excluir"] },
   { key: "referencias", label: "Referências", actions: ["visualizar", "criar", "editar", "excluir"] },
   { key: "configuracoes", label: "Configurações", actions: ["visualizar", "administrar"] },
+  // Like: equipe envia (criar) e administra; cliente comenta e aprova.
+  { key: "like", label: "Like (aprovação)", actions: ["visualizar", "criar", "editar", "excluir", "administrar", "comentar", "aprovar"] },
 ];
 
 export function modulePermissionKey(moduleKey: string, action: PermissionAction): string {
@@ -559,7 +564,7 @@ export function modulePermissionKey(moduleKey: string, action: PermissionAction)
 // Subconjunto de módulos relevante para permissões de usuários DO CLIENTE
 // (dentro do próprio ambiente da marca) — "clientes" e "equipe" são áreas da
 // agência e não fazem sentido aqui.
-export const CLIENT_PERMISSION_MODULE_KEYS = ["plano", "biblioteca", "espaco360", "referencias", "calendario", "configuracoes"];
+export const CLIENT_PERMISSION_MODULE_KEYS = ["plano", "biblioteca", "espaco360", "like", "referencias", "calendario", "configuracoes"];
 export const CLIENT_PERMISSION_MODULES = PERMISSION_MODULES.filter((m) => CLIENT_PERMISSION_MODULE_KEYS.includes(m.key));
 
 // Uma chave de permissão pode ser tanto "modulo.acao" (matriz nova) quanto uma

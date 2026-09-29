@@ -21,6 +21,7 @@ import { Route as EspecialistasIaRouteImport } from './routes/especialistas-ia'
 import { Route as EstruturaRouteImport } from './routes/estrutura'
 import { Route as EvolucaoRouteImport } from './routes/evolucao'
 import { Route as MercadoRouteImport } from './routes/mercado'
+import { Route as MeuAcessoRouteImport } from './routes/meu-acesso'
 import { Route as PesquisaRouteImport } from './routes/pesquisa'
 import { Route as RadarRouteImport } from './routes/radar'
 import { Route as ReferenciasRouteImport } from './routes/referencias'
@@ -123,6 +124,11 @@ const EvolucaoRoute = EvolucaoRouteImport.update({
 const MercadoRoute = MercadoRouteImport.update({
   id: '/mercado',
   path: '/mercado',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeuAcessoRoute = MeuAcessoRouteImport.update({
+  id: '/meu-acesso',
+  path: '/meu-acesso',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PesquisaRoute = PesquisaRouteImport.update({
@@ -358,6 +364,7 @@ export interface FileRoutesByFullPath {
   '/estrutura': typeof EstruturaRoute
   '/evolucao': typeof EvolucaoRoute
   '/mercado': typeof MercadoRoute
+  '/meu-acesso': typeof MeuAcessoRoute
   '/pesquisa': typeof PesquisaRoute
   '/radar': typeof RadarRoute
   '/referencias': typeof ReferenciasRoute
@@ -413,6 +420,7 @@ export interface FileRoutesByTo {
   '/estrutura': typeof EstruturaRoute
   '/evolucao': typeof EvolucaoRoute
   '/mercado': typeof MercadoRoute
+  '/meu-acesso': typeof MeuAcessoRoute
   '/pesquisa': typeof PesquisaRoute
   '/radar': typeof RadarRoute
   '/referencias': typeof ReferenciasRoute
@@ -470,6 +478,7 @@ export interface FileRoutesById {
   '/estrutura': typeof EstruturaRoute
   '/evolucao': typeof EvolucaoRoute
   '/mercado': typeof MercadoRoute
+  '/meu-acesso': typeof MeuAcessoRoute
   '/pesquisa': typeof PesquisaRoute
   '/radar': typeof RadarRoute
   '/referencias': typeof ReferenciasRoute
@@ -529,6 +538,7 @@ export interface FileRouteTypes {
     | '/estrutura'
     | '/evolucao'
     | '/mercado'
+    | '/meu-acesso'
     | '/pesquisa'
     | '/radar'
     | '/referencias'
@@ -584,6 +594,7 @@ export interface FileRouteTypes {
     | '/estrutura'
     | '/evolucao'
     | '/mercado'
+    | '/meu-acesso'
     | '/pesquisa'
     | '/radar'
     | '/referencias'
@@ -640,6 +651,7 @@ export interface FileRouteTypes {
     | '/estrutura'
     | '/evolucao'
     | '/mercado'
+    | '/meu-acesso'
     | '/pesquisa'
     | '/radar'
     | '/referencias'
@@ -698,6 +710,7 @@ export interface RootRouteChildren {
   EstruturaRoute: typeof EstruturaRoute
   EvolucaoRoute: typeof EvolucaoRoute
   MercadoRoute: typeof MercadoRoute
+  MeuAcessoRoute: typeof MeuAcessoRoute
   PesquisaRoute: typeof PesquisaRoute
   RadarRoute: typeof RadarRoute
   ReferenciasRoute: typeof ReferenciasRoute
@@ -800,6 +813,13 @@ declare module '@tanstack/react-router' {
       path: '/mercado'
       fullPath: '/mercado'
       preLoaderRoute: typeof MercadoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meu-acesso': {
+      id: '/meu-acesso'
+      path: '/meu-acesso'
+      fullPath: '/meu-acesso'
+      preLoaderRoute: typeof MeuAcessoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pesquisa': {
@@ -1210,6 +1230,7 @@ const rootRouteChildren: RootRouteChildren = {
   EstruturaRoute: EstruturaRoute,
   EvolucaoRoute: EvolucaoRoute,
   MercadoRoute: MercadoRoute,
+  MeuAcessoRoute: MeuAcessoRoute,
   PesquisaRoute: PesquisaRoute,
   RadarRoute: RadarRoute,
   ReferenciasRoute: ReferenciasRoute,

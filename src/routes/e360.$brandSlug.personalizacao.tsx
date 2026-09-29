@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { goToLogin } from "@/lib/login-redirect";
 import { useEffect, useState } from "react";
 import { SpaceShell } from "@/components/reach/space-shell";
 import { PageHeader } from "@/components/reach/page-header";
@@ -26,7 +27,7 @@ function SpacePersonalization() {
     let active = true;
     (async () => {
       const { data } = await supabase.auth.getSession();
-      if (!data.session) { navigate({ to: "/auth" }); return; }
+      if (!data.session) { goToLogin(navigate as never); return; }
       const b = await getBrandBySlug(brandSlug);
       if (!b || !brandModules(b).espaco360) { if (active) setError("Espaço não disponível para este cliente."); return; }
       const access = await getAccess();
