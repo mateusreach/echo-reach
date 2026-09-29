@@ -32,7 +32,21 @@ export const EVENTS: { kind: NotifyKind; label: string; who: "cliente" | "equipe
 export const DEFAULT_PREFS: Prefs = { events: {}, inApp: true, email: true, dailyDigest: false, quietStart: "22:00", quietEnd: "08:00" };
 
 // ----- Demo --------------------------------------------------------------------------------
-const demo = { list: [] as Notification[], prefs: new Map<string, Prefs>(), listeners: new Set<() => void>() };
+const demo = { list: [] as Notification[], prefs: new Map<string, Prefs>(), listeners: new Set<() => void>(), seeded: false };
+/** Algumas notificações de exemplo para o sino não começar vazio. */
+function seedDemo() {
+  if (demo.seeded) return;
+  demo.seeded = true;
+  const ago = (h: number) => new Date(Date.now() - h * 3600e3).toISOString();
+  const mk = (userId: string, kind: NotifyKind, title: string, body: string | null, link: string, h: number, read = false): Notification => ({ id: uid("nt"), userId, brandSlug: "fina-fragrancia", kind, title, body, link, readAt: read ? ago(h - 0.5) : null, createdAt: ago(h) });
+  demo.list.push(
+    mk("u-helena", "like.comentario", "Carla Mendes comentou em Reels de bastidores", "Aqui dá para mostrar mais o rótulo?", "/like/fina-fragrancia", 20),
+    mk("u-helena", "like.rodada_vencida", "Rodada vencida: Feed · Zelus", "O prazo de decisão passou.", "/like/zelus", 30, true),
+    mk("u-helena", "like.decisao", "Paulo Nunes aprovou Post: bastidores", null, "/like/isabela-gomes", 60, true),
+    mk("u-carla", "like.nova_rodada", "Novos materiais para aprovar", "Fina Fragrância: a Reach enviou materiais para você revisar.", "/like/fina-fragrancia", 26),
+    mk("u-carla", "like.nova_versao", "Nova versão: Stories: contagem regressiva", "Troquei a foto da capa e encurtei a legenda.", "/like/fina-fragrancia", 6),
+  );
+}
 const emit = () => demo.listeners.forEach((f) => f());
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 
@@ -63,9 +77,14 @@ export const demoPrefsOf = (userId: string) => demo.prefs.get(userId) ?? DEFAULT
 
 // ----- API ---------------------------------------------------------------------------------
 export async function listNotifications(userId: string, limit = 30): Promise<Notification[]> {
-  if (isDemoMode()) return clone(demo.list.filter((n) => n.userId === userId).slice(0, limit));
+  if (isDemoMode()) { seedDemo(); return clone(demo.list.filter((n) => n.userId === userId).slice(0, limit)); }
   const { data } = await db.from("notifications").select("*, brands(slug)").eq("user_id", userId).order("created_at", { ascending: false }).limit(limit);
   return ((data ?? []) as any[]).map((n) => ({ id: n.id, userId: n.user_id, brandSlug: n.brands?.slug ?? null, kind: n.kind, title: n.title, body: n.body, link: n.link, readAt: n.read_at, createdAt: n.created_at }));
+}
+
+export async function markAllRead(userId: string) {
+  if (isDemoMode()) { for (const n of demo.list) if (n.userId === userId) n.readAt = n.readAt ?? nowISO(); emit(); return; }
+  await db.from("notifications").update({ read_at: nowISO() }).eq("user_id", userId).is("read_at", null);
 }
 
 export async function markRead(ids: string[]) {

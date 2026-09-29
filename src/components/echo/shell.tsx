@@ -11,6 +11,9 @@ import { viewTransition } from "./motion";
 import { useEchoSession } from "./session";
 import { useQuery } from "@tanstack/react-query";
 import { isDemoMode } from "@/lib/home-data";
+import { KIND_META, listRecent, norm, searchAll, trackRecent, warmSearch, type Hit, type HitKind } from "@/lib/search-data";
+import { isViewingAsClient, startViewAsClient } from "@/lib/view-as";
+import { NotificationBell } from "./notifications";
 
 const DEMO_CLIENTS = ["Dra. Giuliana", "Fina Fragrância", "A Emporium", "Esense", "Eliza", "Pão de Queijo da Maria", "Gaby Mota Cachos", "Gamô Ateliê", "Zelus", "Spirale", "Isabela Gomes"];
 const slugify = (n: string) => n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -91,12 +94,26 @@ function AppearancePanel({ onClose, onPathChange }: { onClose: () => void; onPat
 
 export type CommandItem = { id: string; group: string; label: string; sub?: string; icon: IconName; run: () => void };
 
-function CommandPalette({ items, onClose }: { items: CommandItem[]; onClose: () => void }) {
+function CommandPalette({ items, onClose, client }: { items: CommandItem[]; onClose: () => void; client?: boolean }) {
+  const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [i, setI] = useState(0);
+  const [hits, setHits] = useState<Hit[]>([]);
   const input = useRef<HTMLInputElement>(null);
-  const list = useMemo(() => items.filter((it) => (it.label + " " + (it.sub ?? "")).toLowerCase().includes(q.toLowerCase())), [items, q]);
-  useEffect(() => { input.current?.focus(); }, []);
+  // Busca global com pequeno atraso para não consultar a cada tecla.
+  useEffect(() => {
+    if (q.trim().length < 2) { setHits([]); return; }
+    let alive = true;
+    const t = setTimeout(() => { searchAll(q, { client, limit: 30, perKind: 4 }).then((h) => { if (alive) setHits(h); }).catch(() => undefined); }, 60);
+    return () => { alive = false; clearTimeout(t); };
+  }, [q, client]);
+  const open = (h: { kind: HitKind; id: string; title: string; sub: string | null; href: string }) => { trackRecent({ kind: h.kind, id: h.id, title: h.title, sub: h.sub, href: h.href }); navigate({ to: h.href as never }); };
+  const recentItems: CommandItem[] = q ? [] : listRecent().slice(0, 5).map((r) => ({ id: `rec-${r.href}`, group: "Recentes", label: r.title, sub: r.sub ?? KIND_META[r.kind]?.label, icon: (KIND_META[r.kind]?.icon ?? "history") as IconName, run: () => open(r) }));
+  const hitItems: CommandItem[] = hits.filter((h) => h.kind !== "cliente" || !items.some((it) => it.id === `cli-${h.brandSlug}`)).map((h) => ({ id: `hit-${h.kind}-${h.id}`, group: KIND_META[h.kind].plural, label: h.title, sub: h.sub ?? undefined, icon: KIND_META[h.kind].icon as IconName, run: () => open(h) }));
+  const filtered = useMemo(() => items.filter((it) => norm(it.label + " " + (it.sub ?? "")).includes(norm(q))), [items, q]);
+  const more: CommandItem[] = q.trim().length >= 2 ? [{ id: "all", group: "Pesquisa", label: `Ver todos os resultados para “${q.trim()}”`, icon: "search", run: () => navigate({ to: "/pesquisa" as never, search: { q: q.trim() } as never }) }] : [];
+  const list = [...recentItems, ...filtered, ...hitItems, ...more];
+  useEffect(() => { input.current?.focus(); warmSearch(client); }, []);
   useEffect(() => setI(0), [q]);
   const groups = [...new Set(list.map((l) => l.group))];
   const run = (it?: CommandItem) => { if (!it) return; onClose(); it.run(); };
@@ -106,7 +123,7 @@ function CommandPalette({ items, onClose }: { items: CommandItem[]; onClose: () 
       <div className="e-cmdk floating" role="dialog" aria-label="Paleta de comandos" style={{ width: "min(640px, 100%)" }}>
         <div className="e-cmdk-in">
           <Icon name="search" size="md" />
-          <input ref={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar ambientes, clientes e ações…" aria-label="Buscar comandos"
+          <input ref={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar clientes, tarefas, materiais, pessoas…" aria-label="Buscar em todo o Echo"
             onKeyDown={(e) => {
               if (e.key === "ArrowDown") { e.preventDefault(); setI((x) => Math.min(list.length - 1, x + 1)); }
               if (e.key === "ArrowUp") { e.preventDefault(); setI((x) => Math.max(0, x - 1)); }
@@ -116,7 +133,7 @@ function CommandPalette({ items, onClose }: { items: CommandItem[]; onClose: () 
           <span className="e-kbd">esc</span>
         </div>
         <div className="e-cmdk-list" role="listbox">
-          {list.length === 0 && <div className="e-state" style={{ padding: "22px 12px" }}><h4>Nada encontrado para “{q}”</h4><p>Tente o nome de um cliente ou de um ambiente.</p></div>}
+          {list.length === 0 && <div className="e-state" style={{ padding: "22px 12px" }}><h4>Nada encontrado para “{q}”</h4><p>{q.trim().length < 2 ? "Digite pelo menos duas letras." : "Tente o nome de um cliente, de um material ou de uma pessoa."}</p></div>}
           {groups.map((g) => (
             <div key={g}>
               <div className="e-cmdk-group e-label">{g}</div>
@@ -187,7 +204,18 @@ export function EchoTopbar({
   const baseCommands: CommandItem[] = [
     { id: "base", group: "Ações rápidas", label: "Alternar base clara ou escura", sub: "Aparência", icon: "moon", run: () => { const html = document.documentElement; setAppearance({ base: html.dataset.base === "dark" ? "light" : "dark" }); } },
     { id: "cores", group: "Ações rápidas", label: "Personalizar cores", sub: "Caminho, mistura e aura", icon: "palette", run: () => setAppearOpen(true) },
+    { id: "sol", group: "Ações rápidas", label: "Nova solicitação", sub: "Espaço 360", icon: "message", run: () => navigate({ to: "/e360" as never }) },
+    ...(isClient ? [] : [
+      { id: "tarefa", group: "Ações rápidas", label: "Nova tarefa", sub: "Workspace · Demandas", icon: "plus" as IconName, run: () => navigate({ to: "/workspace/demandas" as never }) },
+      { id: "like", group: "Ações rápidas", label: "Enviar para aprovação", sub: "Like", icon: "send" as IconName, run: () => navigate({ to: "/like" as never }) },
+      { id: "busca", group: "Ações rápidas", label: "Pesquisa completa", sub: "Filtros por ambiente, cliente, tipo e período", icon: "search" as IconName, run: () => navigate({ to: "/pesquisa" as never }) },
+    ]),
   ];
+  // Equipe: "ver como cliente" direto do ⌘K.
+  const viewAsCommands: CommandItem[] = isClient || !mounted || isViewingAsClient() ? [] : (clients.data ?? []).map((c) => ({
+    id: `va-${c.slug}`, group: "Ver como cliente", label: `Ver como ${c.name}`, sub: "Abre o Like como o cliente vê", icon: "eye",
+    run: () => { startViewAsClient(c.name); window.location.assign(`/like/${c.slug}`); },
+  }));
 
   return (
     <>
@@ -236,6 +264,7 @@ export function EchoTopbar({
           <button type="button" className="e-btn secondary sm echo-search" onClick={() => setPaletteOpen(true)} aria-label="Buscar (⌘K)">
             <Icon name="search" /> <span className="lbl">Buscar</span> <span className="e-kbd">⌘K</span>
           </button>
+          {mounted && sess?.signedIn && <NotificationBell userId={sess.userId} />}
           <div style={{ position: "relative" }}>
             <button type="button" className="e-btn secondary icon" data-appearance-trigger aria-label="Aparência" aria-expanded={appearOpen} onClick={() => setAppearOpen((v) => !v)}>
               <Icon name="palette" />
@@ -257,7 +286,7 @@ export function EchoTopbar({
           </div>
         </div>
       </header>
-      {paletteOpen && <CommandPalette items={[...baseCommands, ...envCommands, ...commands.filter((c) => c.group !== "Clientes"), ...clientCommands]} onClose={() => setPaletteOpen(false)} />}
+      {paletteOpen && <CommandPalette client={isClient || isViewingAsClient()} items={[...baseCommands, ...envCommands, ...commands.filter((c) => c.group !== "Clientes"), ...clientCommands, ...viewAsCommands]} onClose={() => setPaletteOpen(false)} />}
     </>
   );
 }
