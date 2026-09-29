@@ -545,7 +545,7 @@ button.member-card:focus-visible { outline: none; box-shadow: var(--e-ring); }
 .prio { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--ink-3); }
 .prio i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
 .star { width: 30px; height: 30px; border: 0; border-radius: 50%; background: none; color: var(--ink-3); display: grid; place-items: center; cursor: pointer; transition: transform var(--dur-2) var(--ease-out), color var(--dur-1) ease; }
-.star.on { color: #E8A93A; }
+.star.on { color: var(--warn-fill); }
 .star.on svg { fill: currentColor; }
 .star:hover:not(:disabled) { background: var(--hover); }
 .star:active:not(:disabled) { transform: scale(.85); }
