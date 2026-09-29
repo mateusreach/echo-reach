@@ -33,14 +33,18 @@ export function EchoSubnav({ items, secondary, label }: { items: SubnavItem[]; s
 }
 
 /** Aviso do modo demonstração dentro dos ambientes: sem banco, as telas ficam vazias. */
-export function DemoNotice() {
+export function DemoNotice({ withData }: { withData?: boolean }) {
   const [demo, setDemo] = useState(false);
   useEffect(() => setDemo(isDemoMode()), []);
   if (!demo) return null;
   return (
     <div className="echo-demo" role="status" style={{ marginTop: 6, marginBottom: 12 }}>
       <Icon name="info" size="sm" />
-      <span><b>Modo demonstração.</b> Este ambiente lê os dados do banco, que não está conectado aqui. A moldura é a do Echo; o conteúdo aparece quando o Supabase estiver configurado.</span>
+      {withData ? (
+        <span><b>Modo demonstração.</b> Dados de exemplo. Você pode testar criar, editar e confirmar; nada é salvo ao recarregar a página.</span>
+      ) : (
+        <span><b>Modo demonstração.</b> Este ambiente lê os dados do banco, que não está conectado aqui. A moldura é a do Echo; o conteúdo aparece quando o Supabase estiver configurado.</span>
+      )}
     </div>
   );
 }
@@ -69,6 +73,7 @@ export function EchoLayout({
   nav,
   children,
   wide,
+  demoData,
 }: {
   env?: EnvDef["id"];
   eyebrow?: ReactNode;
@@ -77,13 +82,15 @@ export function EchoLayout({
   nav?: ReactNode;
   children: ReactNode;
   wide?: boolean;
+  /** Esta área tem dados de exemplo no modo demonstração. */
+  demoData?: boolean;
 }) {
   return (
     <div className="echo-app">
       <EchoTopbar activeEnv={env} />
       <div className={`echo-frame${wide ? " wide" : ""}`}>
         <ViewAsBanner />
-        <DemoNotice />
+        <DemoNotice withData={demoData} />
         {(title || eyebrow) && (
           <div className="echo-envhead">
             <div style={{ minWidth: 0 }}>

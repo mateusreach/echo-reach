@@ -3,6 +3,7 @@ import { goToLogin } from "@/lib/login-redirect";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppSettings } from "@/lib/branding";
+import { isDemoMode } from "@/lib/home-data";
 import { EchoBlocked, EchoLayout, EchoLoading, EchoSubnav } from "@/components/echo/layout";
 import { getAccess } from "@/lib/agency-data";
 import { withTimeout } from "@/lib/with-timeout";
@@ -13,13 +14,13 @@ export const Route = createFileRoute("/agencia")({
 });
 
 const NAV = [
-  { to: "/agencia", label: "Home", exact: true },
+  { to: "/agencia", label: "Início", exact: true, icon: "home" as const },
   { to: "/agencia/equipe", label: "Equipe" },
   { to: "/agencia/clientes", label: "Clientes" },
 
   { to: "/agencia/calendario", label: "Calendário" },
   { to: "/agencia/comunicacao", label: "Comunicação" },
-  { to: "/agencia/modelos", label: "Modelos de Plano" },
+  { to: "/agencia/modelos", label: "Modelos" },
   { to: "/agencia/configuracoes", label: "Configurações" },
 ] as const;
 
@@ -32,6 +33,8 @@ function AgencyLayout() {
 
   useEffect(() => {
     let alive = true;
+    // Sem banco (modo demonstração), a Agência abre com dados de exemplo.
+    if (isDemoMode()) { setChecking(false); return; }
     (async () => {
       const { data } = await withTimeout(supabase.auth.getSession(), 8000, "A verificação da sessão demorou demais.");
       if (!alive) return;
@@ -69,6 +72,7 @@ function AgencyLayout() {
   const agencyName = (settings as any)?.agency_name || "Reach";
   return (
     <EchoLayout
+      demoData
       eyebrow="Administração"
       title={`Agência ${agencyName}`}
       nav={<EchoSubnav label="Agência" items={NAV.map((i) => ({ ...i }))} />}

@@ -1,167 +1,134 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarDays, CheckCircle2, Inbox, Megaphone } from "lucide-react";
-import { listBrands, type Brand } from "@/lib/reach-data";
-import {
-  addDaysISO,
-  isLate,
-  listAgencyEvents,
-  listAgencyPosts,
-  listWorkItems,
-  todayISO,
-  type AgencyEvent,
-  type AgencyPost,
-  type WorkItem,
-} from "@/lib/agency-data";
-import { cn } from "@/lib/utils";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { AgendaRow, Panel, PersonLoad, StatTile, WORK_TONE, STATUS_LABEL, entryTone } from "@/components/echo/blocks";
+import { Badge, Button, EmptyState, Skeleton } from "@/components/echo/primitives";
+import { Icon } from "@/components/echo/icon";
+import { stagger } from "@/components/echo/motion";
+import { EVENT_CATEGORIES, POST_KINDS } from "@/lib/agency-data";
+import { loadAgencyHome, toggleAck, type AgendaEntry, type AgencyHome as HomeData } from "@/lib/agency-page-data";
+import { relDay } from "@/lib/home-data";
 
 export const Route = createFileRoute("/agencia/")({
-  head: () => ({
-    meta: [
-      { title: "Home da Agência — Reach Brand OS" },
-      { name: "description", content: "Visão operacional da Reach: campanhas, tarefas, solicitações e marcos do mês." },
-      { property: "og:title", content: "Home da Agência — Reach Brand OS" },
-      { property: "og:description", content: "Centro de comando operacional da Reach." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "Agência · Echo" }, { name: "description", content: "O que está acontecendo hoje na operação da Reach." }] }),
   component: AgencyHome,
 });
 
 function AgencyHome() {
-  const [items, setItems] = useState<WorkItem[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [events, setEvents] = useState<AgencyEvent[]>([]);
-  const [posts, setPosts] = useState<AgencyPost[]>([]);
-
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["agency-home"], queryFn: loadAgencyHome, enabled: ready, staleTime: 20_000 });
+  const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    let alive = true;
-    Promise.all([listWorkItems(), listBrands(), listAgencyEvents(), listAgencyPosts()])
-      .then(([w, b, e, p]) => {
-        if (!alive) return;
-        setItems(w);
-        setBrands(b);
-        setEvents(e);
-        setPosts(p);
-      })
-      .catch(() => undefined);
-    return () => {
-      alive = false;
-    };
-  }, []);
+    if (!q.data || !root.current) return;
+    stagger(root.current.querySelectorAll(".stat-tile"), { y: 12, dur: 480 }, 50);
+    stagger(root.current.querySelectorAll(".now-panel"), { y: 14, dur: 520, delay: 200 }, 60);
+  }, [!!q.data]);
 
-  const brandName = useMemo(() => new Map(brands.map((b) => [b.id, b.name])), [brands]);
-  const late = items.filter(isLate);
-  const soon = items.filter((i) => i.dueDate && i.dueDate >= todayISO() && i.dueDate <= addDaysISO(7) && !isLate(i));
-  const requests = items.filter((i) => i.kind === "solicitacao" && !["concluida", "cancelada"].includes(i.status));
-  const campaigns = items.filter((i) => i.kind === "campanha");
-  const upcoming = events.filter((e) => e.event_date >= todayISO()).slice(0, 6);
+  if (!ready || q.isLoading) return <HomeSkeleton />;
+  if (q.isError || !q.data)
+    return (
+      <div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}>
+        <EmptyState kind="error" title="Não foi possível carregar o Início da Agência" text="A consulta ao banco falhou. Tente de novo em instantes." actions={<Button variant="secondary" icon="refresh" onClick={() => q.refetch()}>Tentar novamente</Button>} />
+      </div>
+    );
+  const d: HomeData = q.data;
+  const brandName = (id?: string | null) => (id ? d.brands.find((b) => b.id === id)?.name ?? "Cliente" : "Reach (interno)");
+  const maxLoad = Math.max(1, ...d.team.map((t) => t.open));
 
-  const kpis = [
-    { label: "Clientes ativos", value: brands.length, icon: CheckCircle2 },
-    { label: "Campanhas", value: campaigns.length, icon: Megaphone },
-    { label: "Solicitações abertas", value: requests.length, icon: Inbox },
-    { label: "Itens atrasados", value: late.length, icon: AlertTriangle },
-  ];
+  const ack = async (id: string, on: boolean) => {
+    try {
+      await toggleAck(id, on);
+      toast.success(on ? "Leitura confirmada" : "Confirmação removida");
+      qc.invalidateQueries({ queryKey: ["agency-home"] });
+      qc.invalidateQueries({ queryKey: ["agency-posts"] });
+    } catch {
+      toast.error("Não foi possível registrar. Tente de novo.");
+    }
+  };
+
+  const row = (e: AgendaEntry) => (
+    <AgendaRow
+      key={`${e.layer}-${e.id}`}
+      date={e.date}
+      tone={entryTone(e.date)}
+      title={e.title}
+      meta={[brandName(e.brandId), e.who, relDay(e.date)].filter(Boolean).join(" · ")}
+      badge={e.status && WORK_TONE[e.status] ? { label: STATUS_LABEL[e.status] ?? e.status, tone: WORK_TONE[e.status] } : undefined}
+      to={e.brandId ? `/workspace/cliente/${d.brands.find((b) => b.id === e.brandId)?.slug ?? ""}` : "/workspace"}
+    />
+  );
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-xl font-semibold tracking-tight">Home da Agência</h1>
-        <p className="text-sm text-muted-foreground">O que está acontecendo hoje na operação da Reach.</p>
-      </header>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {kpis.map((k) => (
-          <div key={k.label} className="surface rounded-2xl p-4">
-            <k.icon className="h-4 w-4 text-muted-foreground" />
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{k.value}</p>
-            <p className="text-xs text-muted-foreground">{k.label}</p>
-          </div>
-        ))}
+    <div ref={root} className="stack-lg">
+      <p className="e-small" style={{ margin: "-4px 4px 0" }}>O que está acontecendo hoje na operação da Reach.</p>
+      <div className="stat-row">
+        <StatTile label="Clientes ativos" value={d.kpis.clients} icon="briefcase" to="/clientes" tone="var(--env-brand)" />
+        <StatTile label="Solicitações abertas" value={d.kpis.requests} icon="message" to="/e360" tone="var(--env-360)" />
+        <StatTile label="Itens atrasados" value={d.kpis.late} icon="alert" tone="var(--danger)" hint="tarefas e solicitações" />
+        <StatTile label="Aguardando o cliente" value={d.kpis.awaitingClient} icon="heart" to="/workspace/avaliacoes" tone="var(--env-like)" hint="em avaliação externa" />
+        <StatTile label="Frentes sem cobertura" value={d.kpis.uncovered} icon="feed" to="/workspace/controle" tone="var(--warn)" />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <WorkList title="Atrasados" items={late} brandName={brandName} tone="danger" />
-        <WorkList title="Próximos 7 dias" items={soon} brandName={brandName} />
+      <div className="grid-2">
+        <Panel title="Atrasados" icon="alert" count={d.late.length} tone="var(--danger)">
+          {d.late.length ? <div className="now-list">{d.late.map(row)}</div> : <EmptyState compact kind="ok" title="Nada atrasado" text="Todas as tarefas e solicitações estão dentro do prazo." />}
+        </Panel>
+        <Panel title="Próximos 7 dias" icon="calendar" count={d.soon.length} tone="var(--env-workspace)">
+          {d.soon.length ? <div className="now-list">{d.soon.map(row)}</div> : <EmptyState compact title="Semana livre" text="Nenhum prazo nos próximos 7 dias." />}
+        </Panel>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <section className="surface space-y-3 rounded-2xl p-5">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-            <h2 className="truncate text-sm font-semibold">Próximos marcos</h2>
-            <Link to="/agencia/calendario" className="shrink-0 text-xs text-brand">Calendário</Link>
-          </div>
-          {upcoming.length === 0 && <p className="text-sm text-muted-foreground">Nenhum marco agendado.</p>}
-          {upcoming.map((e) => (
-            <div key={e.id} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-2xl border border-border px-3 py-2">
-              <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <div className="min-w-0">
-                <p className="truncate text-sm">{e.title}</p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {formatDate(e.event_date)}
-                  {e.brand_id ? ` · ${brandName.get(e.brand_id) ?? "Cliente"}` : " · Reach"}
-                </p>
-              </div>
+      <div className="grid-2">
+        <Panel title="Próximos marcos" icon="flag" count={d.upcoming.length} tone="var(--env-brand)" action={<Link to="/agencia/calendario" className="e-link" style={{ fontSize: 13 }}>Calendário <Icon name="arrowRight" size="sm" /></Link>}>
+          {d.upcoming.length ? (
+            <div className="now-list">
+              {d.upcoming.map((e) => {
+                const cat = EVENT_CATEGORIES.find((c) => c.key === e.category);
+                return <AgendaRow key={e.id} date={e.date} tone={entryTone(e.date)} title={e.title} color={cat?.color} meta={[cat?.label, brandName(e.brandId), e.time?.slice(0, 5)].filter(Boolean).join(" · ")} to="/agencia/calendario" />;
+              })}
             </div>
-          ))}
-        </section>
-
-        <section className="surface space-y-3 rounded-2xl p-5">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-            <h2 className="truncate text-sm font-semibold">Comunicação interna</h2>
-            <Link to="/agencia/comunicacao" className="shrink-0 text-xs text-brand">Ver mural</Link>
-          </div>
-          {posts.length === 0 && <p className="text-sm text-muted-foreground">Nenhum comunicado publicado.</p>}
-          {posts.slice(0, 5).map((p) => (
-            <div key={p.id} className="rounded-2xl border border-border px-3 py-2">
-              <p className="truncate text-sm font-medium">{p.title}</p>
-              {p.content && <p className="line-clamp-2 text-xs text-muted-foreground">{p.content}</p>}
+          ) : <EmptyState compact icon="calendar" title="Nenhum marco agendado" text="Cadastre marcos no Calendário da agência." />}
+        </Panel>
+        <Panel title="Mural" icon="megaphone" count={d.posts.length} tone="var(--env-360)" action={<Link to="/agencia/comunicacao" className="e-link" style={{ fontSize: 13 }}>Ver mural <Icon name="arrowRight" size="sm" /></Link>}>
+          {d.posts.length ? (
+            <div className="now-list">
+              {d.posts.slice(0, 4).map((p) => (
+                <div key={p.id} className="post-mini">
+                  <div className="e-row" style={{ gap: 6 }}>
+                    {p.pinned && <Icon name="pin" size="sm" />}
+                    <Badge tone="glass">{POST_KINDS.find((k) => k.key === p.kind)?.label ?? p.kind}</Badge>
+                    <span className="e-caption">{relDay(p.created_at.slice(0, 10))}</span>
+                  </div>
+                  <b>{p.title}</b>
+                  {p.content && <p className="e-clamp2">{p.content}</p>}
+                  <div className="e-row" style={{ gap: 8 }}>
+                    <Button size="sm" variant={p.mine ? "tonal" : "secondary"} icon={p.mine ? "check" : undefined} onClick={() => ack(p.id, !p.mine)}>{p.mine ? "Ciente" : "Marcar como ciente"}</Button>
+                    <span className="e-caption">{p.acks.length} {p.acks.length === 1 ? "confirmação" : "confirmações"}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </section>
+          ) : <EmptyState compact icon="megaphone" title="Nenhum comunicado" text="Publique avisos e atualizações para a equipe." />}
+        </Panel>
       </div>
+
+      <Panel title="Carga da equipe" icon="users" count={d.team.length} tone="var(--env-workspace)" action={<Link to="/agencia/equipe" className="e-link" style={{ fontSize: 13 }}>Equipe <Icon name="arrowRight" size="sm" /></Link>}>
+        {d.team.length ? (
+          <div className="team-grid">{d.team.map((t) => <PersonLoad key={t.id} name={t.name} role={t.role} open={t.open} late={t.late} max={maxLoad} leader={t.leader} />)}</div>
+        ) : <EmptyState compact icon="users" title="Nenhuma pessoa na equipe" text="Cadastre a equipe em Agência › Equipe." />}
+      </Panel>
     </div>
   );
 }
 
-function WorkList({
-  title,
-  items,
-  brandName,
-  tone,
-}: {
-  title: string;
-  items: WorkItem[];
-  brandName: Map<string, string>;
-  tone?: "danger";
-}) {
+function HomeSkeleton() {
   return (
-    <section className="surface space-y-3 rounded-2xl p-5">
-      <h2 className="text-sm font-semibold">{title}</h2>
-      {items.length === 0 && <p className="text-sm text-muted-foreground">Nada por aqui.</p>}
-      {items.slice(0, 8).map((i) => (
-        <div key={`${i.kind}-${i.id}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-border px-3 py-2">
-          <div className="min-w-0">
-            <p className="truncate text-sm">{i.title}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {i.kind} · {i.brandId ? brandName.get(i.brandId) ?? "Cliente" : "Reach"}
-              {i.responsible ? ` · ${i.responsible}` : ""}
-            </p>
-          </div>
-          {i.dueDate && (
-            <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[10.5px]", tone === "danger" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>
-              {formatDate(i.dueDate)}
-            </span>
-          )}
-        </div>
-      ))}
-    </section>
+    <div className="stack-lg" aria-busy="true" aria-label="Carregando o Início da Agência">
+      <div className="stat-row">{[0, 1, 2, 3, 4].map((i) => <div key={i} className="stat-tile e-glass"><Skeleton w={30} h={30} r={10} /><Skeleton w="50%" h={28} r={8} /><Skeleton w="70%" h={11} /></div>)}</div>
+      <div className="grid-2">{[0, 1].map((i) => <div key={i} className="now-panel e-glass"><Skeleton w="35%" h={14} />{[0, 1, 2].map((k) => <Skeleton key={k} h={50} r={14} />)}</div>)}</div>
+    </div>
   );
-}
-
-function formatDate(iso: string) {
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y.slice(2)}`;
 }

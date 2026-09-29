@@ -1,252 +1,191 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { Check, History, Pin, PinOff, Plus, ThumbsUp, Trash2 } from "lucide-react";
-import { PillButton } from "@/components/reach/ui";
-import {
-  POST_KINDS,
-  ackPost,
-  createAgencyPost,
-  deleteAgencyPost,
-  getFullAccess,
-  listAgencyPosts,
-  listPostAcks,
-  listProfiles,
-  unackPost,
-  updateAgencyPost,
-  type AgencyPost,
-  type PostAck,
-  type ProfileRow,
-} from "@/lib/agency-data";
-import { cn } from "@/lib/utils";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Avatar, Badge, Button, EmptyState, Skeleton } from "@/components/echo/primitives";
+import { Chip, Field, Menu, Select, Switch, TextArea } from "@/components/echo/controls";
+import { Drawer, HoldButton, Modal } from "@/components/echo/overlays";
+import { Icon } from "@/components/echo/icon";
+import { stagger } from "@/components/echo/motion";
+import { useAccess } from "@/components/echo/session";
+import { POST_KINDS } from "@/lib/agency-data";
+import { listPostsWithAcks, listTeamForAcks, removePost, savePost, toggleAck, type PostWithAcks } from "@/lib/agency-page-data";
+import { relDay } from "@/lib/home-data";
 
 export const Route = createFileRoute("/agencia/comunicacao")({
-  head: () => ({
-    meta: [
-      { title: "Comunicados — Reach Brand OS" },
-      { name: "description", content: "Mural interno da Reach com avisos, comunicados e confirmação de leitura da equipe." },
-      { property: "og:title", content: "Comunicados internos da Reach" },
-      { property: "og:description", content: "Avisos internos com registro de quem confirmou ciência e quando." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
-  component: ComunicacaoPage,
+  head: () => ({ meta: [{ title: "Comunicação · Agência · Echo" }] }),
+  component: Communication,
 });
 
-function ComunicacaoPage() {
-  const [posts, setPosts] = useState<AgencyPost[]>([]);
-  const [acks, setAcks] = useState<PostAck[]>([]);
-  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [canPublish, setCanPublish] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [historyFor, setHistoryFor] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [kind, setKind] = useState<string>("aviso");
-  const [err, setErr] = useState<string | null>(null);
+type Draft = { id?: string; title: string; content: string; kind: string; pinned: boolean };
+const EMPTY: Draft = { title: "", content: "", kind: "comunicado", pinned: false };
+const KIND_ICON: Record<string, "megaphone" | "alert" | "refresh" | "lock"> = { comunicado: "megaphone", aviso: "alert", atualizacao: "refresh", nota: "lock" };
 
-  async function refresh() {
-    const [p, a, pr] = await Promise.all([listAgencyPosts(), listPostAcks().catch(() => []), listProfiles().catch(() => [])]);
-    setPosts(p);
-    setAcks(a);
-    setProfiles(pr);
-  }
+function fmt(isoTs: string) {
+  const d = new Date(isoTs);
+  return `${relDay(isoTs.slice(0, 10))} · ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
 
-  useEffect(() => {
-    getFullAccess()
-      .then((access) => {
-        setUserId(access.userId);
-        setIsAdmin(access.isAdmin);
-        setCanPublish(access.can("comunicados.publicar"));
-      })
-      .catch(() => undefined);
-    refresh().catch(() => undefined);
-  }, []);
+function Communication() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+  const qc = useQueryClient();
+  const { can, session } = useAccess();
+  const canCreate = can("comunicacao.criar");
+  const canDelete = can("comunicacao.excluir");
+  const posts = useQuery({ queryKey: ["agency-posts"], queryFn: listPostsWithAcks, enabled: ready });
+  const team = useQuery({ queryKey: ["agency-team-acks"], queryFn: listTeamForAcks, enabled: ready, staleTime: 120_000 });
+  const [kind, setKind] = useState<string>("todos");
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [errors, setErrors] = useState<{ title?: string }>({});
+  const [saving, setSaving] = useState(false);
+  const [acksOf, setAcksOf] = useState<PostWithAcks | null>(null);
+  const [toDelete, setToDelete] = useState<PostWithAcks | null>(null);
+  const list = useRef<HTMLDivElement>(null);
 
-  const nameById = useMemo(
-    () => new Map(profiles.map((p) => [p.id, p.display_name || p.email || "Usuário"])),
-    [profiles],
-  );
-  const acksByPost = useMemo(() => {
-    const map = new Map<string, PostAck[]>();
-    for (const a of acks) map.set(a.post_id, [...(map.get(a.post_id) ?? []), a]);
-    return map;
-  }, [acks]);
+  const all = posts.data ?? [];
+  const shown = useMemo(() => (kind === "todos" ? all : all.filter((p) => p.kind === kind)), [all, kind]);
+  useEffect(() => { if (list.current && posts.data) stagger(list.current.querySelectorAll(".post-card"), { y: 12, dur: 420 }, 50); }, [kind, !!posts.data]);
 
-  async function submit() {
-    if (!title.trim()) return;
-    setErr(null);
+  const refresh = () => { qc.invalidateQueries({ queryKey: ["agency-posts"] }); qc.invalidateQueries({ queryKey: ["agency-home"] }); };
+  const ack = async (p: PostWithAcks) => {
+    try { await toggleAck(p.id, !p.mine); toast.success(p.mine ? "Confirmação removida" : "Leitura confirmada"); refresh(); }
+    catch { toast.error("Não foi possível registrar. Tente de novo."); }
+  };
+  const save = async () => {
+    if (!draft) return;
+    if (!draft.title.trim()) { setErrors({ title: "Dê um título ao comunicado." }); return; }
+    setSaving(true);
     try {
-      await createAgencyPost({ title: title.trim(), content: content.trim() || null, kind, pinned: false });
-      setTitle("");
-      setContent("");
-      setOpen(false);
-      await refresh();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Falha ao publicar");
+      await savePost({ ...draft, title: draft.title.trim(), content: draft.content.trim() });
+      toast.success(draft.id ? "Comunicado atualizado" : "Comunicado publicado");
+      setDraft(null);
+      refresh();
+    } catch {
+      toast.error("Não foi possível salvar. Confira sua permissão e tente de novo.");
+    } finally {
+      setSaving(false);
     }
-  }
+  };
+  const pin = async (p: PostWithAcks) => {
+    try { await savePost({ id: p.id, title: p.title, content: p.content ?? "", kind: p.kind, pinned: !p.pinned }); toast.success(p.pinned ? "Comunicado desafixado" : "Comunicado fixado no topo"); refresh(); }
+    catch { toast.error("Não foi possível alterar."); }
+  };
+  const remove = async () => {
+    if (!toDelete) return;
+    try { await removePost(toDelete.id); toast.success("Comunicado excluído"); setToDelete(null); refresh(); }
+    catch { toast.error("Não foi possível excluir."); }
+  };
 
-  async function toggleAck(postId: string, mine: boolean) {
-    setErr(null);
-    try {
-      if (mine) await unackPost(postId);
-      else await ackPost(postId);
-      await refresh();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Falha ao registrar confirmação");
-    }
-  }
+  const teamList = team.data ?? [];
+  const pending = acksOf ? teamList.filter((t) => !acksOf.acks.some((a) => a.userId === t.id)) : [];
 
   return (
-    <div className="space-y-5">
-      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-xl font-semibold tracking-tight">Comunicados</h1>
-          <p className="truncate text-sm text-muted-foreground">
-            Avisos internos com registro formal de ciência: quem confirmou e quando.
-          </p>
+    <div className="stack-lg">
+      <div className="e-row between wrap" style={{ gap: 12 }}>
+        <div className="e-row wrap" style={{ gap: 6 }} role="group" aria-label="Filtrar por tipo">
+          <Chip pressed={kind === "todos"} onClick={() => setKind("todos")} count={all.length}>Todos</Chip>
+          {POST_KINDS.map((k) => (
+            <Chip key={k.key} icon={KIND_ICON[k.key]} pressed={kind === k.key} onClick={() => setKind(k.key)} count={all.filter((p) => p.kind === k.key).length}>{k.label}</Chip>
+          ))}
         </div>
-        {canPublish && (
-          <PillButton onClick={() => setOpen((v) => !v)} className="shrink-0">
-            <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Novo comunicado</span>
-          </PillButton>
-        )}
-      </header>
+        {canCreate && <Button icon="plus" onClick={() => { setErrors({}); setDraft({ ...EMPTY }); }}>Novo comunicado</Button>}
+      </div>
 
-      {err && <p className="text-sm text-destructive">{err}</p>}
-
-      {open && canPublish && (
-        <section className="surface space-y-3 rounded-2xl p-5">
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título" className="w-full rounded-full border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary" />
-          <textarea rows={4} value={content} onChange={(e) => setContent(e.target.value)} placeholder="Mensagem" className="w-full rounded-2xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary" />
-          <div className="flex flex-wrap items-center gap-2">
-            <select value={kind} onChange={(e) => setKind(e.target.value)} className="rounded-full border border-border bg-background/50 px-4 py-2 text-sm outline-none">
-              {POST_KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}
-            </select>
-            <PillButton onClick={submit}>Publicar</PillButton>
-          </div>
-        </section>
+      {!ready || posts.isLoading ? (
+        <div className="stack-lg" aria-busy="true">{[0, 1, 2].map((i) => <div key={i} className="post-card e-glass"><Skeleton w="30%" h={12} /><Skeleton w="60%" h={20} r={8} /><Skeleton h={40} r={10} /></div>)}</div>
+      ) : posts.isError ? (
+        <div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="error" title="Não foi possível carregar o mural" text="Tente de novo em instantes." actions={<Button variant="secondary" icon="refresh" onClick={() => posts.refetch()}>Tentar novamente</Button>} /></div>
+      ) : shown.length === 0 ? (
+        <div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}>
+          <EmptyState icon="megaphone" title={kind === "todos" ? "Nenhum comunicado ainda" : "Nenhum comunicado deste tipo"} text="Publique avisos, atualizações e notas para toda a equipe da Reach." actions={canCreate ? <Button icon="plus" onClick={() => setDraft({ ...EMPTY, kind: kind === "todos" ? "comunicado" : kind })}>Novo comunicado</Button> : undefined} />
+        </div>
+      ) : (
+        <div className="stack-lg" ref={list}>
+          {shown.map((p) => {
+            const mineOwn = p.created_by === session?.userId || session?.isAdmin || session?.mode === "demo";
+            const missing = teamList.filter((t) => !p.acks.some((a) => a.userId === t.id)).length;
+            return (
+              <article key={p.id} className={`post-card e-glass${p.pinned ? " pinned" : ""}`}>
+                <header className="e-row between" style={{ gap: 10, alignItems: "flex-start" }}>
+                  <div className="e-row wrap" style={{ gap: 6 }}>
+                    {p.pinned && <Badge tone="grad" icon="pin">Fixado</Badge>}
+                    <Badge tone="glass" icon={KIND_ICON[p.kind]}>{POST_KINDS.find((k) => k.key === p.kind)?.label ?? p.kind}</Badge>
+                  </div>
+                  {mineOwn && (canCreate || canDelete) && (
+                    <Menu
+                      align="right"
+                      trigger={({ open, toggle }) => <Button variant="ghost" size="sm" iconOnly icon="more" aria-label="Ações do comunicado" aria-expanded={open} onClick={toggle} />}
+                      items={[
+                        ...(canCreate ? [{ label: "Editar", icon: "edit" as const, onSelect: () => { setErrors({}); setDraft({ id: p.id, title: p.title, content: p.content ?? "", kind: p.kind, pinned: p.pinned }); } }, { label: p.pinned ? "Desafixar" : "Fixar no topo", icon: "pin" as const, onSelect: () => pin(p) }] : []),
+                        ...(canDelete ? ["-" as const, { label: "Excluir", icon: "trash" as const, danger: true, onSelect: () => setToDelete(p) }] : []),
+                      ]}
+                    />
+                  )}
+                </header>
+                <h3 className="e-h4" style={{ margin: 0 }}>{p.title}</h3>
+                {p.content && <p className="post-body">{p.content}</p>}
+                <footer className="post-foot">
+                  <span className="e-row" style={{ gap: 8 }}><Avatar name={p.author} size="xs" /><span className="e-caption">{p.author} · {fmt(p.created_at)}</span></span>
+                  <span className="sp" />
+                  <button type="button" className="e-link" style={{ fontSize: 13 }} onClick={() => setAcksOf(p)}>
+                    {p.acks.length} {p.acks.length === 1 ? "confirmou" : "confirmaram"}{teamList.length ? ` · faltam ${missing}` : ""}
+                  </button>
+                  <Button size="sm" variant={p.mine ? "tonal" : "primary"} icon={p.mine ? "check" : undefined} onClick={() => ack(p)}>{p.mine ? "Ciente" : "Marcar como ciente"}</Button>
+                </footer>
+              </article>
+            );
+          })}
+        </div>
       )}
 
-      <div className="space-y-3">
-        {posts.map((p) => {
-          const postAcks = acksByPost.get(p.id) ?? [];
-          const mine = !!userId && postAcks.some((a) => a.user_id === userId);
-          return (
-            <article key={p.id} className={cn("surface rounded-2xl p-5", p.pinned && "ring-1 ring-primary/40")}>
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                <div className="min-w-0">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                    {POST_KINDS.find((k) => k.key === p.kind)?.label ?? p.kind} · {new Date(p.created_at).toLocaleDateString("pt-BR")}
-                  </p>
-                  <h2 className="truncate text-sm font-semibold">{p.title}</h2>
-                </div>
-                {canPublish && (
-                  <div className="flex shrink-0 gap-1">
-                    <button
-                      aria-label={p.pinned ? "Desafixar" : "Fixar"}
-                      onClick={async () => {
-                        await updateAgencyPost(p.id, { pinned: !p.pinned });
-                        await refresh();
-                      }}
-                      className="grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground"
-                    >
-                      {p.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-                    </button>
-                    <button
-                      aria-label="Excluir comunicado"
-                      onClick={async () => {
-                        await deleteAgencyPost(p.id);
-                        await refresh();
-                      }}
-                      className="grid h-9 w-9 place-items-center rounded-full border border-border text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-              {p.content && <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{p.content}</p>}
+      <Drawer
+        open={!!draft}
+        onClose={() => setDraft(null)}
+        eyebrow="Mural da agência"
+        title={draft?.id ? "Editar comunicado" : "Novo comunicado"}
+        footer={<><Button variant="ghost" onClick={() => setDraft(null)}>Cancelar</Button><Button icon="send" loading={saving} onClick={save}>{draft?.id ? "Salvar" : "Publicar"}</Button></>}
+      >
+        {draft && (
+          <>
+            <Field label="Título" value={draft.title} onChange={(e) => { setDraft({ ...draft, title: e.target.value }); setErrors({}); }} placeholder="Ex.: Feriado de 12 de outubro" error={errors.title} autoFocus />
+            <Select label="Tipo" value={draft.kind} onChange={(v) => setDraft({ ...draft, kind: v })} options={POST_KINDS.map((k) => ({ value: k.key, label: k.label, icon: KIND_ICON[k.key] }))} />
+            <TextArea label="Mensagem" value={draft.content} max={2000} rows={7} onChange={(e) => setDraft({ ...draft, content: e.target.value })} placeholder="O que a equipe precisa saber e o que deve fazer." />
+            <Switch label="Fixar no topo do mural" checked={draft.pinned} onChange={(v) => setDraft({ ...draft, pinned: v })} />
+          </>
+        )}
+      </Drawer>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-                <button
-                  onClick={() => toggleAck(p.id, mine)}
-                  aria-pressed={mine}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-medium transition-colors",
-                    mine
-                      ? "border-success/40 bg-success/10 text-success"
-                      : "border-border text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {mine ? <Check className="h-3.5 w-3.5" /> : <ThumbsUp className="h-3.5 w-3.5" />}
-                  {mine ? "Você está ciente" : "Estou ciente"}
-                </button>
+      <Drawer open={!!acksOf} onClose={() => setAcksOf(null)} eyebrow="Confirmações de leitura" title={acksOf?.title ?? ""}>
+        {acksOf && (
+          <>
+            <div className="e-stack" style={{ gap: 6 }}>
+              <span className="e-label">Confirmaram · {acksOf.acks.length}</span>
+              {acksOf.acks.length === 0 ? <p className="e-small" style={{ margin: 0 }}>Ninguém confirmou ainda.</p> : acksOf.acks.map((a) => (
+                <div key={a.userId} className="e-row" style={{ gap: 10, padding: "6px 4px" }}><Avatar name={a.name} size="sm" /><span className="e-grow">{a.name}</span><span className="e-caption">{fmt(a.at)}</span><Icon name="checkCircle" size="sm" /></div>
+              ))}
+            </div>
+            <div className="e-stack" style={{ gap: 6 }}>
+              <span className="e-label">Faltam · {pending.length}</span>
+              {pending.length === 0 ? <p className="e-small" style={{ margin: 0 }}>Toda a equipe confirmou.</p> : pending.map((t) => (
+                <div key={t.id} className="e-row" style={{ gap: 10, padding: "6px 4px", opacity: 0.75 }}><Avatar name={t.name} size="sm" /><span className="e-grow">{t.name}</span><span className="e-caption">pendente</span></div>
+              ))}
+            </div>
+          </>
+        )}
+      </Drawer>
 
-                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  {postAcks.slice(0, 6).map((a) => (
-                    <span
-                      key={a.id}
-                      title={`${nameById.get(a.user_id) ?? "Usuário"} · ${new Date(a.created_at).toLocaleString("pt-BR")}`}
-                      className="grid h-7 w-7 place-items-center rounded-full bg-muted text-[10.5px] font-semibold text-muted-foreground"
-                    >
-                      {initials(nameById.get(a.user_id) ?? "?")}
-                    </span>
-                  ))}
-                  <span className="text-[11px] text-muted-foreground">
-                    {postAcks.length === 0 ? "Ninguém confirmou ainda" : `${postAcks.length} confirmação(ões)`}
-                  </span>
-                </div>
-
-                {isAdmin && (
-                  <button
-                    onClick={() => setHistoryFor(historyFor === p.id ? null : p.id)}
-                    className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[11px] text-muted-foreground"
-                  >
-                    <History className="h-3.5 w-3.5" /> Histórico
-                  </button>
-                )}
-              </div>
-
-              {isAdmin && historyFor === p.id && (
-                <div className="mt-3 space-y-1 rounded-2xl border border-border p-3">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Histórico de confirmações</p>
-                  {postAcks.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma confirmação registrada.</p>}
-                  {postAcks.map((a) => (
-                    <p key={a.id} className="text-xs">
-                      <span className="font-medium">{nameById.get(a.user_id) ?? a.user_id}</span>{" "}
-                      <span className="text-muted-foreground">confirmou em {new Date(a.created_at).toLocaleString("pt-BR")}</span>
-                    </p>
-                  ))}
-                  <p className="pt-1 text-[11px] text-muted-foreground">
-                    Pendentes: {pending(profiles, postAcks).join(", ") || "ninguém"}
-                  </p>
-                </div>
-              )}
-            </article>
-          );
-        })}
-        {posts.length === 0 && <p className="text-sm text-muted-foreground">Nenhum comunicado ainda.</p>}
-      </div>
+      <Modal
+        open={!!toDelete}
+        onClose={() => setToDelete(null)}
+        icon="trash"
+        tone="danger"
+        title="Excluir este comunicado?"
+        sub={toDelete?.title}
+        footer={<><Button variant="secondary" onClick={() => setToDelete(null)}>Cancelar</Button><HoldButton label="Segure para excluir" onConfirm={remove} /></>}
+      >
+        <p className="e-small" style={{ margin: 0 }}>O comunicado e as confirmações de leitura saem do mural. Não é possível desfazer.</p>
+      </Modal>
     </div>
   );
-}
-
-function pending(profiles: ProfileRow[], acks: PostAck[]) {
-  const done = new Set(acks.map((a) => a.user_id));
-  return profiles
-    .filter((p) => p.role === "agency" && !done.has(p.id))
-    .map((p) => p.display_name || p.email || "Usuário");
-}
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join("");
 }
