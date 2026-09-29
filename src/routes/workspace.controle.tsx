@@ -1,162 +1,440 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Badge, Button, ClientLogo, EmptyState, Skeleton } from "@/components/echo/primitives";
-import { Menu, Select } from "@/components/echo/controls";
+import { Badge, Button, EmptyState, Skeleton } from "@/components/echo/primitives";
+import { Field, Segmented, Select } from "@/components/echo/controls";
+import { Drawer } from "@/components/echo/overlays";
+import {
+  ActiveFilters,
+  CoverageLegend,
+  CoverageTimeline,
+  DetailFacts,
+  MetricFilters,
+  PeriodNavigator,
+  shortDate,
+  type CoverageRow,
+} from "@/components/echo/operations";
 import { Icon } from "@/components/echo/icon";
-import { addDays, localDate, RECURRENCES, RISK_LABELS, toISO, today, type FrontWithRisk, type RiskLevel } from "@/lib/workspace-data";
+import {
+  addDays,
+  frontPeriod,
+  frontRisk,
+  localDate,
+  RECURRENCES,
+  RISK_LABELS,
+  toISO,
+  today,
+  type FrontWithRisk,
+  type RiskLevel,
+} from "@/lib/workspace-data";
 import { demoApprove, ensureCycle, listOpsFronts, subscribeFronts } from "@/lib/ops-data";
 import { isDemoMode } from "@/lib/home-data";
 
 export const Route = createFileRoute("/workspace/controle")({
-  head: () => ({ meta: [{ title: "Controle · Workspace · Echo" }, { name: "description", content: "Nenhum cliente sem post: cobertura mensal por frente." }] }),
+  head: () => ({
+    meta: [
+      { title: "Controle · Workspace · Echo" },
+      {
+        name: "description",
+        content: "Cobertura de conteúdo: datas, antecedência e próximos ciclos por cliente.",
+      },
+    ],
+  }),
   component: CoverageControl,
 });
 
-const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const LEVELS: RiskLevel[] = ["red", "orange", "yellow", "green"];
-const RISK_TONE: Record<RiskLevel, "late" | "adjust" | "review" | "done"> = { red: "late", orange: "adjust", yellow: "review", green: "done" };
-const RISK_COLOR: Record<RiskLevel, string> = { red: "var(--danger)", orange: "var(--warn)", yellow: "var(--review)", green: "var(--ok)" };
-const ddmm = (d?: string | null) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}` : "—");
-const recLabel = (k: string) => (RECURRENCES as Record<string, string>)[k] ?? k;
-const prefersReduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const COLORS: Record<RiskLevel, string> = {
+  red: "var(--danger)",
+  orange: "var(--warn)",
+  yellow: "var(--review)",
+  green: "var(--ok)",
+};
+const TONES = { red: "late", orange: "adjust", yellow: "review", green: "done" } as const;
+const ICONS = { red: "alert", orange: "clock", yellow: "eye", green: "checkCircle" };
+const HINTS = {
+  red: "aprovação vencida",
+  orange: "hora de produzir",
+  yellow: "planejar o ciclo",
+  green: "cobertura em dia",
+};
+const EMPTY_FILTERS = { brand: "", front: "", rec: "", level: "" as RiskLevel | "", search: "" };
+const normalize = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR");
+const recurrence = (key: string) => (RECURRENCES as Record<string, string>)[key] ?? key;
+const riskHint = (x: FrontWithRisk) =>
+  !x.front.approved_until
+    ? "Sem data aprovada"
+    : x.diff < 0
+      ? `Venceu há ${-x.diff} ${x.diff === -1 ? "dia" : "dias"}`
+      : x.diff === 0
+        ? "Cobertura até hoje"
+        : `${x.diff} ${x.diff === 1 ? "dia" : "dias"} de cobertura`;
+const productionDate = (x: FrontWithRisk) =>
+  x.front.approved_until
+    ? toISO(addDays(localDate(x.front.approved_until), -x.front.lead_days))
+    : null;
+const cycleKey = (x: FrontWithRisk) => `${x.front.id}:${x.period.start}:${x.period.end}`;
 
 function CoverageControl() {
   const qc = useQueryClient();
   const [ready, setReady] = useState(false);
   const now = today();
   const [ym, setYm] = useState({ y: now.getFullYear(), m: now.getMonth() });
-  const [dir, setDir] = useState<1 | -1 | 0>(0);
-  const [f, setF] = useState({ brand: "", front: "", rec: "", level: "" as RiskLevel | "" });
+  const [f, setF] = useState(EMPTY_FILTERS);
+  const [view, setView] = useState<"timeline" | "list">("timeline");
+  const [selected, setSelected] = useState<string | null>(null);
   const [flash, setFlash] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-  useEffect(() => setReady(true), []);
-  const q = useQuery({ queryKey: ["ops-fronts"], queryFn: listOpsFronts, enabled: ready });
-
-  // Tempo real: uma aprovação no Like que avança a cobertura faz a linha piscar.
-  useEffect(() => subscribeFronts((id) => { qc.invalidateQueries({ queryKey: ["ops-fronts"] }); pulse(id); }), []);
-  const pulse = (id: string) => { setFlash((x) => [...x, id]); window.setTimeout(() => setFlash((x) => x.filter((y) => y !== id)), 1800); };
-
-  const all = q.data ?? [];
-  const brands = useMemo(() => [...new Map(all.map((x) => [x.brand.id, x.brand])).values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")), [all]);
-  const frontNames = useMemo(() => [...new Set(all.map((x) => x.front.name))].sort(), [all]);
-  const visible = all.filter((x) => (!f.brand || x.brand.id === f.brand) && (!f.front || x.front.name === f.front) && (!f.rec || x.front.recurrence === f.rec) && (!f.level || x.level === f.level));
-  const count = (l: RiskLevel) => all.filter((x) => x.level === l).length;
-
-  const days = new Date(ym.y, ym.m + 1, 0).getDate();
-  const first = new Date(ym.y, ym.m, 1);
-  const isNow = ym.y === now.getFullYear() && ym.m === now.getMonth();
-  const shift = (by: 1 | -1) => { setDir(by); const d = new Date(ym.y, ym.m + by, 1); setYm({ y: d.getFullYear(), m: d.getMonth() }); };
-  /** Posição (0..days) de uma data dentro do mês exibido, recortada nas bordas. */
-  const pos = (isoDate: string | null | undefined, end = true) => {
-    if (!isoDate) return null;
-    const d = localDate(isoDate);
-    if (d < first) return 0;
-    if (d.getFullYear() > ym.y || (d.getFullYear() === ym.y && d.getMonth() > ym.m)) return days;
-    return end ? d.getDate() : d.getDate() - 1;
-  };
+  const [created, setCreated] = useState<string[]>([]);
+  const inFlight = useRef(false);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => {
-    if (!gridRef.current || prefersReduced() || !dir) return;
-    gridRef.current.animate([{ transform: `translateX(${dir * 24}px)`, opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 320, easing: "cubic-bezier(.23,1,.32,1)" });
-  }, [ym.y, ym.m]);
-
-  const createCycle = async (x: FrontWithRisk) => {
-    setBusy(x.front.id);
-    try { const r = await ensureCycle(x); toast.success(r.created ? "Entrega do ciclo criada" : "A entrega deste ciclo já existe", { description: `${x.brand.name} · ${x.front.name} · ${ddmm(x.period.start)}–${ddmm(x.period.end)}` }); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível criar a entrega."); } finally { setBusy(null); }
+    setReady(true);
+    if (window.matchMedia("(max-width: 760px)").matches) setView("list");
+    return () => timers.current.forEach(clearTimeout);
+  }, []);
+  const q = useQuery({ queryKey: ["ops-fronts"], queryFn: listOpsFronts, enabled: ready });
+  const pulse = (id: string) => {
+    setFlash((ids) => [...ids, id]);
+    timers.current.push(setTimeout(() => setFlash((ids) => ids.filter((x) => x !== id)), 1800));
   };
+  useEffect(
+    () =>
+      subscribeFronts((id) => {
+        qc.invalidateQueries({ queryKey: ["ops-fronts"] });
+        pulse(id);
+      }),
+    [qc],
+  );
+  // Recalculate after approvals (including demo); the next-cycle period must not remain stale.
+  const all = useMemo(
+    () =>
+      (q.data ?? []).map((x) => ({ ...x, ...frontRisk(x.front), period: frontPeriod(x.front) })),
+    [q.data],
+  );
+  const brands = useMemo(
+    () =>
+      [...new Map(all.map((x) => [x.brand.id, x.brand])).values()].sort((a, b) =>
+        a.name.localeCompare(b.name, "pt-BR"),
+      ),
+    [all],
+  );
+  const frontNames = useMemo(() => [...new Set(all.map((x) => x.front.name))].sort(), [all]);
+  const scoped = all.filter(
+    (x) =>
+      (!f.brand || x.brand.id === f.brand) &&
+      (!f.front || x.front.name === f.front) &&
+      (!f.rec || x.front.recurrence === f.rec) &&
+      (!f.search ||
+        normalize(`${x.brand.name} ${x.front.name}`).includes(normalize(f.search.trim()))),
+  );
+  const visible = scoped
+    .filter((x) => !f.level || x.level === f.level)
+    .sort(
+      (a, b) =>
+        LEVELS.indexOf(a.level) - LEVELS.indexOf(b.level) ||
+        a.diff - b.diff ||
+        a.brand.name.localeCompare(b.brand.name, "pt-BR"),
+    );
+  const active = all.find((x) => x.front.id === selected);
+  const isNow = ym.y === now.getFullYear() && ym.m === now.getMonth();
+  const monthLabel = new Date(ym.y, ym.m, 1).toLocaleDateString("pt-BR", {
+    month: "long",
+    year: "numeric",
+  });
+  const shift = (by: number) => {
+    const d = new Date(ym.y, ym.m + by, 1);
+    setYm({ y: d.getFullYear(), m: d.getMonth() });
+  };
+  const createCycle = async (id: string) => {
+    const x = all.find((item) => item.front.id === id);
+    if (!x || inFlight.current) return;
+    inFlight.current = true;
+    setBusy(id);
+    try {
+      const r = await ensureCycle(x);
+      setCreated((items) => [...new Set([...items, cycleKey(x)])]);
+      qc.invalidateQueries({ queryKey: ["ops-fronts"] });
+      toast.success(r.created ? "Entrega do ciclo criada" : "A entrega deste ciclo já existe", {
+        description: `${x.brand.name} · ${x.front.name} · ${shortDate(x.period.start)}–${shortDate(x.period.end)}`,
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível criar a entrega.");
+    } finally {
+      inFlight.current = false;
+      setBusy(null);
+    }
+  };
+  const rows: CoverageRow[] = visible.map((x) => ({
+    id: x.front.id,
+    name: x.brand.name,
+    logo: x.brand.logo_url,
+    front: x.front.name,
+    recurrence: recurrence(x.front.recurrence),
+    approved: x.front.approved_until,
+    produce: productionDate(x),
+    nextStart: x.period.start,
+    nextEnd: x.period.end,
+    status: RISK_LABELS[x.level],
+    color: COLORS[x.level],
+    hint: riskHint(x),
+    lead: x.front.lead_days,
+    updated: flash.includes(x.front.id),
+  }));
+  const activeFilters = [
+    { id: "search", label: `Busca: ${f.search}`, value: f.search },
+    { id: "brand", label: brands.find((b) => b.id === f.brand)?.name ?? "", value: f.brand },
+    { id: "front", label: f.front, value: f.front },
+    { id: "rec", label: recurrence(f.rec), value: f.rec },
+    { id: "level", label: f.level ? RISK_LABELS[f.level] : "", value: f.level },
+  ]
+    .filter((x) => x.value)
+    .map((x) => ({
+      id: x.id,
+      label: x.label,
+      onRemove: () => setF((prev) => ({ ...prev, [x.id]: "" })),
+    }));
 
-  if (!ready || q.isLoading) return <div className="stack-lg" aria-busy="true"><div className="stat-row four">{LEVELS.map((l) => <Skeleton key={l} h={88} r={20} />)}</div><Skeleton h={420} r={24} /></div>;
-  if (q.isError) return <div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="error" title="Não foi possível carregar o controle" actions={<Button variant="secondary" icon="refresh" onClick={() => q.refetch()}>Tentar novamente</Button>} /></div>;
+  if (!ready || q.isLoading)
+    return (
+      <div className="coverage-page" aria-busy="true">
+        <Skeleton h={70} r={16} />
+        <div className="e-metric-filters">
+          {LEVELS.map((l) => (
+            <Skeleton key={l} h={108} r={22} />
+          ))}
+        </div>
+        <Skeleton h={520} r={24} />
+      </div>
+    );
+  if (q.isError)
+    return (
+      <EmptyState
+        kind="error"
+        title="Não foi possível carregar o controle"
+        actions={
+          <Button variant="secondary" icon="refresh" onClick={() => q.refetch()}>
+            Tentar novamente
+          </Button>
+        }
+      />
+    );
 
   return (
-    <div className="stack-lg">
-      <div className="risk-row" role="group" aria-label="Filtrar por situação">
-        {LEVELS.map((l) => (
-          <button key={l} type="button" className={`risk-tile e-glass${f.level === l ? " on" : ""}`} aria-pressed={f.level === l} style={{ ["--c" as string]: RISK_COLOR[l] }} onClick={() => setF({ ...f, level: f.level === l ? "" : l })}>
-            <span className="risk-n tnum">{count(l)}</span>
-            <span>{RISK_LABELS[l]}</span>
-            <small>{l === "red" ? "aprovação vencida" : l === "orange" ? "dentro da antecedência" : l === "yellow" ? "perto da antecedência" : "cobertura em dia"}</small>
-          </button>
-        ))}
-      </div>
-
-      <div className="ctl-bar">
-        <div className="month-nav">
-          <Button size="sm" variant="ghost" icon="chevLeft" aria-label="Mês anterior" onClick={() => shift(-1)} />
-          <span className="month-label">{MONTHS[ym.m][0].toUpperCase() + MONTHS[ym.m].slice(1)} de {ym.y}</span>
-          <Button size="sm" variant="ghost" icon="chevRight" aria-label="Próximo mês" onClick={() => shift(1)} />
-          {!isNow && <Button size="sm" variant="ghost" onClick={() => { setDir(0); setYm({ y: now.getFullYear(), m: now.getMonth() }); }}>Hoje</Button>}
+    <div className="coverage-page">
+      <header className="coverage-heading">
+        <div>
+          <span className="e-label">Workspace / Controle</span>
+          <h1>Cobertura de conteúdo</h1>
+          <p>O que já está aprovado. O que precisa entrar em produção.</p>
         </div>
-        <div className="ctl-filters">
-          <Select value={f.brand} onChange={(v) => setF({ ...f, brand: v })} options={[{ value: "", label: "Todos os clientes" }, ...brands.map((b) => ({ value: b.id, label: b.name }))]} />
-          <Select value={f.front} onChange={(v) => setF({ ...f, front: v })} options={[{ value: "", label: "Todas as frentes" }, ...frontNames.map((n) => ({ value: n, label: n }))]} />
-          <Select value={f.rec} onChange={(v) => setF({ ...f, rec: v })} options={[{ value: "", label: "Toda recorrência" }, ...Object.entries(RECURRENCES).map(([value, label]) => ({ value, label }))]} />
+        <span className="coverage-date">
+          <Icon name="calendar" size="sm" />
+          {now.toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}
+        </span>
+      </header>
+      <MetricFilters
+        value={f.level}
+        onChange={(level) => setF({ ...f, level: level as RiskLevel | "" })}
+        items={LEVELS.map((level) => ({
+          id: level,
+          value: scoped.filter((x) => x.level === level).length,
+          label: RISK_LABELS[level],
+          hint: HINTS[level],
+          color: COLORS[level],
+          icon: ICONS[level],
+        }))}
+      />
+      <section className="coverage-board" aria-label="Controle de cobertura">
+        <div className="coverage-toolbar">
+          <PeriodNavigator
+            label={monthLabel[0].toUpperCase() + monthLabel.slice(1)}
+            onPrevious={() => shift(-1)}
+            onNext={() => shift(1)}
+            onToday={() => setYm({ y: now.getFullYear(), m: now.getMonth() })}
+            current={isNow}
+          />
+          <Segmented
+            label="Visualização da cobertura"
+            value={view}
+            onChange={setView}
+            items={[
+              { value: "timeline", label: "Linha do tempo", icon: "calendar" },
+              { value: "list", label: "Resumo", icon: "list" },
+            ]}
+          />
         </div>
-        <span className="e-caption tnum">{visible.length} de {all.length} frentes</span>
-      </div>
-
-      {visible.length === 0 ? (
-        <div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="search" title="Nenhuma frente com esses filtros" actions={<Button variant="secondary" onClick={() => setF({ brand: "", front: "", rec: "", level: "" })}>Limpar filtros</Button>} /></div>
-      ) : (
-        <div className="ctl e-glass" ref={gridRef} style={{ ["--days" as string]: days }}>
-          <div className="ctl-head">
-            <span className="ctl-label-h">Cliente · frente</span>
-            <div className="ctl-days">
-              {Array.from({ length: days }, (_, i) => {
-                const d = new Date(ym.y, ym.m, i + 1);
-                const wk = d.getDay() === 0 || d.getDay() === 6;
-                return <span key={i} className={`${wk ? "wk" : ""}${isNow && i + 1 === now.getDate() ? " today" : ""}`}>{i + 1}</span>;
-              })}
+        <div className="coverage-filters">
+          <Field
+            type="search"
+            aria-label="Buscar cliente ou frente"
+            placeholder="Buscar cliente ou frente"
+            value={f.search}
+            onChange={(e) => setF({ ...f, search: e.target.value })}
+          />
+          <Select
+            value={f.brand}
+            icon="briefcase"
+            onChange={(brand) => setF({ ...f, brand })}
+            options={[
+              { value: "", label: "Todos os clientes" },
+              ...brands.map((b) => ({ value: b.id, label: b.name })),
+            ]}
+          />
+          <Select
+            value={f.front}
+            onChange={(front) => setF({ ...f, front })}
+            options={[
+              { value: "", label: "Todas as frentes" },
+              ...frontNames.map((name) => ({ value: name, label: name })),
+            ]}
+          />
+          <Select
+            value={f.rec}
+            onChange={(rec) => setF({ ...f, rec })}
+            options={[
+              { value: "", label: "Toda recorrência" },
+              ...Object.entries(RECURRENCES).map(([value, label]) => ({ value, label })),
+            ]}
+          />
+        </div>
+        <ActiveFilters items={activeFilters} onClear={() => setF(EMPTY_FILTERS)}>
+          {visible.length} de {all.length} frentes · prioridade por risco
+        </ActiveFilters>
+        {!all.length ? (
+          <EmptyState
+            title="Nenhuma frente cadastrada"
+            text="Cadastre as frentes de conteúdo na operação de um cliente para acompanhar a cobertura."
+            actions={
+              <Link to="/clientes" className="e-btn secondary">
+                Ver clientes
+              </Link>
+            }
+          />
+        ) : !visible.length ? (
+          <EmptyState
+            kind="search"
+            title="Nenhuma frente com esses filtros"
+            actions={
+              <Button variant="secondary" onClick={() => setF(EMPTY_FILTERS)}>
+                Limpar filtros
+              </Button>
+            }
+          />
+        ) : (
+          <CoverageTimeline
+            rows={rows}
+            year={ym.y}
+            month={ym.m}
+            today={toISO(now)}
+            view={view}
+            busyId={busy}
+            createdIds={all.filter((x) => created.includes(cycleKey(x))).map((x) => x.front.id)}
+            onInspect={setSelected}
+            onCreate={createCycle}
+          />
+        )}
+        <footer className="coverage-board-foot">
+          <CoverageLegend />
+          <small>Situação atual · {shortDate(toISO(now))} · detalhes ao tocar na frente</small>
+        </footer>
+      </section>
+      <p className="coverage-note">
+        <Icon name="info" size="sm" />A faixa indica até quando há conteúdo aprovado; o losango
+        marca quando começar a produzir. As situações refletem hoje, mesmo ao consultar outro mês.
+      </p>
+      <Drawer
+        open={!!active}
+        onClose={() => setSelected(null)}
+        title={active ? `${active.brand.name} · ${active.front.name}` : "Cobertura"}
+        eyebrow="Controle de cobertura"
+        footer={
+          active && (
+            <Link
+              to="/workspace/cliente/$brandSlug"
+              params={{ brandSlug: active.brand.slug }}
+              className="e-btn secondary"
+            >
+              Abrir operação do cliente
+              <Icon name="arrowUpRight" />
+            </Link>
+          )
+        }
+      >
+        {active && (
+          <>
+            <div className="coverage-detail-summary">
+              <Badge tone={TONES[active.level]} dot>
+                {RISK_LABELS[active.level]}
+              </Badge>
+              <p>
+                {riskHint(active)}.{" "}
+                {active.level === "red"
+                  ? "Priorize a próxima entrega para retomar a cobertura."
+                  : active.level === "orange"
+                    ? "A janela de produção já começou. Organize a próxima entrega."
+                    : "Acompanhe o início da produção para manter o cliente coberto."}
+              </p>
             </div>
-          </div>
-          {visible.map((x, row) => {
-            const cov = pos(x.front.approved_until);
-            const produce = x.front.approved_until ? toISO(addDays(localDate(x.front.approved_until), -x.front.lead_days)) : null;
-            const pp = pos(produce);
-            const ps = pos(x.period.start, false);
-            const pe = pos(x.period.end);
-            return (
-              <div key={x.front.id} className={`ctl-row${flash.includes(x.front.id) ? " flash" : ""}`} style={{ ["--c" as string]: RISK_COLOR[x.level], ["--i" as string]: row }}>
-                <div className="ctl-label">
-                  <ClientLogo name={x.brand.name} logoUrl={x.brand.logo_url} size="sm" />
-                  <div style={{ minWidth: 0 }}>
-                    <b className="e-ellipsis" style={{ display: "block" }}>{x.brand.name}</b>
-                    <span className="e-caption">{x.front.name} · {recLabel(x.front.recurrence)}</span>
-                  </div>
-                  <Badge tone={RISK_TONE[x.level]} dot>{RISK_LABELS[x.level]}</Badge>
-                </div>
-                <div className="ctl-track" role="img" aria-label={`${x.brand.name} ${x.front.name}: aprovado até ${ddmm(x.front.approved_until)}`}>
-                  {Array.from({ length: days }, (_, i) => { const d = new Date(ym.y, ym.m, i + 1).getDay(); return d === 0 || d === 6 ? <i key={i} className="wk" style={{ gridColumn: i + 1 }} /> : null; })}
-                  {cov !== null && cov > 0 && <span className="cov" style={{ gridColumn: `1 / ${cov + 1}` }} />}
-                  {ps !== null && pe !== null && pe > ps && <span className="pending" style={{ gridColumn: `${ps + 1} / ${pe + 1}` }} title={`Próxima pauta ${ddmm(x.period.start)}–${ddmm(x.period.end)}`} />}
-                  {pp !== null && pp > 0 && pp <= days && produce && localDate(produce) >= first && <span className="mark produce" style={{ gridColumn: pp }} title={`Começar a produzir em ${ddmm(produce)}`}><i /></span>}
-                  {isNow && <span className="mark now" style={{ gridColumn: now.getDate() }} title="Hoje"><i /></span>}
-                </div>
-                <div className="ctl-detail">
-                  <span className="e-caption tnum">aprovado até <b>{ddmm(x.front.approved_until)}</b> · antecedência {x.front.lead_days}d · próxima pauta {ddmm(x.period.start)}–{ddmm(x.period.end)}</span>
-                  <span className="e-row" style={{ gap: 4 }}>
-                    <Button size="sm" variant="secondary" icon="plus" loading={busy === x.front.id} onClick={() => createCycle(x)}>Criar entrega do ciclo</Button>
-                    {isDemoMode() && <Menu align="right" trigger={({ toggle }) => <Button size="sm" variant="ghost" icon="more" aria-label="Mais ações" onClick={toggle} />} items={[
-                      { title: "Demonstração" },
-                      { label: "Simular aprovação no Like (+7 dias)", icon: "heart", onSelect: () => { const base = x.front.approved_until ? localDate(x.front.approved_until) : today(); demoApprove(x.front.id, toISO(addDays(base, 7))); qc.invalidateQueries({ queryKey: ["ops-fronts"] }); pulse(x.front.id); toast.success("Aprovado no Like", { description: `${x.brand.name} · ${x.front.name} coberto até ${ddmm(toISO(addDays(base, 7)))}` }); } },
-                    ]} />}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-          <div className="ctl-legend">
-            <span><i className="lg cov" /> Coberto (aprovado)</span>
-            <span><i className="lg produce" /> Começar a produzir</span>
-            <span><i className="lg pending" /> Próxima pauta</span>
-            <span><i className="lg now" /> Hoje</span>
-          </div>
-        </div>
-      )}
-      <p className="e-caption" style={{ margin: 0 }}><Icon name="info" size="sm" /> A cobertura avança sozinha quando o cliente aprova no Like um material com data de publicação.</p>
+            <DetailFacts
+              items={[
+                { label: "Aprovado até", value: shortDate(active.front.approved_until) },
+                { label: "Começar a produzir", value: shortDate(productionDate(active)) },
+                {
+                  label: "Antecedência",
+                  value: `${active.front.lead_days} dias`,
+                  hint: "Antes de terminar a cobertura",
+                },
+                { label: "Recorrência", value: recurrence(active.front.recurrence) },
+              ]}
+            />
+            <section className="coverage-cycle">
+              <span className="e-label">Próximo ciclo</span>
+              <h4>
+                {shortDate(active.period.start)} — {shortDate(active.period.end)}
+              </h4>
+              <p>
+                Crie a entrega para organizar as tarefas desse período. Se ela já existir, o sistema
+                mantém a mesma entrega.
+              </p>
+              <Button
+                variant="primary"
+                icon={created.includes(cycleKey(active)) ? "check" : "plus"}
+                loading={busy === active.front.id}
+                disabled={!!busy || created.includes(cycleKey(active))}
+                onClick={() => createCycle(active.front.id)}
+              >
+                {created.includes(cycleKey(active))
+                  ? "Entrega do ciclo criada"
+                  : "Criar entrega do ciclo"}
+              </Button>
+            </section>
+            {isDemoMode() && (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="refresh"
+                onClick={() => {
+                  const base = active.front.approved_until
+                    ? localDate(active.front.approved_until)
+                    : today();
+                  demoApprove(active.front.id, toISO(addDays(base, 7)));
+                  qc.invalidateQueries({ queryKey: ["ops-fronts"] });
+                  pulse(active.front.id);
+                  toast.success("Cobertura de exemplo atualizada em 7 dias");
+                }}
+              >
+                Simular aprovação (+7 dias)
+              </Button>
+            )}
+          </>
+        )}
+      </Drawer>
     </div>
   );
 }

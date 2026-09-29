@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { PeriodNavigator } from "@/components/echo/operations";
 import { AgendaRow } from "@/components/echo/blocks";
 import { Button, EmptyState, Skeleton } from "@/components/echo/primitives";
 import { Chip, Field, Segmented, Select, TextArea } from "@/components/echo/controls";
@@ -132,12 +133,7 @@ function AgencyCalendar() {
   return (
     <div className="stack-lg">
       <div className="cal-toolbar e-glass">
-        <div className="e-row" style={{ gap: 4 }}>
-          <Button variant="ghost" size="sm" iconOnly icon="chevLeft" aria-label="Mês anterior" onClick={() => go(-1)} />
-          <h2 className="e-h3 cal-title" aria-live="polite">{MESES[ym.m]} <span>{ym.y}</span></h2>
-          <Button variant="ghost" size="sm" iconOnly icon="chevRight" aria-label="Próximo mês" onClick={() => go(1)} />
-          <Button variant="secondary" size="sm" onClick={goToday}>Hoje</Button>
-        </div>
+        <PeriodNavigator label={`${MESES[ym.m]} de ${ym.y}`} onPrevious={() => go(-1)} onNext={() => go(1)} onToday={goToday} current={ym.y === now.getFullYear() && ym.m === now.getMonth()} />
         <span className="sp" />
         <Segmented label="Visualização" value={view} onChange={setView} items={[{ value: "mes", label: "Mês", icon: "calendar" }, { value: "lista", label: "Lista", icon: "list" }]} />
         {canEdit && <Button icon="plus" onClick={() => newOn(todayISO)}>Novo marco</Button>}

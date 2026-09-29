@@ -9,6 +9,7 @@
 @import "./styles/echo/motion.css";
 @import "./styles/echo/brand.css";
 @import "./styles/echo/app.css";
+@import "./styles/echo/operations.css";
 
 @custom-variant dark (&:is(.dark *));
 

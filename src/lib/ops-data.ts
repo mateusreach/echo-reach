@@ -181,3 +181,69 @@ export function demoApprove(frontId: string, until: string) {
   const f = demo().fronts.find((x) => x.front.id === frontId);
   if (f) f.front.approved_until = until;
 }
+
+// ----- Demandas: criar, ações em massa (com desfazer) --------------------------------
+
+export async function createOpsTask(input: { brand: { id: string; name: string; slug: string }; workOrderId: string | null; title: string; sector: string | null; owner: string | null; due: string | null }) {
+  if (isDemoMode()) {
+    demo().tasks.push({ id: `t-${Math.random().toString(36).slice(2, 8)}`, title: input.title, brand: input.brand, frontId: null, frontName: null, workOrderId: input.workOrderId, status: "Parada", owner: input.owner, due: input.due, sector: input.sector, note: null, requiresReview: false, since: nowISO(), remindedAt: null, likeMaterial: null });
+    return;
+  }
+  const { error } = await db.from("workspace_tasks").insert({ brand_id: input.brand.id, work_order_id: input.workOrderId, title: input.title, sector: input.sector, owner_name: input.owner, due_date: input.due, status: "Parada" });
+  if (error) throw error;
+}
+
+type Snapshot = Pick<OpsTask, "id" | "status" | "owner" | "due" | "sector">;
+/** Aplica a mesma mudança a várias tarefas e devolve como desfazer. */
+export async function bulkUpdate(tasks: OpsTask[], change: { status?: WorkStatus; owner?: string | null; shiftDays?: number; sector?: string | null }): Promise<() => Promise<void>> {
+  const before: Snapshot[] = tasks.map((t) => ({ id: t.id, status: t.status, owner: t.owner, due: t.due, sector: t.sector }));
+  for (const t of tasks) {
+    if (change.status) await setTaskStatus(t.id, change.status);
+    const p: TaskPatch = {};
+    if ("owner" in change) p.owner = change.owner ?? null;
+    if ("sector" in change) p.sector = change.sector ?? null;
+    if (change.shiftDays && t.due) p.due = toISO(addDays(new Date(t.due + "T00:00:00"), change.shiftDays));
+    if (Object.keys(p).length) await patchTask(t.id, p);
+  }
+  return async () => {
+    for (const b of before) {
+      if (change.status) await setTaskStatus(b.id, b.status);
+      await patchTask(b.id, { owner: b.owner, due: b.due, sector: b.sector });
+    }
+  };
+}
+
+// ----- Calendário: camadas de publicações aprovadas e reuniões -----------------------
+
+export type CalendarLayerItem = { id: string; kind: "publicacao" | "reuniao"; title: string; date: string; brand: { name: string; slug: string } };
+export async function listCalendarLayers(): Promise<CalendarLayerItem[]> {
+  if (isDemoMode()) {
+    const b = (slug: string, name: string) => ({ slug, name });
+    return [
+      { id: "p1", kind: "publicacao", title: "Carrossel “Notas de outono”", date: iso(2), brand: b("fina-fragrancia", "Fina Fragrância") },
+      { id: "p2", kind: "publicacao", title: "Reels de lançamento", date: iso(5), brand: b("zelus", "Zelus") },
+      { id: "p3", kind: "publicacao", title: "Guia: como guardar seu perfume", date: iso(4), brand: b("fina-fragrancia", "Fina Fragrância") },
+      { id: "p4", kind: "publicacao", title: "Stories da semana", date: iso(1), brand: b("eliza", "Eliza") },
+      { id: "m1", kind: "reuniao", title: "Alinhamento mensal", date: iso(3), brand: b("fina-fragrancia", "Fina Fragrância") },
+      { id: "m2", kind: "reuniao", title: "Aprovação do plano de novembro", date: iso(8), brand: b("dra-giuliana", "Dra. Giuliana") },
+    ];
+  }
+  const [pubs, meets] = await Promise.all([
+    db.from("conteudos").select("id, title, publish_date, status, brands!inner(name, slug)").in("status", ["aprovada", "produzida", "publicada"]).not("publish_date", "is", null),
+    db.from("espaco360_meetings").select("id, title, meeting_date, brands!inner(name, slug)"),
+  ]);
+  return [
+    ...((pubs.data ?? []) as any[]).map((p) => ({ id: p.id, kind: "publicacao" as const, title: p.title, date: String(p.publish_date).slice(0, 10), brand: p.brands })),
+    ...((meets.data ?? []) as any[]).map((m) => ({ id: m.id, kind: "reuniao" as const, title: m.title, date: String(m.meeting_date).slice(0, 10), brand: m.brands })),
+  ];
+}
+
+/** Link "Adicionar ao Google Agenda" para uma tarefa com prazo (dia inteiro). */
+export function googleCalendarLink(t: OpsTask) {
+  if (!t.due) return null;
+  const start = t.due.replace(/-/g, "");
+  const endD = addDays(new Date(t.due + "T00:00:00"), 1);
+  const end = toISO(endD).replace(/-/g, "");
+  const params = new URLSearchParams({ action: "TEMPLATE", text: `${t.title} · ${t.brand.name}`, dates: `${start}/${end}`, details: `${t.frontName ? `Frente ${t.frontName} · ` : ""}Etapa: ${t.status}\nEcho · Workspace` });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}

@@ -1,0 +1,90 @@
+/* Echo · Operational patterns. Canonical copy: reach-echo-ds/css/operations.css. */
+.e-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.e-period { display:inline-flex; align-items:center; gap:2px; padding:4px; border:1px solid var(--line); border-radius:var(--r-pill); background:var(--glass); box-shadow:var(--glass-inset); max-width:100%; }
+.e-period-label { min-width:146px; text-align:center; font-size:13px; font-weight:600; color:var(--ink); font-variant-numeric:tabular-nums; }
+.e-period-divider { height:18px; width:1px; background:var(--line-2); margin:0 3px; }
+.e-metric-filters { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.e-metric-filter { display:grid; gap:14px; border:1px solid var(--line); border-radius:var(--r-lg); padding:17px 20px; background:var(--glass); box-shadow:var(--glass-inset); color:var(--ink); font:inherit; text-align:left; cursor:pointer; transition:background 150ms ease,box-shadow 150ms ease; }
+.e-metric-top { display:flex; gap:8px; align-items:center; font-size:12px; font-weight:500; color:var(--ink-2); }
+.e-metric-top > .e-ic:first-child { color:var(--metric-color); }
+.e-metric-top > .e-ic:last-child { margin-left:auto; color:var(--ink-3); }
+.e-metric-value { display:flex; gap:12px; align-items:baseline; font-size:32px; line-height:1; letter-spacing:-.04em; font-weight:500; }
+.e-metric-value small { font-size:11px; line-height:1.5; font-weight:400; letter-spacing:0; color:var(--ink-3); }
+.e-metric-filter[aria-pressed=true] { background:color-mix(in oklab,var(--metric-color) 7%,var(--glass)); box-shadow:var(--glass-inset),inset 0 0 0 1px var(--metric-color); }
+.e-active-filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; min-height:30px; }
+.e-active-filters > .e-caption { margin-right:auto; }
+.e-detail-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin:0; gap:18px 16px; }
+.e-detail-facts dt { color:var(--ink-3); font-size:12px; margin-bottom:5px; }
+.e-detail-facts dd { color:var(--ink); font-size:14px; font-weight:500; margin:0; font-variant-numeric:tabular-nums; }
+.e-detail-facts small { display:block; color:var(--ink-3); font-size:11px; margin-top:4px; }
+.e-coverage-view { container-type:inline-size; min-width:0; }
+.e-coverage-scroll { overflow:auto; max-height:640px; scrollbar-width:thin; overscroll-behavior-x:contain; border-block:1px solid var(--line); }
+.e-coverage-table { width:100%; min-width:1020px; border-spacing:0; border-collapse:separate; table-layout:fixed; color:var(--ink); font-size:12px; }
+.e-coverage-table th { font-weight:500; text-align:left; }
+.e-coverage-table thead th { position:sticky; top:0; z-index:3; background:var(--bg); height:48px; border-bottom:1px solid var(--line); color:var(--ink-3); }
+.e-coverage-table .e-coverage-identity { width:215px; padding:0 16px; position:sticky; left:0; z-index:2; background:var(--bg); border-right:1px solid var(--line); }
+.e-coverage-table thead .e-coverage-identity { z-index:4; font-size:11px; }
+.e-coverage-table .e-coverage-status { width:156px; padding:0 16px; }
+.e-coverage-table .e-coverage-action { width:48px; padding-right:8px; }
+.e-coverage-table td { padding:0; }
+.e-coverage-table tbody th, .e-coverage-table tbody td { height:68px; border-bottom:1px solid var(--line); }
+.e-coverage-table tbody tr:last-child > * { border-bottom:0; }
+.e-coverage-client { display:flex; align-items:center; gap:10px; width:100%; padding:10px 0; border:0; border-radius:var(--r-sm); background:none; color:var(--ink); text-align:left; font:inherit; cursor:pointer; min-width:0; }
+.e-coverage-client .e-logo { --sz:30px; flex:none; border-radius:10px; box-shadow:none; }
+.e-coverage-name { min-width:0; flex:1; display:grid; gap:4px; }
+.e-coverage-name b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px; font-weight:600; }
+.e-coverage-name small { font-size:11px; color:var(--ink-2); }
+.e-coverage-name small span { color:var(--ink-3); }
+.e-coverage-days, .e-coverage-grid { display:grid; grid-template-columns:repeat(var(--days),minmax(0,1fr)); }
+.e-coverage-days { height:48px; align-items:center; text-align:center; font-size:10px; font-weight:400; }
+.e-coverage-days > span { display:grid; place-items:center; height:24px; }
+.e-coverage-days .weekend { color:var(--ink-4); }
+.e-coverage-days .is-today { border-radius:7px; background:var(--accent-ink); color:var(--bg); font-weight:600; }
+.e-coverage-track { display:block; position:relative; width:100%; height:67px; padding:0; border:0; background:transparent; cursor:pointer; }
+.e-coverage-grid { position:absolute; inset:0; pointer-events:none; }
+.e-coverage-grid > i { border-right:1px solid color-mix(in oklab,var(--line) 60%,transparent); }
+.e-coverage-grid .weekend { background:var(--hover); }
+.e-coverage-band { position:absolute; height:16px; top:21px; left:0; background:color-mix(in oklab,var(--coverage-color) 16%,var(--bg)); border-block:1px solid color-mix(in oklab,var(--coverage-color) 28%,transparent); border-right:2px solid var(--coverage-color); border-radius:0 5px 5px 0; }
+.e-coverage-next { position:absolute; top:42px; height:6px; background:color-mix(in oklab,var(--accent-ink) 8%,var(--bg)); border:1px dashed color-mix(in oklab,var(--accent-ink) 50%,transparent); border-radius:4px; }
+.e-coverage-production { position:absolute; top:16px; width:7px; height:7px; border:1.5px solid var(--warn); background:var(--bg); transform:translateX(-50%) rotate(45deg); z-index:1; }
+.e-coverage-today { position:absolute; top:0; bottom:0; border-left:1px solid var(--accent-ink); opacity:.7; pointer-events:none; }
+.e-coverage-offscreen { position:absolute; left:12px; top:24px; font-size:10px; color:var(--ink-3); }
+.e-coverage-state { display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:500; color:var(--coverage-color); white-space:nowrap; }
+.e-coverage-state i { width:5px; height:5px; border-radius:50%; background:currentColor; flex:none; }
+.e-coverage-status small { display:block; margin-top:5px; color:var(--ink-3); font-size:10.5px; }
+.e-coverage-legend { display:flex; align-items:center; gap:18px; flex-wrap:wrap; color:var(--ink-3); font-size:11px; }
+.e-coverage-legend > span { display:inline-flex; align-items:center; gap:6px; }
+.e-coverage-legend i { display:inline-block; width:16px; height:7px; border-radius:3px; }
+.e-coverage-legend .covered { background:color-mix(in oklab,var(--ok) 22%,transparent); border:1px solid var(--ok); }
+.e-coverage-legend .next { border:1px dashed var(--accent-ink); }
+.e-coverage-legend .production { width:6px; height:6px; border:1px solid var(--warn); border-radius:0; transform:rotate(45deg); }
+.e-coverage-legend .today { width:1px; height:12px; background:var(--accent-ink); }
+.e-coverage-cards { display:none; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; padding:16px; }
+.e-coverage-card { border:1px solid var(--line); border-radius:var(--r-lg); padding:14px; background:var(--glass); min-width:0; }
+.e-coverage-card .e-coverage-client { padding:0 0 14px; }
+.e-coverage-card-state { display:flex; gap:8px; justify-content:space-between; align-items:center; margin-bottom:18px; }
+.e-coverage-card-state small { color:var(--ink-3); font-size:10.5px; }
+.e-coverage-card-foot { display:flex; gap:8px; justify-content:space-between; align-items:center; margin-top:16px; padding-top:12px; border-top:1px solid var(--line); }
+.e-coverage-view.is-list .e-coverage-scroll { display:none; }
+.e-coverage-view.is-list .e-coverage-cards { display:grid; }
+.e-coverage-table .is-updated > *, .e-coverage-card.is-updated { background:color-mix(in oklab,var(--ok) 8%,var(--bg)); }
+.e-period button, .e-metric-filter, .e-coverage-client, .e-coverage-track { touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.e-metric-filter:focus-visible, .e-coverage-client:focus-visible, .e-coverage-track:focus-visible, .e-coverage-scroll:focus-visible { outline:2px solid var(--accent-ink); outline-offset:-2px; }
+@media (hover:hover) and (pointer:fine) {
+  .e-metric-filter:hover { background:var(--glass-hi); }
+  .e-coverage-table tbody tr:hover > * { background:var(--glass-hi); }
+  .e-coverage-client:hover .e-coverage-name b { color:var(--accent-ink); }
+}
+@container (max-width:720px) {
+  .e-coverage-view:not(.force-timeline) .e-coverage-scroll { display:none; }
+  .e-coverage-view:not(.force-timeline) .e-coverage-cards { display:grid; }
+}
+@media (max-width:760px) {
+  .e-metric-filters { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .e-metric-filter { padding:14px; gap:10px; }
+  .e-metric-value { font-size:28px; gap:8px; }
+  .e-metric-value small { font-size:10px; }
+  .e-period-label { min-width:126px; font-size:12px; }
+  .e-coverage-cards { grid-template-columns:minmax(0,1fr); padding:12px; }
+}
+@media (prefers-reduced-motion:reduce) { .e-metric-filter { transition:none; } }
