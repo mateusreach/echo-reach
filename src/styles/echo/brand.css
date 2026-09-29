@@ -1,0 +1,99 @@
+/* ==========================================================================
+   Echo · Marca
+   Órbitas e estrela usam o degradê do caminho de cor (--p1 → --p2 → --mix)
+   e se transformam junto quando a pessoa troca de caminho. A palavra usa --ink.
+   ========================================================================== */
+.e-echo { display: block; height: 32px; width: auto; overflow: visible; flex: none; }
+.e-echo .s1 { stop-color: var(--p1); }
+.e-echo .s2 { stop-color: var(--p2); }
+.e-echo .s3 { stop-color: var(--mix); }
+.e-echo .word { fill: var(--ink); transition: fill var(--dur-2) ease; }
+.e-echo.v-mono .ring, .e-echo.v-mono .spark { fill: var(--ink); }
+.e-echo.v-white .ring, .e-echo.v-white .spark, .e-echo.v-white .word { fill: #fff; }
+.e-echo.v-white .echoes .ring { fill: #fff; }
+
+/* Geometria: tudo gira a partir do cruzamento das órbitas; a estrela, do centro do “o”. */
+.e-echo .orbit, .e-echo .echoes .ring, .e-echo .spark, .e-echo .band { transform-box: view-box; }
+.e-echo .orbit, .e-echo .echoes .ring { transform-origin: 388px 207px; }
+.e-echo .spark { transform-origin: 506.2px 211.5px; }
+.e-echo .orbit { transition: transform 700ms var(--ease-spring); }
+.e-echo .spark { transition: transform 620ms var(--ease-spring), filter var(--dur-3) ease; }
+.e-echo .echoes .ring { fill: var(--p2); opacity: 0; }
+.e-echo .band { opacity: 0; }
+
+/* Hover (ponteiro fino), anfitrião com hover ou reprodução programada */
+.e-echo.is-playing .orbit.a { transform: rotate(-6deg) scale(1.02); }
+.e-echo.is-playing .orbit.b { transform: rotate(6deg) scale(1.02); }
+.e-echo.is-playing .spark { transform: rotate(90deg) scale(1.35); filter: drop-shadow(0 0 14px color-mix(in oklab, var(--p2) 80%, transparent)); }
+.e-echo.is-playing .echoes .ring { animation: e-echo-ripple 1100ms var(--ease-out); }
+.e-echo.is-playing .echoes .ring + .ring { animation-delay: 150ms; }
+.e-echo.is-playing .band { animation: e-echo-sheen 1000ms var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  .e-echo:hover .orbit.a, .e-echo-host:hover .e-echo .orbit.a { transform: rotate(-6deg) scale(1.02); }
+  .e-echo:hover .orbit.b, .e-echo-host:hover .e-echo .orbit.b { transform: rotate(6deg) scale(1.02); }
+  .e-echo:hover .spark, .e-echo-host:hover .e-echo .spark { transform: rotate(90deg) scale(1.35); filter: drop-shadow(0 0 14px color-mix(in oklab, var(--p2) 80%, transparent)); }
+  .e-echo:hover .echoes .ring, .e-echo-host:hover .e-echo .echoes .ring { animation: e-echo-ripple 1100ms var(--ease-out); }
+  .e-echo:hover .echoes .ring + .ring, .e-echo-host:hover .e-echo .echoes .ring + .ring { animation-delay: 150ms; }
+  .e-echo:hover .band, .e-echo-host:hover .e-echo .band { animation: e-echo-sheen 1000ms var(--ease-out); }
+}
+/* Ecos: as órbitas se repetem e se dissipam para fora */
+@keyframes e-echo-ripple {
+  0% { opacity: .5; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.16); }
+}
+/* Luz atravessando o vidro das órbitas */
+@keyframes e-echo-sheen {
+  0% { opacity: 1; transform: translateX(0) skewX(-18deg); }
+  100% { opacity: 1; transform: translateX(1160px) skewX(-18deg); }
+}
+
+/* Anfitriões da marca */
+.e-echo-host { cursor: pointer; }
+.cat-brand .e-echo { height: 34px; }
+.cat-brand .by { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding-left: 10px; border-left: 1px solid var(--line-2); }
+.cat-brand .by svg { height: 11px; width: auto; fill: currentColor; }
+.hero-logo { display: inline-block; justify-self: start; margin: -6px 0 -4px -6px; padding: 6px; }
+.hero-logo .e-echo { height: clamp(84px, 11vw, 128px); }
+
+/* Carregador: as duas órbitas oscilam em sentidos opostos, como um eco; a estrela cintila */
+.e-orbit-loader { --sz: 64px; display: inline-block; width: var(--sz); height: calc(var(--sz) * .48); }
+.e-orbit-loader svg { width: 100%; height: 100%; overflow: visible; display: block; }
+.e-orbit-loader .s1 { stop-color: var(--p1); } .e-orbit-loader .s2 { stop-color: var(--p2); } .e-orbit-loader .s3 { stop-color: var(--mix); }
+.e-orbit-loader .la, .e-orbit-loader .lb, .e-orbit-loader .ls { transform-box: view-box; }
+.e-orbit-loader .la, .e-orbit-loader .lb { transform-origin: 388px 207px; }
+.e-orbit-loader .ls { transform-origin: 506.2px 211.5px; }
+.e-orbit-loader .la { animation: e-orbit-a 1.3s var(--ease-in-out) infinite alternate; }
+.e-orbit-loader .lb { animation: e-orbit-b 1.3s var(--ease-in-out) infinite alternate; }
+.e-orbit-loader .ls { animation: e-twinkle .65s ease-in-out infinite alternate; }
+@keyframes e-orbit-a { from { transform: rotate(-16deg) scale(.96); } to { transform: rotate(14deg) scale(1.04); } }
+@keyframes e-orbit-b { from { transform: rotate(16deg) scale(.96); } to { transform: rotate(-14deg) scale(1.04); } }
+@keyframes e-twinkle { from { transform: scale(.7) rotate(0deg); opacity: .6; } to { transform: scale(1.25) rotate(45deg); opacity: 1; } }
+
+/* Catálogo: vitrine da marca */
+.brand-stage { position: relative; border-radius: 28px; padding: 28px; display: grid; place-items: center; min-height: 190px; overflow: hidden; }
+.brand-stage .e-echo { height: 96px; }
+.brand-stage.grad { background: var(--grad); }
+.brand-stage.onix { background: radial-gradient(120% 120% at 30% 0%, #2A2A33, #0E0E12); }
+.brand-stage.onix .e-echo .word { fill: #F4F4F8; }
+.brand-stage .cap { position: absolute; left: 16px; bottom: 12px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.brand-stage.grad .cap, .brand-stage.onix .cap { color: rgba(255,255,255,.75); }
+.brand-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; width: 100%; }
+.brand-paths > div { border-radius: 22px; padding: 22px 18px 14px; display: grid; gap: 10px; justify-items: center; }
+.brand-paths .e-echo { height: 64px; }
+.brand-sizes { display: flex; align-items: flex-end; gap: 28px; flex-wrap: wrap; }
+.brand-sizes figure { margin: 0; display: grid; gap: 8px; justify-items: start; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); }
+.brand-anatomy { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; width: 100%; }
+.brand-anatomy > div { padding: 14px 16px; border-radius: 18px; display: grid; gap: 4px; font-size: 13px; color: var(--ink-2); }
+.brand-anatomy b { color: var(--ink); font-size: 14px; }
+.brand-clear { position: relative; display: inline-block; padding: 26px 34px; border-radius: 16px; outline: 1.5px dashed var(--accent-line); outline-offset: -1px; background: repeating-linear-gradient(45deg, transparent 0 8px, var(--accent-soft) 8px 9px); }
+.brand-clear .e-echo { height: 56px; background: var(--bg); border-radius: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .e-echo .orbit, .e-echo .spark { transition-duration: 0ms !important; }
+  .e-echo .echoes .ring, .e-echo .band { animation: none !important; }
+  .e-echo:hover .orbit, .e-echo-host:hover .e-echo .orbit, .e-echo.is-playing .orbit { transform: none !important; }
+  .e-echo:hover .spark, .e-echo-host:hover .e-echo .spark, .e-echo.is-playing .spark { transform: none !important; }
+  .e-orbit-loader .la, .e-orbit-loader .lb { animation: e-loader-fade 1.6s ease-in-out infinite alternate; }
+  .e-orbit-loader .ls { animation: none; }
+  @keyframes e-loader-fade { from { opacity: .45; } to { opacity: 1; } }
+}

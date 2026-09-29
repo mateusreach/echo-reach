@@ -11,6 +11,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { useEffect, type ReactNode } from "react";
 import { applyTheme, getStoredTheme } from "@/lib/branding";
 import { ModuleSwitcher } from "@/components/reach/module-switcher";
+import { APPEARANCE_BOOT, applyAppearance, readAppearance } from "@/components/echo/appearance";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -80,15 +81,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Reach Brand OS — Inteligência estratégica de marcas" },
+      { title: "Echo · Reach" },
       {
         name: "description",
         content:
-          "O cérebro de cada marca: fundação, posicionamento, narrativas, planejamento e histórico de decisões em um só lugar.",
+          "Brand, Workspace, Like e Espaço 360: planejamento, produção, aprovação e acompanhamento de cada cliente da Reach.",
       },
       { name: "author", content: "Reach" },
-      { property: "og:title", content: "Reach Brand OS" },
-      { property: "og:description", content: "Inteligência estratégica de marcas. Parte do ecossistema Reach." },
+      { property: "og:title", content: "Echo · Reach" },
+      { property: "og:description", content: "A plataforma da Reach para marcas, operação e aprovação." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -98,7 +99,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap",
       },
       // Ícone oficial Reach Brand como favicon (versão estática, não animada).
       { rel: "icon", href: "/favicon.ico", sizes: "any" },
@@ -118,6 +119,8 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" data-reach-theme="blue">
       <head>
+        {/* Aplica base e caminho de cor antes da primeira pintura. */}
+        <script dangerouslySetInnerHTML={{ __html: APPEARANCE_BOOT }} />
         <HeadContent />
       </head>
       <body>
@@ -134,6 +137,8 @@ function RootComponent() {
   // Aplica o tema e a paleta oficial Reach logo na abertura do app.
   useEffect(() => {
     applyTheme(getStoredTheme());
+    // A aparência do Echo (base + caminho de cor) prevalece e mantém o piloto sincronizado.
+    applyAppearance(readAppearance());
   }, []);
 
   return (

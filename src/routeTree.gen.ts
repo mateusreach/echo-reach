@@ -9,140 +9,65 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WorkspaceRouteImport } from './routes/workspace'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as ResultadosRouteImport } from './routes/resultados'
-import { Route as ReferenciasRouteImport } from './routes/referencias'
-import { Route as RadarRouteImport } from './routes/radar'
-import { Route as PesquisaRouteImport } from './routes/pesquisa'
-import { Route as MercadoRouteImport } from './routes/mercado'
-import { Route as EvolucaoRouteImport } from './routes/evolucao'
-import { Route as EstruturaRouteImport } from './routes/estrutura'
-import { Route as EspecialistasIaRouteImport } from './routes/especialistas-ia'
-import { Route as Espaco360RouteImport } from './routes/espaco-360'
-import { Route as EditorialRouteImport } from './routes/editorial'
-import { Route as E360RouteImport } from './routes/e360'
-import { Route as CriativaRouteImport } from './routes/criativa'
-import { Route as CanaisRouteImport } from './routes/canais'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AgenciaRouteImport } from './routes/agencia'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as WorkspaceIndexRouteImport } from './routes/workspace.index'
-import { Route as E360IndexRouteImport } from './routes/e360.index'
-import { Route as ClientesIndexRouteImport } from './routes/clientes.index'
+import { Route as AgenciaRouteImport } from './routes/agencia'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CanaisRouteImport } from './routes/canais'
+import { Route as CriativaRouteImport } from './routes/criativa'
+import { Route as E360RouteImport } from './routes/e360'
+import { Route as EditorialRouteImport } from './routes/editorial'
+import { Route as Espaco360RouteImport } from './routes/espaco-360'
+import { Route as EspecialistasIaRouteImport } from './routes/especialistas-ia'
+import { Route as EstruturaRouteImport } from './routes/estrutura'
+import { Route as EvolucaoRouteImport } from './routes/evolucao'
+import { Route as MercadoRouteImport } from './routes/mercado'
+import { Route as PesquisaRouteImport } from './routes/pesquisa'
+import { Route as RadarRouteImport } from './routes/radar'
+import { Route as ReferenciasRouteImport } from './routes/referencias'
+import { Route as ResultadosRouteImport } from './routes/resultados'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as AgenciaIndexRouteImport } from './routes/agencia.index'
-import { Route as WorkspaceRotinasRouteImport } from './routes/workspace.rotinas'
-import { Route as WorkspaceMeuAcessoRouteImport } from './routes/workspace.meu-acesso'
-import { Route as WorkspaceMetasRouteImport } from './routes/workspace.metas'
-import { Route as WorkspaceEquipeRouteImport } from './routes/workspace.equipe'
-import { Route as WorkspaceDemandasRouteImport } from './routes/workspace.demandas'
-import { Route as WorkspaceCronogramaRouteImport } from './routes/workspace.cronograma'
-import { Route as WorkspaceControleRouteImport } from './routes/workspace.controle'
-import { Route as WorkspaceConfiguracoesRouteImport } from './routes/workspace.configuracoes'
-import { Route as WorkspaceClientesRouteImport } from './routes/workspace.clientes'
-import { Route as WorkspaceAvaliacoesRouteImport } from './routes/workspace.avaliacoes'
-import { Route as WorkspaceAgendaRouteImport } from './routes/workspace.agenda'
-import { Route as E360BrandSlugRouteImport } from './routes/e360.$brandSlug'
-import { Route as ClientesBrandSlugRouteImport } from './routes/clientes.$brandSlug'
-import { Route as AgenciaModelosRouteImport } from './routes/agencia.modelos'
-import { Route as AgenciaEquipeRouteImport } from './routes/agencia.equipe'
-import { Route as AgenciaConfiguracoesRouteImport } from './routes/agencia.configuracoes'
-import { Route as AgenciaComunicacaoRouteImport } from './routes/agencia.comunicacao'
-import { Route as AgenciaClientesRouteImport } from './routes/agencia.clientes'
 import { Route as AgenciaCalendarioRouteImport } from './routes/agencia.calendario'
+import { Route as AgenciaClientesRouteImport } from './routes/agencia.clientes'
+import { Route as AgenciaComunicacaoRouteImport } from './routes/agencia.comunicacao'
+import { Route as AgenciaConfiguracoesRouteImport } from './routes/agencia.configuracoes'
+import { Route as AgenciaEquipeRouteImport } from './routes/agencia.equipe'
+import { Route as AgenciaModelosRouteImport } from './routes/agencia.modelos'
+import { Route as ClientesIndexRouteImport } from './routes/clientes.index'
+import { Route as ClientesBrandSlugRouteImport } from './routes/clientes.$brandSlug'
+import { Route as E360IndexRouteImport } from './routes/e360.index'
+import { Route as E360BrandSlugRouteImport } from './routes/e360.$brandSlug'
+import { Route as WorkspaceIndexRouteImport } from './routes/workspace.index'
+import { Route as WorkspaceAgendaRouteImport } from './routes/workspace.agenda'
+import { Route as WorkspaceAvaliacoesRouteImport } from './routes/workspace.avaliacoes'
+import { Route as WorkspaceClientesRouteImport } from './routes/workspace.clientes'
+import { Route as WorkspaceConfiguracoesRouteImport } from './routes/workspace.configuracoes'
+import { Route as WorkspaceControleRouteImport } from './routes/workspace.controle'
+import { Route as WorkspaceCronogramaRouteImport } from './routes/workspace.cronograma'
+import { Route as WorkspaceDemandasRouteImport } from './routes/workspace.demandas'
+import { Route as WorkspaceEquipeRouteImport } from './routes/workspace.equipe'
+import { Route as WorkspaceMetasRouteImport } from './routes/workspace.metas'
+import { Route as WorkspaceMeuAcessoRouteImport } from './routes/workspace.meu-acesso'
+import { Route as WorkspaceRotinasRouteImport } from './routes/workspace.rotinas'
 import { Route as BBrandSlugIndexRouteImport } from './routes/b.$brandSlug.index'
-import { Route as WorkspaceClienteBrandSlugRouteImport } from './routes/workspace.cliente.$brandSlug'
-import { Route as E360BrandSlugResultadosRouteImport } from './routes/e360.$brandSlug.resultados'
-import { Route as E360BrandSlugPlanoRouteImport } from './routes/e360.$brandSlug.plano'
-import { Route as E360BrandSlugPersonalizacaoRouteImport } from './routes/e360.$brandSlug.personalizacao'
-import { Route as E360BrandSlugAgendaRouteImport } from './routes/e360.$brandSlug.agenda'
-import { Route as BBrandSlugResultadosRouteImport } from './routes/b.$brandSlug.resultados'
-import { Route as BBrandSlugPlanoRouteImport } from './routes/b.$brandSlug.plano'
-import { Route as BBrandSlugEspaco360RouteImport } from './routes/b.$brandSlug.espaco-360'
-import { Route as BBrandSlugConfiguracoesRouteImport } from './routes/b.$brandSlug.configuracoes'
-import { Route as BBrandSlugBibliotecaRouteImport } from './routes/b.$brandSlug.biblioteca'
 import { Route as BBrandSlugAgendaRouteImport } from './routes/b.$brandSlug.agenda'
-import { Route as E360BrandSlugCampanhaCampaignIdRouteImport } from './routes/e360.$brandSlug.campanha.$campaignId'
+import { Route as BBrandSlugBibliotecaRouteImport } from './routes/b.$brandSlug.biblioteca'
+import { Route as BBrandSlugConfiguracoesRouteImport } from './routes/b.$brandSlug.configuracoes'
+import { Route as BBrandSlugEspaco360RouteImport } from './routes/b.$brandSlug.espaco-360'
+import { Route as BBrandSlugPlanoRouteImport } from './routes/b.$brandSlug.plano'
+import { Route as BBrandSlugResultadosRouteImport } from './routes/b.$brandSlug.resultados'
+import { Route as E360BrandSlugAgendaRouteImport } from './routes/e360.$brandSlug.agenda'
+import { Route as E360BrandSlugPersonalizacaoRouteImport } from './routes/e360.$brandSlug.personalizacao'
+import { Route as E360BrandSlugPlanoRouteImport } from './routes/e360.$brandSlug.plano'
+import { Route as E360BrandSlugResultadosRouteImport } from './routes/e360.$brandSlug.resultados'
+import { Route as WorkspaceClienteBrandSlugRouteImport } from './routes/workspace.cliente.$brandSlug'
 import { Route as BBrandSlugCampanhaCampaignIdRouteImport } from './routes/b.$brandSlug.campanha.$campaignId'
+import { Route as E360BrandSlugCampanhaCampaignIdRouteImport } from './routes/e360.$brandSlug.campanha.$campaignId'
 
-const WorkspaceRoute = WorkspaceRouteImport.update({
-  id: '/workspace',
-  path: '/workspace',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResultadosRoute = ResultadosRouteImport.update({
-  id: '/resultados',
-  path: '/resultados',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReferenciasRoute = ReferenciasRouteImport.update({
-  id: '/referencias',
-  path: '/referencias',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RadarRoute = RadarRouteImport.update({
-  id: '/radar',
-  path: '/radar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PesquisaRoute = PesquisaRouteImport.update({
-  id: '/pesquisa',
-  path: '/pesquisa',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MercadoRoute = MercadoRouteImport.update({
-  id: '/mercado',
-  path: '/mercado',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EvolucaoRoute = EvolucaoRouteImport.update({
-  id: '/evolucao',
-  path: '/evolucao',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EstruturaRoute = EstruturaRouteImport.update({
-  id: '/estrutura',
-  path: '/estrutura',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EspecialistasIaRoute = EspecialistasIaRouteImport.update({
-  id: '/especialistas-ia',
-  path: '/especialistas-ia',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const Espaco360Route = Espaco360RouteImport.update({
-  id: '/espaco-360',
-  path: '/espaco-360',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EditorialRoute = EditorialRouteImport.update({
-  id: '/editorial',
-  path: '/editorial',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const E360Route = E360RouteImport.update({
-  id: '/e360',
-  path: '/e360',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CriativaRoute = CriativaRouteImport.update({
-  id: '/criativa',
-  path: '/criativa',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CanaisRoute = CanaisRouteImport.update({
-  id: '/canais',
-  path: '/canais',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgenciaRoute = AgenciaRouteImport.update({
@@ -150,24 +75,84 @@ const AgenciaRoute = AgenciaRouteImport.update({
   path: '/agencia',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceIndexRoute = WorkspaceIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => WorkspaceRoute,
+const CanaisRoute = CanaisRouteImport.update({
+  id: '/canais',
+  path: '/canais',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const E360IndexRoute = E360IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => E360Route,
+const CriativaRoute = CriativaRouteImport.update({
+  id: '/criativa',
+  path: '/criativa',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const ClientesIndexRoute = ClientesIndexRouteImport.update({
-  id: '/clientes/',
-  path: '/clientes/',
+const E360Route = E360RouteImport.update({
+  id: '/e360',
+  path: '/e360',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditorialRoute = EditorialRouteImport.update({
+  id: '/editorial',
+  path: '/editorial',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Espaco360Route = Espaco360RouteImport.update({
+  id: '/espaco-360',
+  path: '/espaco-360',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EspecialistasIaRoute = EspecialistasIaRouteImport.update({
+  id: '/especialistas-ia',
+  path: '/especialistas-ia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EstruturaRoute = EstruturaRouteImport.update({
+  id: '/estrutura',
+  path: '/estrutura',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EvolucaoRoute = EvolucaoRouteImport.update({
+  id: '/evolucao',
+  path: '/evolucao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MercadoRoute = MercadoRouteImport.update({
+  id: '/mercado',
+  path: '/mercado',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PesquisaRoute = PesquisaRouteImport.update({
+  id: '/pesquisa',
+  path: '/pesquisa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RadarRoute = RadarRouteImport.update({
+  id: '/radar',
+  path: '/radar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferenciasRoute = ReferenciasRouteImport.update({
+  id: '/referencias',
+  path: '/referencias',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResultadosRoute = ResultadosRouteImport.update({
+  id: '/resultados',
+  path: '/resultados',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceRoute = WorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgenciaIndexRoute = AgenciaIndexRouteImport.update({
@@ -175,89 +160,9 @@ const AgenciaIndexRoute = AgenciaIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AgenciaRoute,
 } as any)
-const WorkspaceRotinasRoute = WorkspaceRotinasRouteImport.update({
-  id: '/rotinas',
-  path: '/rotinas',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceMeuAcessoRoute = WorkspaceMeuAcessoRouteImport.update({
-  id: '/meu-acesso',
-  path: '/meu-acesso',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceMetasRoute = WorkspaceMetasRouteImport.update({
-  id: '/metas',
-  path: '/metas',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceEquipeRoute = WorkspaceEquipeRouteImport.update({
-  id: '/equipe',
-  path: '/equipe',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceDemandasRoute = WorkspaceDemandasRouteImport.update({
-  id: '/demandas',
-  path: '/demandas',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceCronogramaRoute = WorkspaceCronogramaRouteImport.update({
-  id: '/cronograma',
-  path: '/cronograma',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceControleRoute = WorkspaceControleRouteImport.update({
-  id: '/controle',
-  path: '/controle',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceConfiguracoesRoute = WorkspaceConfiguracoesRouteImport.update({
-  id: '/configuracoes',
-  path: '/configuracoes',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceClientesRoute = WorkspaceClientesRouteImport.update({
-  id: '/clientes',
-  path: '/clientes',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceAvaliacoesRoute = WorkspaceAvaliacoesRouteImport.update({
-  id: '/avaliacoes',
-  path: '/avaliacoes',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceAgendaRoute = WorkspaceAgendaRouteImport.update({
-  id: '/agenda',
-  path: '/agenda',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const E360BrandSlugRoute = E360BrandSlugRouteImport.update({
-  id: '/$brandSlug',
-  path: '/$brandSlug',
-  getParentRoute: () => E360Route,
-} as any)
-const ClientesBrandSlugRoute = ClientesBrandSlugRouteImport.update({
-  id: '/clientes/$brandSlug',
-  path: '/clientes/$brandSlug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AgenciaModelosRoute = AgenciaModelosRouteImport.update({
-  id: '/modelos',
-  path: '/modelos',
-  getParentRoute: () => AgenciaRoute,
-} as any)
-const AgenciaEquipeRoute = AgenciaEquipeRouteImport.update({
-  id: '/equipe',
-  path: '/equipe',
-  getParentRoute: () => AgenciaRoute,
-} as any)
-const AgenciaConfiguracoesRoute = AgenciaConfiguracoesRouteImport.update({
-  id: '/configuracoes',
-  path: '/configuracoes',
-  getParentRoute: () => AgenciaRoute,
-} as any)
-const AgenciaComunicacaoRoute = AgenciaComunicacaoRouteImport.update({
-  id: '/comunicacao',
-  path: '/comunicacao',
+const AgenciaCalendarioRoute = AgenciaCalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
   getParentRoute: () => AgenciaRoute,
 } as any)
 const AgenciaClientesRoute = AgenciaClientesRouteImport.update({
@@ -265,30 +170,144 @@ const AgenciaClientesRoute = AgenciaClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => AgenciaRoute,
 } as any)
-const AgenciaCalendarioRoute = AgenciaCalendarioRouteImport.update({
-  id: '/calendario',
-  path: '/calendario',
+const AgenciaComunicacaoRoute = AgenciaComunicacaoRouteImport.update({
+  id: '/comunicacao',
+  path: '/comunicacao',
   getParentRoute: () => AgenciaRoute,
+} as any)
+const AgenciaConfiguracoesRoute = AgenciaConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => AgenciaRoute,
+} as any)
+const AgenciaEquipeRoute = AgenciaEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
+  getParentRoute: () => AgenciaRoute,
+} as any)
+const AgenciaModelosRoute = AgenciaModelosRouteImport.update({
+  id: '/modelos',
+  path: '/modelos',
+  getParentRoute: () => AgenciaRoute,
+} as any)
+const ClientesIndexRoute = ClientesIndexRouteImport.update({
+  id: '/clientes/',
+  path: '/clientes/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientesBrandSlugRoute = ClientesBrandSlugRouteImport.update({
+  id: '/clientes/$brandSlug',
+  path: '/clientes/$brandSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const E360IndexRoute = E360IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => E360Route,
+} as any)
+const E360BrandSlugRoute = E360BrandSlugRouteImport.update({
+  id: '/$brandSlug',
+  path: '/$brandSlug',
+  getParentRoute: () => E360Route,
+} as any)
+const WorkspaceIndexRoute = WorkspaceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceAgendaRoute = WorkspaceAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceAvaliacoesRoute = WorkspaceAvaliacoesRouteImport.update({
+  id: '/avaliacoes',
+  path: '/avaliacoes',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceClientesRoute = WorkspaceClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceConfiguracoesRoute = WorkspaceConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceControleRoute = WorkspaceControleRouteImport.update({
+  id: '/controle',
+  path: '/controle',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceCronogramaRoute = WorkspaceCronogramaRouteImport.update({
+  id: '/cronograma',
+  path: '/cronograma',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceDemandasRoute = WorkspaceDemandasRouteImport.update({
+  id: '/demandas',
+  path: '/demandas',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceEquipeRoute = WorkspaceEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceMetasRoute = WorkspaceMetasRouteImport.update({
+  id: '/metas',
+  path: '/metas',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceMeuAcessoRoute = WorkspaceMeuAcessoRouteImport.update({
+  id: '/meu-acesso',
+  path: '/meu-acesso',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceRotinasRoute = WorkspaceRotinasRouteImport.update({
+  id: '/rotinas',
+  path: '/rotinas',
+  getParentRoute: () => WorkspaceRoute,
 } as any)
 const BBrandSlugIndexRoute = BBrandSlugIndexRouteImport.update({
   id: '/b/$brandSlug/',
   path: '/b/$brandSlug/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceClienteBrandSlugRoute =
-  WorkspaceClienteBrandSlugRouteImport.update({
-    id: '/cliente/$brandSlug',
-    path: '/cliente/$brandSlug',
-    getParentRoute: () => WorkspaceRoute,
-  } as any)
-const E360BrandSlugResultadosRoute = E360BrandSlugResultadosRouteImport.update({
-  id: '/resultados',
-  path: '/resultados',
-  getParentRoute: () => E360BrandSlugRoute,
+const BBrandSlugAgendaRoute = BBrandSlugAgendaRouteImport.update({
+  id: '/b/$brandSlug/agenda',
+  path: '/b/$brandSlug/agenda',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const E360BrandSlugPlanoRoute = E360BrandSlugPlanoRouteImport.update({
-  id: '/plano',
-  path: '/plano',
+const BBrandSlugBibliotecaRoute = BBrandSlugBibliotecaRouteImport.update({
+  id: '/b/$brandSlug/biblioteca',
+  path: '/b/$brandSlug/biblioteca',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BBrandSlugConfiguracoesRoute = BBrandSlugConfiguracoesRouteImport.update({
+  id: '/b/$brandSlug/configuracoes',
+  path: '/b/$brandSlug/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BBrandSlugEspaco360Route = BBrandSlugEspaco360RouteImport.update({
+  id: '/b/$brandSlug/espaco-360',
+  path: '/b/$brandSlug/espaco-360',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BBrandSlugPlanoRoute = BBrandSlugPlanoRouteImport.update({
+  id: '/b/$brandSlug/plano',
+  path: '/b/$brandSlug/plano',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BBrandSlugResultadosRoute = BBrandSlugResultadosRouteImport.update({
+  id: '/b/$brandSlug/resultados',
+  path: '/b/$brandSlug/resultados',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const E360BrandSlugAgendaRoute = E360BrandSlugAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
   getParentRoute: () => E360BrandSlugRoute,
 } as any)
 const E360BrandSlugPersonalizacaoRoute =
@@ -297,52 +316,33 @@ const E360BrandSlugPersonalizacaoRoute =
     path: '/personalizacao',
     getParentRoute: () => E360BrandSlugRoute,
   } as any)
-const E360BrandSlugAgendaRoute = E360BrandSlugAgendaRouteImport.update({
-  id: '/agenda',
-  path: '/agenda',
+const E360BrandSlugPlanoRoute = E360BrandSlugPlanoRouteImport.update({
+  id: '/plano',
+  path: '/plano',
   getParentRoute: () => E360BrandSlugRoute,
 } as any)
-const BBrandSlugResultadosRoute = BBrandSlugResultadosRouteImport.update({
-  id: '/b/$brandSlug/resultados',
-  path: '/b/$brandSlug/resultados',
-  getParentRoute: () => rootRouteImport,
+const E360BrandSlugResultadosRoute = E360BrandSlugResultadosRouteImport.update({
+  id: '/resultados',
+  path: '/resultados',
+  getParentRoute: () => E360BrandSlugRoute,
 } as any)
-const BBrandSlugPlanoRoute = BBrandSlugPlanoRouteImport.update({
-  id: '/b/$brandSlug/plano',
-  path: '/b/$brandSlug/plano',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BBrandSlugEspaco360Route = BBrandSlugEspaco360RouteImport.update({
-  id: '/b/$brandSlug/espaco-360',
-  path: '/b/$brandSlug/espaco-360',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BBrandSlugConfiguracoesRoute = BBrandSlugConfiguracoesRouteImport.update({
-  id: '/b/$brandSlug/configuracoes',
-  path: '/b/$brandSlug/configuracoes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BBrandSlugBibliotecaRoute = BBrandSlugBibliotecaRouteImport.update({
-  id: '/b/$brandSlug/biblioteca',
-  path: '/b/$brandSlug/biblioteca',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BBrandSlugAgendaRoute = BBrandSlugAgendaRouteImport.update({
-  id: '/b/$brandSlug/agenda',
-  path: '/b/$brandSlug/agenda',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const E360BrandSlugCampanhaCampaignIdRoute =
-  E360BrandSlugCampanhaCampaignIdRouteImport.update({
-    id: '/campanha/$campaignId',
-    path: '/campanha/$campaignId',
-    getParentRoute: () => E360BrandSlugRoute,
+const WorkspaceClienteBrandSlugRoute =
+  WorkspaceClienteBrandSlugRouteImport.update({
+    id: '/cliente/$brandSlug',
+    path: '/cliente/$brandSlug',
+    getParentRoute: () => WorkspaceRoute,
   } as any)
 const BBrandSlugCampanhaCampaignIdRoute =
   BBrandSlugCampanhaCampaignIdRouteImport.update({
     id: '/b/$brandSlug/campanha/$campaignId',
     path: '/b/$brandSlug/campanha/$campaignId',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const E360BrandSlugCampanhaCampaignIdRoute =
+  E360BrandSlugCampanhaCampaignIdRouteImport.update({
+    id: '/campanha/$campaignId',
+    path: '/campanha/$campaignId',
+    getParentRoute: () => E360BrandSlugRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -718,116 +718,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/workspace': {
-      id: '/workspace'
-      path: '/workspace'
-      fullPath: '/workspace'
-      preLoaderRoute: typeof WorkspaceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/resultados': {
-      id: '/resultados'
-      path: '/resultados'
-      fullPath: '/resultados'
-      preLoaderRoute: typeof ResultadosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/referencias': {
-      id: '/referencias'
-      path: '/referencias'
-      fullPath: '/referencias'
-      preLoaderRoute: typeof ReferenciasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/radar': {
-      id: '/radar'
-      path: '/radar'
-      fullPath: '/radar'
-      preLoaderRoute: typeof RadarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pesquisa': {
-      id: '/pesquisa'
-      path: '/pesquisa'
-      fullPath: '/pesquisa'
-      preLoaderRoute: typeof PesquisaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mercado': {
-      id: '/mercado'
-      path: '/mercado'
-      fullPath: '/mercado'
-      preLoaderRoute: typeof MercadoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/evolucao': {
-      id: '/evolucao'
-      path: '/evolucao'
-      fullPath: '/evolucao'
-      preLoaderRoute: typeof EvolucaoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/estrutura': {
-      id: '/estrutura'
-      path: '/estrutura'
-      fullPath: '/estrutura'
-      preLoaderRoute: typeof EstruturaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/especialistas-ia': {
-      id: '/especialistas-ia'
-      path: '/especialistas-ia'
-      fullPath: '/especialistas-ia'
-      preLoaderRoute: typeof EspecialistasIaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/espaco-360': {
-      id: '/espaco-360'
-      path: '/espaco-360'
-      fullPath: '/espaco-360'
-      preLoaderRoute: typeof Espaco360RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/editorial': {
-      id: '/editorial'
-      path: '/editorial'
-      fullPath: '/editorial'
-      preLoaderRoute: typeof EditorialRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/e360': {
-      id: '/e360'
-      path: '/e360'
-      fullPath: '/e360'
-      preLoaderRoute: typeof E360RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/criativa': {
-      id: '/criativa'
-      path: '/criativa'
-      fullPath: '/criativa'
-      preLoaderRoute: typeof CriativaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/canais': {
-      id: '/canais'
-      path: '/canais'
-      fullPath: '/canais'
-      preLoaderRoute: typeof CanaisRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agencia': {
@@ -837,32 +732,116 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgenciaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workspace/': {
-      id: '/workspace/'
-      path: '/'
-      fullPath: '/workspace/'
-      preLoaderRoute: typeof WorkspaceIndexRouteImport
-      parentRoute: typeof WorkspaceRoute
+    '/canais': {
+      id: '/canais'
+      path: '/canais'
+      fullPath: '/canais'
+      preLoaderRoute: typeof CanaisRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/e360/': {
-      id: '/e360/'
-      path: '/'
-      fullPath: '/e360/'
-      preLoaderRoute: typeof E360IndexRouteImport
-      parentRoute: typeof E360Route
+    '/criativa': {
+      id: '/criativa'
+      path: '/criativa'
+      fullPath: '/criativa'
+      preLoaderRoute: typeof CriativaRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/clientes/': {
-      id: '/clientes/'
-      path: '/clientes'
-      fullPath: '/clientes/'
-      preLoaderRoute: typeof ClientesIndexRouteImport
+    '/e360': {
+      id: '/e360'
+      path: '/e360'
+      fullPath: '/e360'
+      preLoaderRoute: typeof E360RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/editorial': {
+      id: '/editorial'
+      path: '/editorial'
+      fullPath: '/editorial'
+      preLoaderRoute: typeof EditorialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/espaco-360': {
+      id: '/espaco-360'
+      path: '/espaco-360'
+      fullPath: '/espaco-360'
+      preLoaderRoute: typeof Espaco360RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/especialistas-ia': {
+      id: '/especialistas-ia'
+      path: '/especialistas-ia'
+      fullPath: '/especialistas-ia'
+      preLoaderRoute: typeof EspecialistasIaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/estrutura': {
+      id: '/estrutura'
+      path: '/estrutura'
+      fullPath: '/estrutura'
+      preLoaderRoute: typeof EstruturaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/evolucao': {
+      id: '/evolucao'
+      path: '/evolucao'
+      fullPath: '/evolucao'
+      preLoaderRoute: typeof EvolucaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mercado': {
+      id: '/mercado'
+      path: '/mercado'
+      fullPath: '/mercado'
+      preLoaderRoute: typeof MercadoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pesquisa': {
+      id: '/pesquisa'
+      path: '/pesquisa'
+      fullPath: '/pesquisa'
+      preLoaderRoute: typeof PesquisaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/radar': {
+      id: '/radar'
+      path: '/radar'
+      fullPath: '/radar'
+      preLoaderRoute: typeof RadarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referencias': {
+      id: '/referencias'
+      path: '/referencias'
+      fullPath: '/referencias'
+      preLoaderRoute: typeof ReferenciasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resultados': {
+      id: '/resultados'
+      path: '/resultados'
+      fullPath: '/resultados'
+      preLoaderRoute: typeof ResultadosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace': {
+      id: '/workspace'
+      path: '/workspace'
+      fullPath: '/workspace'
+      preLoaderRoute: typeof WorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agencia/': {
@@ -872,123 +851,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgenciaIndexRouteImport
       parentRoute: typeof AgenciaRoute
     }
-    '/workspace/rotinas': {
-      id: '/workspace/rotinas'
-      path: '/rotinas'
-      fullPath: '/workspace/rotinas'
-      preLoaderRoute: typeof WorkspaceRotinasRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/workspace/meu-acesso': {
-      id: '/workspace/meu-acesso'
-      path: '/meu-acesso'
-      fullPath: '/workspace/meu-acesso'
-      preLoaderRoute: typeof WorkspaceMeuAcessoRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/workspace/metas': {
-      id: '/workspace/metas'
-      path: '/metas'
-      fullPath: '/workspace/metas'
-      preLoaderRoute: typeof WorkspaceMetasRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/workspace/equipe': {
-      id: '/workspace/equipe'
-      path: '/equipe'
-      fullPath: '/workspace/equipe'
-      preLoaderRoute: typeof WorkspaceEquipeRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/workspace/demandas': {
-      id: '/workspace/demandas'
-      path: '/demandas'
-      fullPath: '/workspace/demandas'
-      preLoaderRoute: typeof WorkspaceDemandasRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/workspace/cronograma': {
-      id: '/workspace/cronograma'
-      path: '/cronograma'
-      fullPath: '/workspace/cronograma'
-      preLoaderRoute: typeof WorkspaceCronogramaRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/workspace/controle': {
-      id: '/workspace/controle'
-      path: '/controle'
-      fullPath: '/workspace/controle'
-      preLoaderRoute: typeof WorkspaceControleRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/workspace/configuracoes': {
-      id: '/workspace/configuracoes'
-      path: '/configuracoes'
-      fullPath: '/workspace/configuracoes'
-      preLoaderRoute: typeof WorkspaceConfiguracoesRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/workspace/clientes': {
-      id: '/workspace/clientes'
-      path: '/clientes'
-      fullPath: '/workspace/clientes'
-      preLoaderRoute: typeof WorkspaceClientesRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/workspace/avaliacoes': {
-      id: '/workspace/avaliacoes'
-      path: '/avaliacoes'
-      fullPath: '/workspace/avaliacoes'
-      preLoaderRoute: typeof WorkspaceAvaliacoesRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/workspace/agenda': {
-      id: '/workspace/agenda'
-      path: '/agenda'
-      fullPath: '/workspace/agenda'
-      preLoaderRoute: typeof WorkspaceAgendaRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/e360/$brandSlug': {
-      id: '/e360/$brandSlug'
-      path: '/$brandSlug'
-      fullPath: '/e360/$brandSlug'
-      preLoaderRoute: typeof E360BrandSlugRouteImport
-      parentRoute: typeof E360Route
-    }
-    '/clientes/$brandSlug': {
-      id: '/clientes/$brandSlug'
-      path: '/clientes/$brandSlug'
-      fullPath: '/clientes/$brandSlug'
-      preLoaderRoute: typeof ClientesBrandSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agencia/modelos': {
-      id: '/agencia/modelos'
-      path: '/modelos'
-      fullPath: '/agencia/modelos'
-      preLoaderRoute: typeof AgenciaModelosRouteImport
-      parentRoute: typeof AgenciaRoute
-    }
-    '/agencia/equipe': {
-      id: '/agencia/equipe'
-      path: '/equipe'
-      fullPath: '/agencia/equipe'
-      preLoaderRoute: typeof AgenciaEquipeRouteImport
-      parentRoute: typeof AgenciaRoute
-    }
-    '/agencia/configuracoes': {
-      id: '/agencia/configuracoes'
-      path: '/configuracoes'
-      fullPath: '/agencia/configuracoes'
-      preLoaderRoute: typeof AgenciaConfiguracoesRouteImport
-      parentRoute: typeof AgenciaRoute
-    }
-    '/agencia/comunicacao': {
-      id: '/agencia/comunicacao'
-      path: '/comunicacao'
-      fullPath: '/agencia/comunicacao'
-      preLoaderRoute: typeof AgenciaComunicacaoRouteImport
+    '/agencia/calendario': {
+      id: '/agencia/calendario'
+      path: '/calendario'
+      fullPath: '/agencia/calendario'
+      preLoaderRoute: typeof AgenciaCalendarioRouteImport
       parentRoute: typeof AgenciaRoute
     }
     '/agencia/clientes': {
@@ -998,88 +865,151 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgenciaClientesRouteImport
       parentRoute: typeof AgenciaRoute
     }
-    '/agencia/calendario': {
-      id: '/agencia/calendario'
-      path: '/calendario'
-      fullPath: '/agencia/calendario'
-      preLoaderRoute: typeof AgenciaCalendarioRouteImport
+    '/agencia/comunicacao': {
+      id: '/agencia/comunicacao'
+      path: '/comunicacao'
+      fullPath: '/agencia/comunicacao'
+      preLoaderRoute: typeof AgenciaComunicacaoRouteImport
       parentRoute: typeof AgenciaRoute
+    }
+    '/agencia/configuracoes': {
+      id: '/agencia/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/agencia/configuracoes'
+      preLoaderRoute: typeof AgenciaConfiguracoesRouteImport
+      parentRoute: typeof AgenciaRoute
+    }
+    '/agencia/equipe': {
+      id: '/agencia/equipe'
+      path: '/equipe'
+      fullPath: '/agencia/equipe'
+      preLoaderRoute: typeof AgenciaEquipeRouteImport
+      parentRoute: typeof AgenciaRoute
+    }
+    '/agencia/modelos': {
+      id: '/agencia/modelos'
+      path: '/modelos'
+      fullPath: '/agencia/modelos'
+      preLoaderRoute: typeof AgenciaModelosRouteImport
+      parentRoute: typeof AgenciaRoute
+    }
+    '/clientes/': {
+      id: '/clientes/'
+      path: '/clientes'
+      fullPath: '/clientes/'
+      preLoaderRoute: typeof ClientesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clientes/$brandSlug': {
+      id: '/clientes/$brandSlug'
+      path: '/clientes/$brandSlug'
+      fullPath: '/clientes/$brandSlug'
+      preLoaderRoute: typeof ClientesBrandSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/e360/': {
+      id: '/e360/'
+      path: '/'
+      fullPath: '/e360/'
+      preLoaderRoute: typeof E360IndexRouteImport
+      parentRoute: typeof E360Route
+    }
+    '/e360/$brandSlug': {
+      id: '/e360/$brandSlug'
+      path: '/$brandSlug'
+      fullPath: '/e360/$brandSlug'
+      preLoaderRoute: typeof E360BrandSlugRouteImport
+      parentRoute: typeof E360Route
+    }
+    '/workspace/': {
+      id: '/workspace/'
+      path: '/'
+      fullPath: '/workspace/'
+      preLoaderRoute: typeof WorkspaceIndexRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/workspace/agenda': {
+      id: '/workspace/agenda'
+      path: '/agenda'
+      fullPath: '/workspace/agenda'
+      preLoaderRoute: typeof WorkspaceAgendaRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/workspace/avaliacoes': {
+      id: '/workspace/avaliacoes'
+      path: '/avaliacoes'
+      fullPath: '/workspace/avaliacoes'
+      preLoaderRoute: typeof WorkspaceAvaliacoesRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/workspace/clientes': {
+      id: '/workspace/clientes'
+      path: '/clientes'
+      fullPath: '/workspace/clientes'
+      preLoaderRoute: typeof WorkspaceClientesRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/workspace/configuracoes': {
+      id: '/workspace/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/workspace/configuracoes'
+      preLoaderRoute: typeof WorkspaceConfiguracoesRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/workspace/controle': {
+      id: '/workspace/controle'
+      path: '/controle'
+      fullPath: '/workspace/controle'
+      preLoaderRoute: typeof WorkspaceControleRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/workspace/cronograma': {
+      id: '/workspace/cronograma'
+      path: '/cronograma'
+      fullPath: '/workspace/cronograma'
+      preLoaderRoute: typeof WorkspaceCronogramaRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/workspace/demandas': {
+      id: '/workspace/demandas'
+      path: '/demandas'
+      fullPath: '/workspace/demandas'
+      preLoaderRoute: typeof WorkspaceDemandasRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/workspace/equipe': {
+      id: '/workspace/equipe'
+      path: '/equipe'
+      fullPath: '/workspace/equipe'
+      preLoaderRoute: typeof WorkspaceEquipeRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/workspace/metas': {
+      id: '/workspace/metas'
+      path: '/metas'
+      fullPath: '/workspace/metas'
+      preLoaderRoute: typeof WorkspaceMetasRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/workspace/meu-acesso': {
+      id: '/workspace/meu-acesso'
+      path: '/meu-acesso'
+      fullPath: '/workspace/meu-acesso'
+      preLoaderRoute: typeof WorkspaceMeuAcessoRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/workspace/rotinas': {
+      id: '/workspace/rotinas'
+      path: '/rotinas'
+      fullPath: '/workspace/rotinas'
+      preLoaderRoute: typeof WorkspaceRotinasRouteImport
+      parentRoute: typeof WorkspaceRoute
     }
     '/b/$brandSlug/': {
       id: '/b/$brandSlug/'
       path: '/b/$brandSlug'
       fullPath: '/b/$brandSlug/'
       preLoaderRoute: typeof BBrandSlugIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/workspace/cliente/$brandSlug': {
-      id: '/workspace/cliente/$brandSlug'
-      path: '/cliente/$brandSlug'
-      fullPath: '/workspace/cliente/$brandSlug'
-      preLoaderRoute: typeof WorkspaceClienteBrandSlugRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/e360/$brandSlug/resultados': {
-      id: '/e360/$brandSlug/resultados'
-      path: '/resultados'
-      fullPath: '/e360/$brandSlug/resultados'
-      preLoaderRoute: typeof E360BrandSlugResultadosRouteImport
-      parentRoute: typeof E360BrandSlugRoute
-    }
-    '/e360/$brandSlug/plano': {
-      id: '/e360/$brandSlug/plano'
-      path: '/plano'
-      fullPath: '/e360/$brandSlug/plano'
-      preLoaderRoute: typeof E360BrandSlugPlanoRouteImport
-      parentRoute: typeof E360BrandSlugRoute
-    }
-    '/e360/$brandSlug/personalizacao': {
-      id: '/e360/$brandSlug/personalizacao'
-      path: '/personalizacao'
-      fullPath: '/e360/$brandSlug/personalizacao'
-      preLoaderRoute: typeof E360BrandSlugPersonalizacaoRouteImport
-      parentRoute: typeof E360BrandSlugRoute
-    }
-    '/e360/$brandSlug/agenda': {
-      id: '/e360/$brandSlug/agenda'
-      path: '/agenda'
-      fullPath: '/e360/$brandSlug/agenda'
-      preLoaderRoute: typeof E360BrandSlugAgendaRouteImport
-      parentRoute: typeof E360BrandSlugRoute
-    }
-    '/b/$brandSlug/resultados': {
-      id: '/b/$brandSlug/resultados'
-      path: '/b/$brandSlug/resultados'
-      fullPath: '/b/$brandSlug/resultados'
-      preLoaderRoute: typeof BBrandSlugResultadosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/b/$brandSlug/plano': {
-      id: '/b/$brandSlug/plano'
-      path: '/b/$brandSlug/plano'
-      fullPath: '/b/$brandSlug/plano'
-      preLoaderRoute: typeof BBrandSlugPlanoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/b/$brandSlug/espaco-360': {
-      id: '/b/$brandSlug/espaco-360'
-      path: '/b/$brandSlug/espaco-360'
-      fullPath: '/b/$brandSlug/espaco-360'
-      preLoaderRoute: typeof BBrandSlugEspaco360RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/b/$brandSlug/configuracoes': {
-      id: '/b/$brandSlug/configuracoes'
-      path: '/b/$brandSlug/configuracoes'
-      fullPath: '/b/$brandSlug/configuracoes'
-      preLoaderRoute: typeof BBrandSlugConfiguracoesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/b/$brandSlug/biblioteca': {
-      id: '/b/$brandSlug/biblioteca'
-      path: '/b/$brandSlug/biblioteca'
-      fullPath: '/b/$brandSlug/biblioteca'
-      preLoaderRoute: typeof BBrandSlugBibliotecaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/b/$brandSlug/agenda': {
@@ -1089,12 +1019,75 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BBrandSlugAgendaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/e360/$brandSlug/campanha/$campaignId': {
-      id: '/e360/$brandSlug/campanha/$campaignId'
-      path: '/campanha/$campaignId'
-      fullPath: '/e360/$brandSlug/campanha/$campaignId'
-      preLoaderRoute: typeof E360BrandSlugCampanhaCampaignIdRouteImport
+    '/b/$brandSlug/biblioteca': {
+      id: '/b/$brandSlug/biblioteca'
+      path: '/b/$brandSlug/biblioteca'
+      fullPath: '/b/$brandSlug/biblioteca'
+      preLoaderRoute: typeof BBrandSlugBibliotecaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/b/$brandSlug/configuracoes': {
+      id: '/b/$brandSlug/configuracoes'
+      path: '/b/$brandSlug/configuracoes'
+      fullPath: '/b/$brandSlug/configuracoes'
+      preLoaderRoute: typeof BBrandSlugConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/b/$brandSlug/espaco-360': {
+      id: '/b/$brandSlug/espaco-360'
+      path: '/b/$brandSlug/espaco-360'
+      fullPath: '/b/$brandSlug/espaco-360'
+      preLoaderRoute: typeof BBrandSlugEspaco360RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/b/$brandSlug/plano': {
+      id: '/b/$brandSlug/plano'
+      path: '/b/$brandSlug/plano'
+      fullPath: '/b/$brandSlug/plano'
+      preLoaderRoute: typeof BBrandSlugPlanoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/b/$brandSlug/resultados': {
+      id: '/b/$brandSlug/resultados'
+      path: '/b/$brandSlug/resultados'
+      fullPath: '/b/$brandSlug/resultados'
+      preLoaderRoute: typeof BBrandSlugResultadosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/e360/$brandSlug/agenda': {
+      id: '/e360/$brandSlug/agenda'
+      path: '/agenda'
+      fullPath: '/e360/$brandSlug/agenda'
+      preLoaderRoute: typeof E360BrandSlugAgendaRouteImport
       parentRoute: typeof E360BrandSlugRoute
+    }
+    '/e360/$brandSlug/personalizacao': {
+      id: '/e360/$brandSlug/personalizacao'
+      path: '/personalizacao'
+      fullPath: '/e360/$brandSlug/personalizacao'
+      preLoaderRoute: typeof E360BrandSlugPersonalizacaoRouteImport
+      parentRoute: typeof E360BrandSlugRoute
+    }
+    '/e360/$brandSlug/plano': {
+      id: '/e360/$brandSlug/plano'
+      path: '/plano'
+      fullPath: '/e360/$brandSlug/plano'
+      preLoaderRoute: typeof E360BrandSlugPlanoRouteImport
+      parentRoute: typeof E360BrandSlugRoute
+    }
+    '/e360/$brandSlug/resultados': {
+      id: '/e360/$brandSlug/resultados'
+      path: '/resultados'
+      fullPath: '/e360/$brandSlug/resultados'
+      preLoaderRoute: typeof E360BrandSlugResultadosRouteImport
+      parentRoute: typeof E360BrandSlugRoute
+    }
+    '/workspace/cliente/$brandSlug': {
+      id: '/workspace/cliente/$brandSlug'
+      path: '/cliente/$brandSlug'
+      fullPath: '/workspace/cliente/$brandSlug'
+      preLoaderRoute: typeof WorkspaceClienteBrandSlugRouteImport
+      parentRoute: typeof WorkspaceRoute
     }
     '/b/$brandSlug/campanha/$campaignId': {
       id: '/b/$brandSlug/campanha/$campaignId'
@@ -1102,6 +1095,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/b/$brandSlug/campanha/$campaignId'
       preLoaderRoute: typeof BBrandSlugCampanhaCampaignIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/e360/$brandSlug/campanha/$campaignId': {
+      id: '/e360/$brandSlug/campanha/$campaignId'
+      path: '/campanha/$campaignId'
+      fullPath: '/e360/$brandSlug/campanha/$campaignId'
+      preLoaderRoute: typeof E360BrandSlugCampanhaCampaignIdRouteImport
+      parentRoute: typeof E360BrandSlugRoute
     }
   }
 }

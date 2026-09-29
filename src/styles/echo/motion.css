@@ -1,0 +1,242 @@
+/* ==========================================================================
+   Echo · Movimento
+   Cada animação tem um propósito: retorno, consistência espacial, indicação de estado
+   ou evitar mudanças bruscas. Encanto só em momentos raros (aprovação, primeira visita).
+   Somente transform, opacity, filter e clip-path — altura apenas em painéis expansíveis.
+   ========================================================================== */
+
+/* ---------- Troca de caminho de cor: os degradês se transformam ---------- */
+:root {
+  transition: --p1 var(--dur-morph) var(--ease-in-out), --p2 var(--dur-morph) var(--ease-in-out),
+    --p3 var(--dur-morph) var(--ease-in-out), --mix var(--dur-morph) var(--ease-in-out),
+    --e-accent var(--dur-morph) var(--ease-in-out);
+}
+
+/* ---------- Aura ambiente: deriva lenta, quase imperceptível ---------- */
+.e-aura::before { animation: e-drift-a var(--dur-ambient) ease-in-out infinite alternate; }
+.e-aura::after { animation: e-drift-b calc(var(--dur-ambient) * 1.3) ease-in-out infinite alternate; }
+.e-aura i { animation: e-drift-c calc(var(--dur-ambient) * .8) ease-in-out infinite alternate; }
+@keyframes e-drift-a { to { transform: translate(-6vmax, 5vmax) scale(1.08); } }
+@keyframes e-drift-b { to { transform: translate(7vmax, -4vmax) scale(1.12); } }
+@keyframes e-drift-c { to { transform: translate(-10vmax, -6vmax) scale(.9); } }
+
+/* ==========================================================================
+   BOTÕES
+   ========================================================================== */
+.e-btn {
+  transition: transform var(--dur-press) var(--ease-out), box-shadow var(--dur-1) ease,
+    color var(--dur-1) ease, opacity var(--dur-1) ease, filter var(--dur-2) ease;
+}
+.e-btn:active, .e-btn.is-active { transform: scale(.97) !important; }
+/* Hover com movimento só em ponteiro fino: no toque, hover dispara ao tocar */
+.e-btn:hover:not(.is-hover) { transform: none; }
+@media (hover: hover) and (pointer: fine) {
+  .e-btn.primary:hover, .e-btn.secondary:hover, .e-btn.danger:hover { transform: translateY(-1px); }
+}
+
+/* Brilho especular que atravessa o gel do primário */
+.e-btn.primary { overflow: hidden; background: linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,0) 52%), var(--grad); }
+.e-btn.primary::after {
+  left: -60%; right: auto; top: 0; bottom: 0; height: auto; width: 45%; border-radius: 0; z-index: -1;
+  background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,.42) 50%, transparent 80%);
+  transform: translateX(0) skewX(-18deg); opacity: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .e-btn.primary:hover::after { opacity: 1; transform: translateX(420%) skewX(-18deg); transition: transform 760ms var(--ease-out), opacity 120ms ease; }
+}
+
+/* Carregando: o rótulo se desfaz em desfoque e o spinner entra */
+.e-btn.is-loading { filter: none; }
+.e-btn.is-loading::before { animation: e-spin .6s linear infinite; transition: opacity var(--dur-1) ease; }
+@starting-style { .e-btn.is-loading::before { opacity: 0; } }
+.e-btn > .lbl-swap { display: inline-flex; align-items: center; gap: inherit; }
+
+/* Concluído: o botão vira confirmação por um instante */
+.e-btn.is-done { pointer-events: none; }
+.e-btn.is-done.primary { background: linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,0) 52%), linear-gradient(135deg, #1FA774, #4FD49B); }
+.e-btn.is-done.secondary { color: var(--ok); }
+
+/* Segurar para confirmar: preenchimento lento ao pressionar, retorno rápido ao soltar */
+.e-hold { position: relative; overflow: hidden; isolation: isolate; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.e-hold .fill {
+  position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: linear-gradient(140deg, #B81F3B, #E8484F);
+  clip-path: inset(0 100% 0 0); transition: clip-path 200ms var(--ease-out);
+}
+.e-hold.holding .fill { clip-path: inset(0 0 0 0); transition: clip-path var(--hold, 1400ms) linear; }
+.e-hold.holding { transform: scale(.97); }
+
+/* ==========================================================================
+   CAMADAS: popover, menu, select, tooltip
+   ========================================================================== */
+.e-pop { transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out); }
+@starting-style { .e-pop { opacity: 0; transform: scale(.96) translateY(-4px); } }
+.e-pop.leaving { opacity: 0; transform: scale(.97); transition-duration: var(--dur-exit); pointer-events: none; }
+.e-mention-pop { transform-origin: bottom left; }
+@starting-style { .e-mention-pop { opacity: 0; transform: scale(.96) translateY(4px); } }
+.e-select-btn .chev, .e-acc-head .chev, .e-step .toggle .e-ic { transition: transform var(--dur-3) var(--ease-in-out) !important; }
+
+/* Tooltip: espera antes do primeiro; depois disso, os vizinhos abrem na hora */
+.e-tip > .bubble {
+  transform-origin: bottom center; transform: translate(-50%, 4px) scale(.97);
+  transition: opacity var(--dur-tip) var(--ease-out), transform var(--dur-tip) var(--ease-out);
+}
+.e-tip:hover > .bubble { transition-delay: 380ms; transform: translate(-50%, 0) scale(1); }
+.e-tip.bottom > .bubble { transform-origin: top center; transform: translate(-50%, -4px) scale(.97); }
+.e-tip.bottom:hover > .bubble { transform: translate(-50%, 0) scale(1); }
+.e-tip.is-open > .bubble { transform: translate(-50%, 0) scale(1); }
+body.e-tip-warm .e-tip > .bubble { transition-duration: 0ms; transition-delay: 0ms; }
+/* Aberto pelo teclado: sem animação */
+.e-tip:focus-within > .bubble { transition-duration: 0ms; transition-delay: 0ms; transform: translate(-50%, 0) scale(1); }
+
+/* ==========================================================================
+   SANFONA, SELEÇÃO E CHIPS
+   ========================================================================== */
+.e-acc-body { transition: grid-template-rows var(--dur-3) var(--ease-out); }
+.e-acc-body > div > div { opacity: 0; transform: translateY(-6px); transition: opacity var(--dur-2) ease, transform var(--dur-3) var(--ease-out); }
+.e-acc-head[aria-expanded="true"] + .e-acc-body > div > div { opacity: 1; transform: none; transition-delay: 60ms; }
+
+.e-check .box { transition: background-color var(--dur-1) ease, box-shadow var(--dur-1) ease, transform var(--dur-press) var(--ease-out); }
+.e-check:active .box { transform: scale(.88); }
+.e-check .box svg { transition: stroke-dashoffset var(--dur-2) var(--ease-out) 40ms; }
+.e-check.radio .box::after { transition: opacity var(--dur-1) ease, transform var(--dur-3) var(--ease-spring); }
+
+/* Switch: o degradê acende por opacidade, a bolha desliza com leve quique */
+.e-switch .track { overflow: hidden; isolation: isolate; }
+.e-switch .track::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--grad); opacity: 0; transition: opacity var(--dur-2) ease; z-index: -1; }
+.e-switch input:checked + .track { background: var(--field); }
+.e-switch input:checked + .track::before { opacity: 1; }
+.e-switch .track::after { transition: transform var(--dur-3) var(--ease-spring), width var(--dur-2) var(--ease-out); }
+
+.e-chip { transition: color var(--dur-1) ease, box-shadow var(--dur-1) ease, transform var(--dur-press) var(--ease-out); }
+.e-chip:active { transform: scale(.96); }
+.e-chip[aria-pressed="true"] .e-ic:first-child { animation: none; }
+.e-filter-active .e-chip { transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out); }
+
+.e-seg .e-seg-pill { transition: left var(--dur-3) var(--ease-spring), width var(--dur-3) var(--ease-spring); }
+.e-seg button { transition: color var(--dur-2) ease; }
+
+/* Tabs em linha: um indicador único que viaja entre as abas */
+.e-tabs-line button[aria-selected="true"]::after { display: none; }
+.e-tab-ind {
+  position: absolute; left: 0; bottom: -1px; height: 2.5px; width: 100px; border-radius: 3px; background: var(--grad);
+  transform-origin: left center; transition: transform var(--dur-3) var(--ease-in-out); pointer-events: none;
+}
+
+/* ==========================================================================
+   TOAST · MODAL · DRAWER
+   ========================================================================== */
+.e-toast {
+  transition: transform var(--dur-toast) ease, opacity var(--dur-toast) ease;
+  touch-action: pan-y; cursor: grab;
+}
+@starting-style { .e-toast { opacity: 0; transform: translateY(100%); } }
+.e-toast.out { opacity: 0; transform: translateY(100%); transition-duration: 200ms; }
+.e-toast.swiping { transition: none; cursor: grabbing; }
+.e-toast.flung { opacity: 0; transition: transform 220ms var(--ease-out), opacity 220ms ease; }
+
+.e-scrim { transition: opacity var(--dur-3) var(--ease-out); }
+@starting-style { .e-scrim { opacity: 0; } }
+.e-modal { transition: opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out); }
+@starting-style { .e-modal { opacity: 0; transform: scale(.96); } }
+.e-drawer { transition: transform var(--dur-4) var(--ease-drawer), opacity var(--dur-2) ease; }
+@starting-style { .e-drawer { transform: translateX(calc(100% + 24px)); } }
+.e-drawer.dragging { transition: none; }
+.e-drawer-head { cursor: grab; }
+.e-layer.closing .e-scrim { opacity: 0; transition-duration: var(--dur-exit); }
+.e-layer.closing .e-modal { opacity: 0; transform: scale(.97); transition-duration: var(--dur-exit); }
+.e-layer.closing .e-drawer { transform: translateX(calc(100% + 24px)); transition: transform 260ms var(--ease-out); }
+/* Command palette: aberta centenas de vezes por dia, pelo teclado — sem animação. */
+.e-cmdk-layer .e-scrim, .e-cmdk.floating { transition: none; }
+
+/* ==========================================================================
+   PROGRESSO, ESTADOS E LISTAS
+   ========================================================================== */
+.e-bar > i { transition: width var(--dur-4) var(--ease-out); }
+.e-ring .fg { transition: stroke-dashoffset 900ms var(--ease-out); }
+.e-spin-sm, .e-btn.is-loading::before { animation-duration: .6s; }
+.e-cov-track .ap { transition: clip-path 700ms var(--ease-in-out); }
+
+.e-bulk { transition: opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out); }
+@starting-style { .e-bulk { opacity: 0; transform: translateY(10px) scale(.98); } }
+.e-script-tools { transition: opacity var(--dur-2) ease, transform var(--dur-2) var(--ease-out); }
+@starting-style { .e-script-tools { opacity: 0; transform: translateY(-6px); } }
+
+.e-deliv-expand > div > div, .e-step-details .inner { transition: opacity var(--dur-3) ease, transform var(--dur-3) var(--ease-out); }
+.e-deliv:not(.open) .e-deliv-expand > div > div, .e-step:not(.open) .e-step-details .inner { opacity: 0; transform: translateY(-6px); }
+.e-deliv-expand, .e-step-details { transition: grid-template-rows var(--dur-3) var(--ease-out); }
+
+.e-mat-media .slides { transition: transform 420ms var(--ease-in-out); }
+.e-mat-media .dots i { transition: width var(--dur-3) var(--ease-out), background-color var(--dur-2) ease; }
+.e-mat-media .play { transition: transform var(--dur-press) var(--ease-out); }
+.e-mat-media .play:active { transform: translate(-50%, -50%) scale(.92); }
+.e-mat-media .vbar .track i { transition: width 250ms linear; }
+
+.e-drop .ic { transition: transform var(--dur-3) var(--ease-spring); }
+.e-drop.over .ic { transform: translateY(-6px) scale(1.08); }
+.e-drop { transition: transform var(--dur-3) var(--ease-out), background-color var(--dur-2) ease, outline-color var(--dur-2) ease; }
+.e-file .sub .e-bar > i { transition: width 380ms linear; }
+
+.e-floatbtn { transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-1) ease, color var(--dur-1) ease; }
+.e-floatbtn:active { transform: scale(.9); }
+.e-ref, .e-proj, .e-mat, .e-member, .path-card { transition: transform var(--dur-3) var(--ease-out), box-shadow var(--dur-3) ease; }
+.e-ref:hover { transform: none; }
+@media (hover: hover) and (pointer: fine) {
+  .e-ref:hover, .e-proj:hover, .e-member:hover { transform: translateY(-3px); box-shadow: var(--glass-inset), var(--sh-3); }
+}
+
+.e-cal-grid button { transition: transform var(--dur-press) var(--ease-out), color var(--dur-1) ease; }
+.e-cal-grid button:active { transform: scale(.9); }
+.e-person, .e-cmt, .e-cov-row, .e-table tbody tr { transition: background-color var(--dur-1) ease; }
+
+/* Barra de ambientes: pílula compartilhada que desliza até o ambiente ativo */
+.e-envbar { position: relative; }
+.e-envbar button { position: relative; z-index: 1; }
+.e-envbar button[aria-pressed="true"] { background: transparent; box-shadow: none; }
+.e-env-pill { position: absolute; z-index: 0; border-radius: var(--r-pill); background: linear-gradient(170deg, var(--glass-strong), var(--glass-hi)); box-shadow: var(--glass-inset), 0 0 0 1px var(--line), var(--sh-1); transition: left var(--dur-3) var(--ease-spring), width var(--dur-3) var(--ease-spring); }
+.e-envbar button .ic { transition: color var(--dur-2) ease, background-color var(--dur-2) ease, box-shadow var(--dur-2) ease; }
+
+/* Índice lateral e navegação do catálogo */
+.cat-side a, .cat-nav a { transition: background-color var(--dur-2) ease, color var(--dur-2) ease; }
+.cat-path { will-change: transform; transition: transform var(--dur-3) var(--ease-out), box-shadow var(--dur-3) ease; }
+.cat-path img { transition: transform 600ms var(--ease-out); }
+.cat-mode .bubble { transition: transform var(--dur-3) var(--ease-spring), background var(--dur-3) ease; }
+
+/* Seção Movimento do catálogo: pistas de curvas */
+.mo-tracks { display: grid; gap: 10px; width: 100%; }
+.mo-track { display: grid; grid-template-columns: 170px 1fr 70px; gap: 16px; align-items: center; }
+.mo-lane { position: relative; height: 34px; border-radius: 999px; background: var(--field); box-shadow: var(--field-sunk); }
+.mo-dot { position: absolute; left: 4px; top: 4px; width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, var(--p3) 45%, var(--p1)); box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 6px 14px -4px color-mix(in oklab, var(--p1) 70%, transparent); }
+.mo-track b { font-size: 13.5px; } .mo-track code { display: block; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); }
+.mo-track .ms { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); text-align: right; }
+.mo-rules { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.mo-rules th { text-align: left; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.mo-rules td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.mo-rules td:first-child { font-weight: 600; white-space: nowrap; }
+.mo-demo { display: grid; gap: 10px; justify-items: start; padding: 16px; border-radius: 20px; min-width: 0; }
+@media (max-width: 560px) { .mo-track { grid-template-columns: 1fr; gap: 6px; } .mo-track .ms { text-align: left; } }
+
+/* Transição de base clara/escura (View Transitions) */
+.e-vt::view-transition-old(root), .e-vt::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+
+/* Câmera lenta ativa */
+:root[data-slowmo] .cat-top::after { content: "Câmera lenta 4×"; position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; color: #fff; background: var(--grad); box-shadow: var(--sh-2); }
+
+/* ==========================================================================
+   MOVIMENTO REDUZIDO: menos e mais suave, não zero.
+   Mantém opacidade e cor; remove deslocamento, escala, deriva e quiques.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .e-aura::before, .e-aura::after, .e-aura i { animation: none; }
+  .e-btn.primary::after { display: none; }
+  .e-btn:hover, .e-btn:active, .e-chip:active, .e-check:active .box, .e-cal-grid button:active { transform: none !important; }
+  .e-seg .e-seg-pill, .e-tab-ind, .e-mat-media .slides, .e-switch .track::after, .cat-mode .bubble { transition-duration: 0ms !important; }
+  .e-pop, .e-tip > .bubble, .e-modal, .e-toast, .e-bulk, .e-script-tools { transform: none !important; }
+  @starting-style { .e-drawer { transform: none; opacity: 0; } .e-toast { transform: none; } .e-modal { transform: none; } }
+  .e-layer.closing .e-drawer { transform: none; opacity: 0; }
+  .e-toast.out { transform: none; }
+  .e-step[data-status="doing"] .e-step-ic .e-ic { animation: none; }
+  .e-skel::after { animation: none; }
+  .e-ref:hover .e-ref-media img, .cat-path:hover img { transform: none; }
+  :root { transition: none; }
+}
