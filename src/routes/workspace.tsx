@@ -1,10 +1,14 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { goToLogin } from "@/lib/login-redirect";
 import { useEffect, useState } from "react";
 import { EchoBlocked, EchoLayout, EchoLoading, EchoSubnav } from "@/components/echo/layout";
 import { supabase } from "@/integrations/supabase/client";
 import { getFullAccess, WORKSPACE_DENY_PERMISSION } from "@/lib/agency-data";
 import { withTimeout } from "@/lib/with-timeout";
+import { isDemoMode } from "@/lib/home-data";
+
+/** Telas do Workspace que já funcionam no modo demonstração. */
+const DEMO_READY = ["/workspace/equipe", "/workspace/configuracoes"];
 
 export const Route = createFileRoute("/workspace")({ component: WorkspaceLayout });
 
@@ -34,10 +38,13 @@ function WorkspaceLayout() {
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [retry, setRetry] = useState(0);
+  const [demo, setDemo] = useState(false);
+  const path = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
     let active = true;
     setLoadError("");
+    if (isDemoMode()) { setDemo(true); setReady(true); return; }
     (async () => {
       try {
         const { data } = await withTimeout(
@@ -77,11 +84,13 @@ function WorkspaceLayout() {
   if (loadError) return <EchoBlocked title="Não foi possível abrir o Workspace" text={loadError} onRetry={() => setRetry((value) => value + 1)} />;
 
   if (!ready) return <EchoLoading label="Carregando Workspace…" />;
+  if (demo && !DEMO_READY.includes(path.replace(/\/$/, ""))) return <EchoBlocked title="Banco não conectado" text="Esta tela do Workspace ainda depende do Supabase. No modo demonstração, abra Equipe ou Configurações." />;
 
   return (
     <EchoLayout
       env="workspace"
       wide
+      demoData={demo}
       nav={<EchoSubnav label="Workspace" items={PRIMARY.map((i) => ({ ...i }))} secondary={SECONDARY.map((i) => ({ ...i }))} />}
     >
       <Outlet />

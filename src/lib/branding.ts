@@ -19,12 +19,12 @@ export type AppSettings = {
   invite_cliente_body?: string | null;
 };
 
-export const DEFAULT_INVITE_COLABORADOR_SUBJECT = "Você foi convidado para acessar o Reach Brand";
+export const DEFAULT_INVITE_COLABORADOR_SUBJECT = "Você foi convidado para acessar o Echo";
 export const DEFAULT_INVITE_COLABORADOR_BODY =
-  "Olá, {{nome}}!\n\nVocê foi convidado por {{agencia}} para fazer parte da equipe no Reach Brand, como {{cargo}}.\n\nAcesse seu ambiente para acompanhar projetos, clientes e planejamentos.\n\n[Acessar meu ambiente]({{link_convite}})\n\nAtenciosamente,\n{{agencia}}";
-export const DEFAULT_INVITE_CLIENTE_SUBJECT = "Você foi convidado para acessar o Reach Brand";
+  "Olá, {{nome}}!\n\nVocê foi convidado por {{agencia}} para fazer parte da equipe no Echo, como {{cargo}}.\n\nAcesse seu ambiente para acompanhar projetos, clientes e planejamentos.\n\n[Acessar meu ambiente]({{link_convite}})\n\nAtenciosamente,\n{{agencia}}";
+export const DEFAULT_INVITE_CLIENTE_SUBJECT = "Você foi convidado para acessar o Echo";
 export const DEFAULT_INVITE_CLIENTE_BODY =
-  "Olá, {{nome}}!\n\nVocê foi convidado por {{agencia}} para acessar o ambiente de {{cliente}} no Reach Brand.\n\nAcesse seu ambiente para acompanhar projetos, conteúdos, planejamentos e informações compartilhadas pela sua equipe.\n\n[Acessar meu ambiente]({{link_convite}})\n\nAtenciosamente,\n{{agencia}}";
+  "Olá, {{nome}}!\n\nVocê foi convidado por {{agencia}} para acessar o ambiente de {{cliente}} no Echo.\n\nAcesse seu ambiente para acompanhar projetos, conteúdos, planejamentos e informações compartilhadas pela sua equipe.\n\n[Acessar meu ambiente]({{link_convite}})\n\nAtenciosamente,\n{{agencia}}";
 
 export const INVITE_TEMPLATE_VARIABLES: { key: string; label: string }[] = [
   { key: "nome", label: "Nome do convidado" },

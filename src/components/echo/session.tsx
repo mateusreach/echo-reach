@@ -5,6 +5,7 @@
 // devolve uma pessoa de exemplo.
 // ---------------------------------------------------------------------------
 import { useQuery } from "@tanstack/react-query";
+import { isSlowmo, restoreSlowmo, setSlowmo } from "./slowmo";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getFullAccess, WORKSPACE_DENY_PERMISSION } from "@/lib/agency-data";
@@ -77,6 +78,12 @@ export function useEchoSession() {
  */
 export function AppearanceSync() {
   const { data } = useEchoSession();
+  // Câmera lenta: ferramenta de revisão só para administradores.
+  useEffect(() => {
+    if (!data) return;
+    if (data.isAdmin) restoreSlowmo();
+    else if (isSlowmo()) setSlowmo(false);
+  }, [data?.isAdmin]);
   useEffect(() => {
     if (!data || data.mode !== "live" || !data.userId) return;
     const key = "echo.appearance.user";

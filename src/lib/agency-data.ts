@@ -929,7 +929,7 @@ function stage(title: string, sections: TemplateSection[]): TemplateStage {
   return { key: slugKey(title), title, sections };
 }
 
-function baseTemplateDefs(): { name: string; type: PlanningTypeKey; description: string; objective: string; stages: TemplateStage[] }[] {
+export function baseTemplateDefs(): { name: string; type: PlanningTypeKey; description: string; objective: string; stages: TemplateStage[] }[] {
   return [
     {
       name: "Planejamento de Comunicação",

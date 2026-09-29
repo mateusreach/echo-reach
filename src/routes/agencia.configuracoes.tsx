@@ -1,1613 +1,349 @@
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { goToLogin } from "@/lib/login-redirect";
-import { useEffect, useState, type FormEvent } from "react";
-import { ArrowRight, Building2, Check, Eye, Plus, RotateCcw, Search, Settings2, Trash2, X } from "lucide-react";
-import { ReachIconAnimation } from "@/components/reach/reach-icon-animation";
-import { PillButton, ReachMark, Chip } from "@/components/reach/ui";
-import { FramedImage } from "@/components/reach/framed-image";
-import { supabase } from "@/integrations/supabase/client";
-import {
-  CLIENT_STATUSES,
-  CONTRACT_TYPES,
-  DEFAULT_MODULES,
-  MODULE_DEFS,
-  brandModules,
-  listWorkspaceDispatches,
-  updateBrand,
-  workspaceConnection,
-  type BrandModules,
-  type WorkspaceDispatch,
-  createBrand,
-  createTeamMember,
-  deleteTeamMember,
-  getProfile,
-  listBrands,
-  listBrandInvites,
-  listBrandMembersFull,
-  listTeamMembers,
-  newFieldKey,
-  cancelBrandInvite,
-  removeBrandMember,
-  setProfileActive,
-  updateBrandMemberAccess,
-  type Brand,
-  type BrandInvite,
-  type BrandMemberRow,
-  type Profile,
-  type TeamMember,
-} from "@/lib/reach-data";
-import { cn } from "@/lib/utils";
-import { startViewAsClient } from "@/lib/view-as";
-import { ImageField } from "@/components/reach/uploader";
-import {
-  saveAppSettings,
-  useAccent,
-  useAppSettings,
-  useTheme,
-  DEFAULT_ACCENT,
-  DEFAULT_INVITE_CLIENTE_BODY,
-  DEFAULT_INVITE_CLIENTE_SUBJECT,
-  DEFAULT_INVITE_COLABORADOR_BODY,
-  DEFAULT_INVITE_COLABORADOR_SUBJECT,
-  INVITE_TEMPLATE_VARIABLES,
-  REACH_THEMES,
-  renderInviteTemplate,
-  type ThemeMode,
-} from "@/lib/branding";
-import { inviteBrandUser, resendInviteEmail } from "@/lib/invites.functions";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import {
-  CLIENT_PERMISSION_MODULES,
-  PERMISSION_ACTIONS,
-  ROLE_LABELS,
-  cancelAgencyInvite,
-  getFullAccess,
-  listAgencyInvites,
-  listProfiles,
-  listUserRoles,
-  modulePermissionKey,
-  setUserRole,
-  type AgencyInvite,
-  type AppRole,
-  type PermissionAction,
-  type ProfileRow,
-  type UserRole,
-} from "@/lib/agency-data";
-import { ColaboradorDrawer } from "@/components/reach/colaborador-drawer";
-import { AgencyInviteModal } from "@/components/reach/agency-invite-modal";
+import { Badge, Button, EmptyState, Skeleton } from "@/components/echo/primitives";
+import { Alert, Field, LineTabs, Segmented, Switch, TextArea } from "@/components/echo/controls";
+import { Drawer } from "@/components/echo/overlays";
+import { Icon, type IconName } from "@/components/echo/icon";
+import { EchoLogo } from "@/components/echo/logo";
+import { useAccess } from "@/components/echo/session";
+import { PATHS, type Base, type PathKey } from "@/components/echo/appearance";
+import { isSlowmo, setSlowmo } from "@/components/echo/slowmo";
+import { INVITE_TEMPLATE_VARIABLES, renderInviteTemplate } from "@/lib/branding";
+import { isDemoMode } from "@/lib/home-data";
+import { DEFAULT_LIKE, loadAgencySettings, loadIntegrations, saveAgencySettings, saveConnection, type AgencySettings, type Connection, type LikeDefaults } from "@/lib/settings-data";
 
 export const Route = createFileRoute("/agencia/configuracoes")({
-  head: () => ({
-    meta: [
-      { title: "Painel da Agência — Reach Brand OS" },
-      { name: "description", content: "Gerencie todas as marcas atendidas pela Reach em um único painel." },
-    ],
-  }),
-  component: AgenciaPage,
+  head: () => ({ meta: [{ title: "Configurações · Echo" }, { name: "description", content: "Identidade, convites, padrões do Like e integrações da agência." }] }),
+  component: SettingsPage,
 });
 
-function AgenciaPage() {
-  const routeSearch = useRouterState({ select: (state) => state.location.search as Record<string, unknown> });
+type Tab = "identidade" | "convites" | "like" | "integracoes" | "revisao";
+const TABS: { value: Tab; label: string; icon: IconName }[] = [
+  { value: "identidade", label: "Identidade", icon: "palette" },
+  { value: "convites", label: "Convites", icon: "send" },
+  { value: "like", label: "Padrões do Like", icon: "heart" },
+  { value: "integracoes", label: "Integrações", icon: "link" },
+  { value: "revisao", label: "Revisão", icon: "play" },
+];
+
+function SettingsPage() {
   const navigate = useNavigate();
-  const agencyName = useAppSettings()?.agency_name ?? null;
-  const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [showNew, setShowNew] = useState(routeSearch.novo === "1");
-  const [tab, setTab] = useState<"agencia" | "marcas" | "equipe" | "integracoes" | "identidade" | "permissoes" | "convites">(routeSearch.tab === "marcas" ? "marcas" : "agencia");
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("todos");
-  const [contractFilter, setContractFilter] = useState("todos");
-  const [editing, setEditing] = useState<Brand | null>(null);
-
-  async function refresh() {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const session = sessionData.session;
-      if (!session) {
-        goToLogin(navigate as never);
-        return;
-      }
-      const [p, b] = await Promise.all([getProfile(session.user.id), listBrands()]);
-      setProfile(p);
-      setBrands(b);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao carregar marcas.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
+  const search = useRouterState({ select: (s) => s.location.search as Record<string, string | undefined> });
+  const { session, can } = useAccess();
+  const [ready, setReady] = useState(false);
+  const [tab, setTab] = useState<Tab>("identidade");
+  useEffect(() => setReady(true), []);
   useEffect(() => {
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <ReachIconAnimation size={48} context="page-loading" />
-        <p className="text-sm text-muted-foreground">Carregando painel da agência…</p>
-      </div>
-    );
-  }
-
-  const isAgency = profile?.role === "agency";
-  const visibleBrands = brands.filter((b) => {
-    const q = query.trim().toLowerCase();
-    const matchesQuery = !q || `${b.name} ${b.segment ?? ""}`.toLowerCase().includes(q);
-    const status = ((b as any).status ?? "ativo") as string;
-    const matchesStatus = statusFilter === "todos" || status === statusFilter;
-    const matchesContract = contractFilter === "todos" || (b as any).contract_type === contractFilter;
-    return matchesQuery && matchesStatus && matchesContract;
-  });
+    // Abas antigas do piloto agora têm páginas próprias.
+    const t = search.tab;
+    if (t === "marcas") navigate({ to: "/clientes" });
+    else if (t === "equipe" || t === "permissoes") navigate({ to: "/agencia/equipe" });
+    else if (t === "agencia") setTab("identidade");
+    else if (TABS.some((x) => x.value === t)) setTab(t as Tab);
+  }, [search.tab]);
+  const q = useQuery({ queryKey: ["agency-settings"], queryFn: loadAgencySettings, enabled: ready });
+  const isAdmin = !!session?.isAdmin;
+  const canEdit = isAdmin || can("configuracoes.administrar");
+  const pick = (t: Tab) => { setTab(t); navigate({ to: "/agencia/configuracoes", search: { tab: t } as never, replace: true }); };
 
   return (
-    <div className="space-y-6">
-      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-xl font-semibold tracking-tight">Configurações da Agência</h1>
-          <p className="truncate text-sm text-muted-foreground">
-            {agencyName ? `${agencyName} · agência, equipe, clientes e sistema` : "Agência, equipe, clientes e sistema"}
-          </p>
-        </div>
-        {isAgency && tab === "marcas" && (
-          <PillButton onClick={() => setShowNew((v) => !v)} className="shrink-0">
-            <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Novo cliente</span>
-          </PillButton>
-        )}
+    <div className="stack-lg">
+      <LineTabs<Tab> value={tab} onChange={pick} items={TABS.filter((t) => t.value !== "revisao" || isAdmin)} />
+      {!canEdit && <Alert kind="info" title="Somente leitura">Para alterar as configurações, peça a permissão “Configurações · Administrar”.</Alert>}
+      {!ready || q.isLoading ? <Skeleton h={420} r={24} /> : q.isError || !q.data ? (
+        <div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="error" title="Não foi possível carregar as configurações" actions={<Button variant="secondary" icon="refresh" onClick={() => q.refetch()}>Tentar novamente</Button>} /></div>
+      ) : (
+        <>
+          {tab === "identidade" && <IdentityTab s={q.data} canEdit={canEdit} />}
+          {tab === "convites" && <InvitesTab s={q.data} canEdit={canEdit} />}
+          {tab === "like" && <LikeTab s={q.data} canEdit={canEdit} />}
+          {tab === "integracoes" && <IntegrationsTab canEdit={canEdit} />}
+          {tab === "revisao" && isAdmin && <ReviewTab />}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Salvar com rascunho local, aviso de alteração pendente e botão de desfazer. */
+function useDraft<T>(initial: T) {
+  const [d, setD] = useState<T>(initial);
+  const [base, setBase] = useState(JSON.stringify(initial));
+  const dirty = JSON.stringify(d) !== base;
+  return { d, set: (p: Partial<T>) => setD((x) => ({ ...x, ...p })), dirty, reset: () => setD(JSON.parse(base)), commit: () => setBase(JSON.stringify(d)) };
+}
+
+function SaveBar({ dirty, saving, onSave, onReset, canEdit }: { dirty: boolean; saving: boolean; onSave: () => void; onReset: () => void; canEdit: boolean }) {
+  if (!canEdit) return null;
+  return (
+    <div className={`settings-save${dirty ? " on" : ""}`} aria-hidden={!dirty}>
+      <span className="tpl-dirty"><i />Alterações não salvas</span>
+      <span style={{ flex: 1 }} />
+      <Button variant="ghost" onClick={onReset} disabled={!dirty}>Desfazer</Button>
+      <Button icon="check" loading={saving} disabled={!dirty} onClick={onSave}>Salvar</Button>
+    </div>
+  );
+}
+
+function Section({ title, desc, children, aside }: { title: string; desc?: string; children: ReactNode; aside?: ReactNode }) {
+  return (
+    <section className="settings-section e-glass">
+      <header className="e-row between" style={{ gap: 12, alignItems: "flex-start" }}>
+        <div><h2 className="e-h3" style={{ margin: 0 }}>{title}</h2>{desc && <p className="e-small" style={{ margin: "4px 0 0" }}>{desc}</p>}</div>
+        {aside}
       </header>
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
-
-      {isAgency && (
-        <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
-          {([
-            ["agencia", "Agência"],
-            ["marcas", "Clientes"],
-            ["equipe", "Equipe"],
-            ["identidade", "Identidade"],
-            ["convites", "Convites"],
-            ["integracoes", "Sistema"],
-            ["permissoes", "Permissões"],
-          ] as const).map(([k, label]) => (
-            <button
-              key={k}
-              onClick={() => setTab(k)}
-              className={cn(
-                "shrink-0 rounded-full px-4 py-2 text-[12.5px] font-medium transition-colors",
-                tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {tab === "agencia" && isAgency && <AgencyProfileSection />}
-      {tab === "permissoes" && isAgency && <PermissionsSection />}
-      {tab === "equipe" && isAgency && <TeamSection brands={brands} />}
-      {tab === "integracoes" && isAgency && <IntegrationsSection brands={brands} onChanged={refresh} />}
-      {tab === "identidade" && isAgency && <IdentitySection />}
-      {tab === "convites" && isAgency && <InvitesSection />}
-
-      {showNew && isAgency && tab === "marcas" && <NewBrandForm onCreated={refresh} onClose={() => setShowNew(false)} />}
-
-
-        {tab === "marcas" && (
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="surface flex min-w-[220px] flex-1 items-center gap-2 rounded-full px-4 py-2">
-              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar cliente por nome ou segmento…"
-                className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-              />
-            </label>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-full border border-border bg-background/50 px-4 py-2 text-sm outline-none">
-              <option value="todos">Todos os status</option>
-              {CLIENT_STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-            </select>
-            <select value={contractFilter} onChange={(e) => setContractFilter(e.target.value)} className="rounded-full border border-border bg-background/50 px-4 py-2 text-sm outline-none">
-              <option value="todos">Toda contratação</option>
-              {CONTRACT_TYPES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
-            </select>
-          </div>
-        )}
-
-        <div className={tab === "marcas" ? "grid gap-5 sm:grid-cols-2 lg:grid-cols-3" : "hidden"}>
-          {visibleBrands.map((b) => (
-            <div key={b.id} className="surface group flex flex-col gap-3 overflow-hidden rounded-2xl transition-transform hover:-translate-y-0.5">
-              {b.cover_url && (
-                <FramedImage src={b.cover_url} frame={(b as any).cover_frame} shape="rect" className="h-20 w-full" />
-              )}
-              <div className="flex flex-1 flex-col gap-3 px-5 pb-5" style={!b.cover_url ? { paddingTop: "1.25rem" } : undefined}>
-              <Link to="/b/$brandSlug" params={{ brandSlug: b.slug }} className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                  {b.logo_url ? (
-                    <FramedImage src={b.logo_url} frame={(b as any).logo_frame} shape="circle" className="h-11 w-11 shrink-0 border border-border" />
-                  ) : (
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl gradient-brand text-primary-foreground">
-                      <Building2 className="h-5 w-5" />
-                    </span>
-                  )}
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{b.name}</p>
-                    {b.segment && <p className="truncate text-xs text-muted-foreground">{b.segment}</p>}
-                  </div>
-                </div>
-                {b.description && <p className="line-clamp-2 text-xs text-muted-foreground">{b.description}</p>}
-                <span className="inline-flex items-center gap-1 text-sm text-brand">
-                  Acessar Brand Home <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                </span>
-              </Link>
-
-              <div className="flex flex-wrap gap-1.5">
-                <span className="rounded-full bg-muted/60 px-2.5 py-1 text-[10.5px] text-muted-foreground">
-                  {CLIENT_STATUSES.find((s) => s.key === ((b as any).status ?? "ativo"))?.label ?? "Ativo"}
-                </span>
-                {(b as any).contract_type && (
-                  <span className="rounded-full bg-muted/60 px-2.5 py-1 text-[10.5px] text-muted-foreground">
-                    {CONTRACT_TYPES.find((c) => c.key === (b as any).contract_type)?.label ?? (b as any).contract_type}
-                  </span>
-                )}
-                {MODULE_DEFS.filter((m) => brandModules(b)[m.key]).map((m) => (
-                  <span key={m.key} className="rounded-full bg-reach-blue-soft px-2.5 py-1 text-[10.5px] text-reach-blue">{m.label}</span>
-                ))}
-              </div>
-
-              <div className="flex flex-wrap gap-2 text-[11.5px]">
-                {brandModules(b).espaco360 && <Link to="/e360/$brandSlug/plano" search={{ tab: undefined, filtro: undefined }} params={{ brandSlug: b.slug }} className="rounded-full border border-border px-2.5 py-1 text-muted-foreground hover:text-foreground">Plano</Link>}
-                {brandModules(b).biblioteca && (
-                  <Link to="/b/$brandSlug/biblioteca" search={{ tab: undefined }} params={{ brandSlug: b.slug }} className="rounded-full border border-border px-2.5 py-1 text-muted-foreground hover:text-foreground">Biblioteca</Link>
-                )}
-                {brandModules(b).espaco360 && (
-                  <Link to="/e360/$brandSlug" params={{ brandSlug: b.slug }} search={{ tab: undefined, filtro: undefined }} className="rounded-full border border-border px-2.5 py-1 text-muted-foreground hover:text-foreground">Espaço 360</Link>
-                )}
-                <button onClick={() => setEditing(b)} className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-muted-foreground hover:text-foreground">
-                  <Settings2 className="h-3 w-3" /> Configurar
-                </button>
-              </div>
-              {isAgency && (
-                <button
-                  onClick={() => {
-                    startViewAsClient(b.name);
-                    navigate({ to: "/b/$brandSlug", params: { brandSlug: b.slug } });
-                  }}
-                  className="mt-auto inline-flex items-center gap-1.5 self-start text-xs text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <Eye className="h-3.5 w-3.5" /> Ver como cliente
-                </button>
-              )}
-              </div>
-            </div>
-          ))}
-
-          {visibleBrands.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhum cliente encontrado com os filtros atuais.</p>
-          )}
-        </div>
-
-      {editing && <ClientSettingsDrawer brand={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); refresh(); }} />}
-    </div>
-  );
-}
-
-
-
-function NewBrandForm({ onCreated, onClose }: { onCreated: () => void; onClose: () => void }) {
-  const [name, setName] = useState("");
-  const [segment, setSegment] = useState("");
-  const [description, setDescription] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState("ativo");
-  const [contract, setContract] = useState("recorrente");
-  const [modules, setModules] = useState<BrandModules>({ ...DEFAULT_MODULES });
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      const slug = newFieldKey(name).replace(/_/g, "-");
-      await createBrand({
-        name,
-        slug,
-        segment: segment || undefined,
-        description: description || undefined,
-        status,
-        contract_type: contract,
-        modules: modules as unknown as Record<string, boolean>,
-      } as any);
-      setName("");
-      setSegment("");
-      setDescription("");
-      onClose();
-      onCreated();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível criar a marca.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="surface space-y-4 rounded-2xl p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">Nova marca</h2>
-        <Chip>Agência</Chip>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label className="text-xs text-muted-foreground">Nome da empresa</label>
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded-2xl border border-border bg-background/50 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground">Segmento</label>
-          <input
-            value={segment}
-            onChange={(e) => setSegment(e.target.value)}
-            className="mt-1 w-full rounded-2xl border border-border bg-background/50 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
-      </div>
-      <div>
-        <label className="text-xs text-muted-foreground">Descrição institucional</label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={2}
-          className="mt-1 w-full rounded-2xl border border-border bg-background/50 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-        />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label className="text-xs text-muted-foreground">Status</label>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-1 w-full rounded-2xl border border-border bg-background/50 px-4 py-2 text-sm outline-none">
-            {CLIENT_STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground">Contratação</label>
-          <select value={contract} onChange={(e) => setContract(e.target.value)} className="mt-1 w-full rounded-2xl border border-border bg-background/50 px-4 py-2 text-sm outline-none">
-            {CONTRACT_TYPES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
-          </select>
-        </div>
-      </div>
-      <ModulesPicker value={modules} onChange={setModules} />
-      {error && <p className="text-xs text-destructive">{error}</p>}
-      <div className="flex justify-end gap-2">
-        <PillButton type="button" variant="secondary" onClick={onClose}>
-          Cancelar
-        </PillButton>
-        <PillButton type="submit" disabled={saving}>
-          {saving ? "Criando…" : "Criar marca"}
-        </PillButton>
-      </div>
-    </form>
-  );
-}
-
-
-// ---------------------------------------------------------------------------
-// Cadastro de equipe e pessoas do cliente
-// ---------------------------------------------------------------------------
-
-/** Gestão administrativa de acesso da equipe da agência — mesma fonte de
- * dados de Agência → Equipe (profiles + user_roles + agency_invites), só
- * que com foco em cadastro/convite/status em vez de carga de trabalho.
- * Antes esta tela criava apenas um cartão em `team_members`, sem nenhum
- * vínculo com login/permissões — por isso um colaborador cadastrado aqui
- * nunca aparecia em Agência → Equipe. */
-function TeamSection({ brands }: { brands: Brand[] }) {
-  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
-  const [roles, setRoles] = useState<UserRole[]>([]);
-  const [invites, setInvites] = useState<AgencyInvite[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [canManage, setCanManage] = useState(false);
-  const [editing, setEditing] = useState<ProfileRow | null>(null);
-  const [inviting, setInviting] = useState(false);
-  const [showInactive, setShowInactive] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function load() {
-    try {
-      const [p, r, inv] = await Promise.all([listProfiles(), listUserRoles(), listAgencyInvites().catch(() => [])]);
-      setProfiles(p);
-      setRoles(r);
-      setInvites(inv);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao carregar equipe.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    getFullAccess().then((a) => setCanManage(a.can("equipe.gerenciar") || a.can("equipe.administrar"))).catch(() => undefined);
-    load();
-  }, []);
-
-  const roleOf = (id: string): AppRole => (roles.find((r) => r.user_id === id)?.role ?? "client");
-  const team = profiles.filter((p) => roleOf(p.id) !== "client");
-  const visibleTeam = team.filter((p) => showInactive || (p as any).active !== false);
-  const pendingInvites = invites.filter((i) => i.status === "pendente");
-
-  return (
-    <section className="space-y-5">
-      <div className="surface space-y-3 rounded-2xl p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold">Equipe da agência</h2>
-            <p className="text-xs text-muted-foreground">Usuários com acesso à agência — a mesma lista de Agência → Equipe.</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-3">
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} className="h-4 w-4 accent-[var(--primary)]" />
-              Mostrar inativos
-            </label>
-            {canManage && (
-              <PillButton size="sm" onClick={() => setInviting(true)}>
-                <Plus className="h-3.5 w-3.5" /> Convidar colaborador
-              </PillButton>
-            )}
-          </div>
-        </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-      </div>
-
-      {pendingInvites.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Convites pendentes</p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {pendingInvites.map((inv) => (
-              <div key={inv.id} className="surface flex items-center justify-between gap-2 rounded-2xl p-4">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{inv.name || inv.email}</p>
-                  <p className="truncate text-xs text-muted-foreground">{inv.email} · {ROLE_LABELS[inv.role]}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <span className="rounded-full bg-warning/12 px-2.5 py-1 text-[10.5px] text-warning">Convite pendente</span>
-                  {canManage && (
-                    <>
-                      <button onClick={async () => { const r = await resendInviteEmail({ data: { kind: "agency", inviteId: inv.id, redirectTo: `${window.location.origin}/auth` } }); if (r.sent) toast.success(`Convite reenviado para ${inv.email}.`); else toast.error(`Não foi possível reenviar: ${"warning" in r ? r.warning : "erro no envio de e-mail"}`); await load(); }} title="Reenviar convite" className="rounded-full border border-border px-2.5 py-1 text-[10.5px] text-muted-foreground transition-colors hover:bg-muted">Reenviar</button>
-                      <button onClick={async () => { await cancelAgencyInvite(inv.id); await load(); }} aria-label="Cancelar convite" className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Carregando equipe…</p>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visibleTeam.map((p) => {
-            const inactive = (p as any).active === false;
-            return (
-              <div key={p.id} className={cn("surface flex items-center gap-3 rounded-2xl p-4", inactive && "opacity-60")}>
-                {p.avatar_url ? (
-                  <img src={p.avatar_url} alt={p.display_name ?? ""} loading="lazy" className="h-11 w-11 shrink-0 rounded-full object-cover" />
-                ) : (
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full gradient-brand text-sm font-semibold text-primary-foreground">
-                    {(p.display_name || p.email || "?").slice(0, 1).toUpperCase()}
-                  </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{p.display_name || p.email}</p>
-                  <p className="truncate text-xs text-muted-foreground">{[p.job_title, ROLE_LABELS[roleOf(p.id)]].filter(Boolean).join(" · ")}</p>
-                  {p.email && <p className="truncate text-[11px] text-muted-foreground">{p.email}</p>}
-                </div>
-                <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[10.5px]", inactive ? "bg-muted text-muted-foreground" : "bg-success/12 text-success")}>
-                  {inactive ? "Inativo" : "Ativo"}
-                </span>
-                <button onClick={() => setEditing(p)} className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs">
-                  {canManage ? "Abrir perfil" : "Ver perfil"}
-                </button>
-              </div>
-            );
-          })}
-          {visibleTeam.length === 0 && <p className="text-sm text-muted-foreground">Nenhum colaborador cadastrado ainda.</p>}
-        </div>
-      )}
-
-      {editing && (
-        <ColaboradorDrawer
-          profile={editing as ProfileRow & { active?: boolean }}
-          role={roleOf(editing.id)}
-          canManage={canManage}
-          onClose={() => setEditing(null)}
-          onSaved={() => load()}
-        />
-      )}
-
-      {inviting && (
-        <AgencyInviteModal onClose={() => setInviting(false)} onInvited={() => { load(); }} />
-      )}
-
-      <p className="text-[11px] text-muted-foreground">
-        Para gerenciar usuários de um cliente específico (não da agência), use a aba Clientes.
-      </p>
-
-      <ContactsRosterSection brands={brands} />
+      {children}
     </section>
   );
 }
 
-/** Contatos sem login (freelancers, terceiros) usados só para atribuição de
- * tarefas no Espaço 360 — conceito diferente de usuário da plataforma, por
- * isso continua em team_members em vez de profiles/auth. */
-function ContactsRosterSection({ brands }: { brands: Brand[] }) {
-  const [people, setPeople] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [name, setName] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
-  const [brandId, setBrandId] = useState<string>("");
-  const [error, setError] = useState<string | null>(null);
-
-  async function load() {
-    try {
-      setPeople((await listTeamMembers()).filter((p) => p.kind !== "equipe"));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao carregar contatos.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function add() {
-    if (!name.trim()) return;
-    try {
-      await createTeamMember({ name: name.trim(), job_title: jobTitle.trim() || null, kind: "convidado", brand_id: brandId || null });
-      setName("");
-      setJobTitle("");
-      load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível cadastrar.");
-    }
-  }
-
-  const input = "mt-1 w-full rounded-2xl border border-border bg-background/50 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
-
-  return (
-    <div className="surface space-y-3 rounded-2xl p-5">
-      <div>
-        <h3 className="text-sm font-semibold">Contatos para atribuição de tarefas</h3>
-        <p className="text-xs text-muted-foreground">Pessoas sem login no sistema (freelancers, terceiros) que podem ser responsáveis por tarefas no Espaço 360. Não têm acesso à plataforma.</p>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" className={input} />
-        <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="Cargo / função" className={input} />
-        <select value={brandId} onChange={(e) => setBrandId(e.target.value)} className={input}>
-          <option value="">Sem vínculo com cliente</option>
-          {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-        </select>
-      </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-      <PillButton size="sm" onClick={add}><Plus className="h-3.5 w-3.5" /> Adicionar contato</PillButton>
-      {!loading && (
-        <div className="flex flex-wrap gap-2 pt-2">
-          {people.map((p) => (
-            <span key={p.id} className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs">
-              {p.name}
-              <button onClick={() => deleteTeamMember(p.id).then(load)} aria-label={`Remover ${p.name}`} className="text-muted-foreground hover:text-destructive"><X className="h-3 w-3" /></button>
-            </span>
-          ))}
-          {people.length === 0 && <p className="text-xs text-muted-foreground">Nenhum contato cadastrado.</p>}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Identidade visual da plataforma
-// ---------------------------------------------------------------------------
-
-function IdentitySection() {
-  const settings = useAppSettings();
-  const theme = useTheme();
+function useSave<T>(draft: ReturnType<typeof useDraft<T>>, toPatch: (d: T) => Partial<AgencySettings>, label: string) {
+  const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState({
-    agency_name: "",
-    logo_url: null as string | null,
-    logo_scale: 1,
-    logo_offset_x: 0,
-    logo_offset_y: 0,
-    primary_color: "",
-    accent_color: "",
-  });
-
-  useEffect(() => {
-    if (!settings) return;
-    setDraft({
-      agency_name: settings.agency_name ?? "",
-      logo_url: settings.logo_url,
-      logo_scale: settings.logo_scale ?? 1,
-      logo_offset_x: settings.logo_offset_x ?? 0,
-      logo_offset_y: settings.logo_offset_y ?? 0,
-      primary_color: settings.primary_color ?? "",
-      accent_color: settings.accent_color ?? "",
-    });
-  }, [settings]);
-
-  async function save() {
+  const save = async () => {
     setSaving(true);
-    setError(null);
-    try {
-      await saveAppSettings({
-        agency_name: draft.agency_name || null,
-        logo_url: draft.logo_url,
-        logo_scale: Number(draft.logo_scale),
-        logo_offset_x: Number(draft.logo_offset_x),
-        logo_offset_y: Number(draft.logo_offset_y),
-        primary_color: draft.primary_color || null,
-        accent_color: draft.accent_color || null,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível salvar.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const input = "mt-1 w-full rounded-2xl border border-border bg-background/50 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
-
-  return (
-    <section className="surface space-y-5 rounded-2xl p-5">
-      <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">Identidade da plataforma</h2>
-
-      <ReachThemePicker />
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="text-xs text-muted-foreground">Nome exibido</label>
-          <input value={draft.agency_name} onChange={(e) => setDraft((d) => ({ ...d, agency_name: e.target.value }))} className={input} />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs text-muted-foreground">Logo</label>
-          <ImageField value={draft.logo_url} folder="marca-plataforma" onChange={(url) => setDraft((d) => ({ ...d, logo_url: url }))} hint="PNG com fundo transparente funciona melhor." />
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div>
-          <label className="text-xs text-muted-foreground">Escala do logo ({draft.logo_scale.toFixed(2)}x)</label>
-          <input type="range" min={0.5} max={2} step={0.05} value={draft.logo_scale} onChange={(e) => setDraft((d) => ({ ...d, logo_scale: Number(e.target.value) }))} className="mt-2 w-full" />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground">Deslocamento X ({draft.logo_offset_x}px)</label>
-          <input type="range" min={-20} max={20} step={1} value={draft.logo_offset_x} onChange={(e) => setDraft((d) => ({ ...d, logo_offset_x: Number(e.target.value) }))} className="mt-2 w-full" />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground">Deslocamento Y ({draft.logo_offset_y}px)</label>
-          <input type="range" min={-20} max={20} step={1} value={draft.logo_offset_y} onChange={(e) => setDraft((d) => ({ ...d, logo_offset_y: Number(e.target.value) }))} className="mt-2 w-full" />
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div>
-          <label className="text-xs text-muted-foreground">Cor principal</label>
-          <input type="color" value={draft.primary_color || "#ff6b4a"} onChange={(e) => setDraft((d) => ({ ...d, primary_color: e.target.value }))} className="mt-1 h-10 w-full rounded-2xl border border-border bg-background/50" />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground">Cor de destaque</label>
-          <input type="color" value={draft.accent_color || "#a855f7"} onChange={(e) => setDraft((d) => ({ ...d, accent_color: e.target.value }))} className="mt-1 h-10 w-full rounded-2xl border border-border bg-background/50" />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground">Tema padrão</label>
-          <select value={theme.mode} onChange={(e) => theme.change(e.target.value as ThemeMode)} className={input}>
-            <option value="dark">Escuro</option>
-            <option value="light">Claro</option>
-            <option value="auto">Automático</option>
-          </select>
-        </div>
-      </div>
-
-      {error && <p className="text-xs text-destructive">{error}</p>}
-      <PillButton onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar identidade"}</PillButton>
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Convites — assunto, mensagem e identidade do e-mail, por tipo de convite
-// ---------------------------------------------------------------------------
-
-type InviteKind = "colaborador" | "cliente";
-
-function InvitesSection() {
-  const settings = useAppSettings();
-  const [kind, setKind] = useState<InviteKind>("colaborador");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const subjectKey = kind === "colaborador" ? "invite_colaborador_subject" : "invite_cliente_subject";
-  const bodyKey = kind === "colaborador" ? "invite_colaborador_body" : "invite_cliente_body";
-  const defaultSubject = kind === "colaborador" ? DEFAULT_INVITE_COLABORADOR_SUBJECT : DEFAULT_INVITE_CLIENTE_SUBJECT;
-  const defaultBody = kind === "colaborador" ? DEFAULT_INVITE_COLABORADOR_BODY : DEFAULT_INVITE_CLIENTE_BODY;
-
-  useEffect(() => {
-    if (!settings) return;
-    setSubject((settings as any)[subjectKey] || defaultSubject);
-    setBody((settings as any)[bodyKey] || defaultBody);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings, kind]);
-
-  async function save() {
-    setSaving(true);
-    setError(null);
-    setNotice(null);
-    try {
-      await saveAppSettings({ [subjectKey]: subject, [bodyKey]: body } as any);
-      setNotice("Modelo salvo.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível salvar o modelo de convite.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const sampleVars = {
-    nome: "Guilherme",
-    agencia: (settings as any)?.agency_name || "Sua agência",
-    email: "guilherme@exemplo.com",
-    link_convite: "https://reach-brand.lovable.app/auth",
-    cliente: "Aurora Cosméticos",
-    cargo: "Analista de Conteúdo",
-    ano: String(new Date().getFullYear()),
+    try { await saveAgencySettings(toPatch(draft.d)); draft.commit(); qc.invalidateQueries({ queryKey: ["agency-settings"] }); toast.success(label); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar."); }
+    finally { setSaving(false); }
   };
-  const previewSubject = renderInviteTemplate(subject, sampleVars);
-  const previewBody = renderInviteTemplate(body, sampleVars);
-  const logoUrl = (settings as any)?.logo_url as string | null;
+  return { saving, save };
+}
 
-  const input = "mt-1 w-full rounded-2xl border border-border bg-background/50 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
+// ----- Identidade --------------------------------------------------------------------
 
+function ImagePick({ label, value, onChange, disabled, round, hint }: { label: string; value: string | null; onChange: (v: string | null) => void; disabled?: boolean; round?: boolean; hint: string }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const pick = async (f: File | undefined) => {
+    if (!f) return;
+    if (!f.type.startsWith("image/")) { toast.error("Escolha um arquivo de imagem."); return; }
+    if (f.size > 2 * 1024 * 1024) { toast.error("A imagem precisa ter até 2 MB."); return; }
+    setBusy(true);
+    try {
+      if (isDemoMode()) onChange(URL.createObjectURL(f));
+      else { const { uploadFile } = await import("@/lib/storage"); onChange((await uploadFile(f, "marca-plataforma")).url); }
+    } catch { toast.error("Não foi possível enviar a imagem."); } finally { setBusy(false); }
+  };
   return (
-    <div className="space-y-5">
-      <div className="surface space-y-4 rounded-2xl p-5">
-        <div>
-          <h2 className="text-sm font-semibold">Convites por e-mail</h2>
-          <p className="text-xs text-muted-foreground">Personalize o assunto e a mensagem de cada tipo de convite. A identidade (logo e nome) é a mesma configurada em Identidade.</p>
+    <div className="e-field">
+      <span className="e-field-label">{label}</span>
+      <div className="img-pick">
+        <span className={`img-pick-prev${round ? " round" : ""}`}>{value ? <img src={value} alt="" /> : <Icon name="image" />}</span>
+        <div className="e-stack" style={{ gap: 6 }}>
+          <div className="e-row" style={{ gap: 6 }}>
+            <Button size="sm" variant="secondary" icon="upload" loading={busy} disabled={disabled} onClick={() => input.current?.click()}>{value ? "Trocar" : "Enviar"}</Button>
+            {value && <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onChange(null)}>Remover</Button>}
+          </div>
+          <span className="e-caption">{hint}</span>
         </div>
+        <input ref={input} type="file" accept="image/*" hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
+      </div>
+    </div>
+  );
+}
 
-        <div className="flex gap-1.5">
-          {([["colaborador", "Convite de colaborador"], ["cliente", "Convite de cliente"]] as const).map(([k, label]) => (
-            <button
-              key={k}
-              onClick={() => setKind(k)}
-              className={cn(
-                "rounded-full px-4 py-2 text-[12.5px] font-medium transition-colors",
-                kind === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {label}
+function IdentityTab({ s, canEdit }: { s: AgencySettings; canEdit: boolean }) {
+  const pickKeys = ({ agency_name, agency_description, agency_email, agency_phone, agency_site, agency_address, logo_url, favicon_url, default_base, default_path }: AgencySettings) => ({ agency_name, agency_description, agency_email, agency_phone, agency_site, agency_address, logo_url, favicon_url, default_base, default_path });
+  const draft = useDraft(pickKeys(s));
+  const { saving, save } = useSave(draft, (d) => d, "Identidade salva");
+  const d = draft.d;
+  const ro = !canEdit;
+  return (
+    <div className="stack-lg">
+      <Section title="Dados institucionais" desc="Aparecem em convites, relatórios e no rodapé dos e-mails.">
+        <div className="grid-2" style={{ gap: 12 }}>
+          <Field label="Nome da agência" value={d.agency_name} disabled={ro} onChange={(e) => draft.set({ agency_name: e.target.value })} />
+          <Field label="E-mail institucional" type="email" value={d.agency_email} disabled={ro} optional onChange={(e) => draft.set({ agency_email: e.target.value })} />
+          <Field label="Telefone" value={d.agency_phone} disabled={ro} optional onChange={(e) => draft.set({ agency_phone: e.target.value })} />
+          <Field label="Site" value={d.agency_site} disabled={ro} optional icon="link" onChange={(e) => draft.set({ agency_site: e.target.value })} />
+        </div>
+        <Field label="Endereço" value={d.agency_address} disabled={ro} optional onChange={(e) => draft.set({ agency_address: e.target.value })} />
+        <TextArea label="Descrição" value={d.agency_description} disabled={ro} optional max={280} rows={3} onChange={(e) => draft.set({ agency_description: e.target.value })} />
+      </Section>
+
+      <Section title="Marca da plataforma" desc="O Echo mantém o próprio logo na barra superior. O logo da agência aparece em convites, relatórios e na tela de acesso.">
+        <div className="grid-2" style={{ gap: 16 }}>
+          <ImagePick label="Logo da agência" value={d.logo_url} disabled={ro} onChange={(v) => draft.set({ logo_url: v })} hint="PNG ou SVG com fundo transparente, até 2 MB." />
+          <ImagePick label="Favicon" value={d.favicon_url} disabled={ro} round onChange={(v) => draft.set({ favicon_url: v })} hint="Quadrado, 64 × 64 px ou maior." />
+        </div>
+      </Section>
+
+      <Section title="Tema padrão para novas pessoas" desc="Vale para quem entra pela primeira vez. Cada pessoa pode mudar o próprio tema depois.">
+        <Segmented<Base> label="Base" value={d.default_base} onChange={(v) => !ro && draft.set({ default_base: v })} items={[{ value: "light", label: "Clara", icon: "sun" }, { value: "dark", label: "Escura", icon: "moon" }, { value: "system", label: "Automática" }]} />
+        <div className="path-pick" role="radiogroup" aria-label="Caminho de cor">
+          {(Object.keys(PATHS) as PathKey[]).map((k) => (
+            <button key={k} type="button" role="radio" aria-checked={d.default_path === k} disabled={ro} className="path-opt" onClick={() => draft.set({ default_path: k })}>
+              <i style={{ background: `linear-gradient(135deg, ${PATHS[k].p1}, ${PATHS[k].p2} 60%, ${PATHS[k].mix})` }} />
+              <b>{PATHS[k].name}</b>
             </button>
           ))}
         </div>
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs text-muted-foreground">Assunto</label>
-              <input value={subject} onChange={(e) => setSubject(e.target.value)} className={input} />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Mensagem</label>
-              <textarea rows={9} value={body} onChange={(e) => setBody(e.target.value)} className={cn(input, "font-mono text-[12.5px] leading-relaxed")} />
-            </div>
-            <div className="rounded-2xl border border-border p-3">
-              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Variáveis disponíveis</p>
-              <div className="flex flex-wrap gap-1.5">
-                {INVITE_TEMPLATE_VARIABLES.map((v) => (
-                  <code key={v.key} title={v.label} className="rounded-full bg-muted px-2.5 py-1 text-[11px]">{`{{${v.key}}}`}</code>
-                ))}
-              </div>
-            </div>
-            {error && <p className="text-xs text-destructive">{error}</p>}
-            {notice && <p className="text-xs text-success">{notice}</p>}
-            <PillButton onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar modelo"}</PillButton>
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Prévia</p>
-            <div className="overflow-hidden rounded-2xl border border-border bg-background">
-              <div className="border-b border-border px-5 py-4">
-                {logoUrl ? <img src={logoUrl} alt={sampleVars.agencia} className="h-8 w-auto max-w-[140px] object-contain" /> : <ReachMark className="h-8 w-8" />}
-              </div>
-              <div className="space-y-3 px-5 py-4">
-                <p className="text-xs text-muted-foreground">Assunto: <span className="text-foreground">{previewSubject}</span></p>
-                <div className="whitespace-pre-wrap text-[13.5px] leading-relaxed">{previewBody}</div>
-              </div>
-              <div className="border-t border-border px-5 py-3 text-[11px] text-muted-foreground">{sampleVars.agencia}</div>
-            </div>
-          </div>
+        <div className="brand-preview" data-path={d.default_path} style={{ ["--p1" as string]: PATHS[d.default_path].p1, ["--p2" as string]: PATHS[d.default_path].p2, ["--mx" as string]: PATHS[d.default_path].mix }}>
+          <EchoLogo size={26} />
+          <span className="e-grow e-small">Prévia do primeiro acesso</span>
+          <span className="brand-preview-btn">Entrar</span>
         </div>
-      </div>
-
-      <div className="surface space-y-2 rounded-2xl p-5">
-        <h3 className="text-sm font-semibold">Sobre o envio real</h3>
-        <p className="text-xs text-muted-foreground">
-          Hoje o convite é enviado pelo serviço de autenticação (Supabase Auth), que usa um modelo de e-mail único e genérico configurado no projeto — fora do alcance desta tela. O assunto e a mensagem personalizados aqui já ficam salvos e prontos, mas para o e-mail
-          realmente recebido usar esta identidade é necessário conectar um provedor de envio próprio (ex.: Resend), o que ainda não está configurado neste projeto.
-        </p>
-      </div>
+      </Section>
+      <SaveBar dirty={draft.dirty} saving={saving} onSave={save} onReset={draft.reset} canEdit={canEdit} />
     </div>
   );
 }
 
-/** Seletor das quatro paletas oficiais Reach — mesma linguagem do Workspace. */
-function ReachThemePicker() {
-  const { accent, change } = useAccent();
+// ----- Convites ------------------------------------------------------------------------
+
+function InvitesTab({ s, canEdit }: { s: AgencySettings; canEdit: boolean }) {
+  const [kind, setKind] = useState<"colaborador" | "cliente">("colaborador");
+  const draft = useDraft({ invite_colaborador_subject: s.invite_colaborador_subject, invite_colaborador_body: s.invite_colaborador_body, invite_cliente_subject: s.invite_cliente_subject, invite_cliente_body: s.invite_cliente_body });
+  const { saving, save } = useSave(draft, (d) => d, "Modelos de convite salvos");
+  const subjectKey = `invite_${kind}_subject` as const;
+  const bodyKey = `invite_${kind}_body` as const;
+  const vars = { nome: "Guilherme", agencia: s.agency_name || "Sua agência", email: "guilherme@exemplo.com", link_convite: "https://echo.reach.com.br/auth", cliente: "Fina Fragrância", cargo: kind === "colaborador" ? "Designer" : "Diretora de marketing", ano: String(new Date().getFullYear()) };
+  const vs = INVITE_TEMPLATE_VARIABLES.filter((v) => kind === "cliente" || v.key !== "cliente");
+  const insert = (k: string) => {
+    const el = document.querySelector<HTMLTextAreaElement>(".invite-body textarea");
+    const text = draft.d[bodyKey];
+    const at = el?.selectionStart ?? text.length;
+    draft.set({ [bodyKey]: `${text.slice(0, at)}{{${k}}}${text.slice(el?.selectionEnd ?? at)}` } as never);
+    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(at + k.length + 4, at + k.length + 4); });
+  };
+  // Markdown mínimo da prévia: [texto](link) vira botão.
+  const preview = renderInviteTemplate(draft.d[bodyKey], vars).split(/(\[[^\]]+\]\([^)]+\))/g);
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/60 p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-base font-semibold tracking-tight">Temas Oficiais Reach</h3>
-          <p className="mt-1 max-w-xl text-[13px] text-muted-foreground">
-            Quatro paletas inspiradas na identidade visual da agência. Escolha uma — todos os componentes se ajustam em tempo real.
-          </p>
-        </div>
-        <button
-          onClick={() => change(DEFAULT_ACCENT)}
-          className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <RotateCcw className="h-3.5 w-3.5" /> Restaurar Reach Orange
-        </button>
-      </div>
-
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {REACH_THEMES.map((t) => {
-          const active = accent === t.key;
-          return (
-            <button
-              key={t.key}
-              onClick={() => change(t.key)}
-              className={cn(
-                "rounded-2xl border p-3 text-left transition-colors",
-                active ? "border-primary/40 bg-primary/[0.08]" : "border-transparent hover:bg-muted/60",
-              )}
-            >
-              <span className="flex h-[86px] overflow-hidden rounded-2xl">
-                {t.colors.map((c) => (
-                  <span key={c} className="flex-1" style={{ backgroundColor: c }} />
-                ))}
-              </span>
-              <span className="mt-3 flex items-center justify-between gap-2">
-                <span className="text-[15px] font-semibold tracking-tight">{t.name}</span>
-                {active && (
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <Check className="h-3.5 w-3.5" />
-                  </span>
-                )}
-              </span>
-              <span className="mt-0.5 block text-[13px] text-muted-foreground">{t.description}</span>
-              <span className="mt-1.5 block text-[11.5px] uppercase tracking-[0.12em] text-muted-foreground/80">
-                Tema · {t.key}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Módulos contratados por cliente
-// ---------------------------------------------------------------------------
-
-function ModulesPicker({ value, onChange }: { value: BrandModules; onChange: (next: BrandModules) => void }) {
-  return (
-    <fieldset className="space-y-2">
-      <legend className="text-xs text-muted-foreground">Módulos contratados</legend>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {MODULE_DEFS.map((m) => (
-          <label key={m.key} className="flex cursor-pointer items-start gap-2 rounded-2xl border border-border bg-card p-3">
-            <input
-              type="checkbox"
-              checked={value[m.key]}
-              onChange={(e) => onChange({ ...value, [m.key]: e.target.checked })}
-              className="mt-0.5 h-4 w-4 accent-[var(--reach-coral)]"
-            />
-            <span className="min-w-0">
-              <span className="block text-[12.5px] font-medium">{m.label}</span>
-              <span className="block text-[11px] leading-snug text-muted-foreground">{m.description}</span>
-            </span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Configuração do cliente (identidade + módulos + Workspace)
-// ---------------------------------------------------------------------------
-
-function ClientSettingsDrawer({ brand, onClose, onSaved }: { brand: Brand; onClose: () => void; onSaved: () => void }) {
-  const conn = workspaceConnection(brand);
-  const [modules, setModules] = useState<BrandModules>(brandModules(brand));
-  const [status, setStatus] = useState<string>(((brand as any).status as string) ?? "ativo");
-  const [contract, setContract] = useState<string>(((brand as any).contract_type as string) ?? "recorrente");
-  const [wsUrl, setWsUrl] = useState(conn.url ?? "");
-  const [wsClientId, setWsClientId] = useState(conn.clientId ?? "");
-  const [connected, setConnected] = useState(conn.connected);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function save() {
-    setSaving(true);
-    setError(null);
-    try {
-      await updateBrand(brand.id, {
-        status,
-        contract_type: contract,
-        modules: modules as unknown as Record<string, boolean>,
-        workspace_url: wsUrl.trim() || null,
-        workspace_client_id: wsClientId.trim() || null,
-        workspace_connected: connected,
-      } as any);
-      onSaved();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível salvar.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end overlay-scrim">
-      <div className="h-full w-full max-w-lg overflow-y-auto border-l border-border bg-card/95 p-6">
-        <div className="mb-5 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-label">Configuração do cliente</div>
-            <h2 className="truncate text-lg font-semibold">{brand.name}</h2>
+    <div className="stack-lg">
+      <Segmented value={kind} onChange={setKind} label="Tipo de convite" items={[{ value: "colaborador", label: "Colaborador" }, { value: "cliente", label: "Cliente" }]} />
+      <div className="invite-grid">
+        <Section title="Mensagem" desc="Use as variáveis para personalizar. Elas são trocadas pelo valor real no envio.">
+          <Field label="Assunto" value={draft.d[subjectKey]} disabled={!canEdit} onChange={(e) => draft.set({ [subjectKey]: e.target.value } as never)} />
+          <div className="invite-body"><TextArea label="Corpo" rows={11} value={draft.d[bodyKey]} disabled={!canEdit} onChange={(e) => draft.set({ [bodyKey]: e.target.value } as never)} /></div>
+          <div className="e-row wrap" style={{ gap: 6 }}>
+            {vs.map((v) => <button key={v.key} type="button" className="var-chip" title={v.label} disabled={!canEdit} onClick={() => insert(v.key)}>{`{{${v.key}}}`}</button>)}
           </div>
-          <button onClick={onClose} aria-label="Fechar" className="grid h-9 w-9 place-items-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="space-y-5">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="text-xs text-muted-foreground">Status</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-1 w-full rounded-2xl border border-border bg-background/50 px-4 py-2 text-sm outline-none">
-                {CLIENT_STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Contratação</label>
-              <select value={contract} onChange={(e) => setContract(e.target.value)} className="mt-1 w-full rounded-2xl border border-border bg-background/50 px-4 py-2 text-sm outline-none">
-                {CONTRACT_TYPES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <ModulesPicker value={modules} onChange={setModules} />
-
-          <ClientUsersSection brand={brand} />
-
-          <div className="space-y-3 rounded-2xl border border-border p-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[12.5px] font-semibold">Conexão com o Reach Workspace</h3>
-              <Chip>{connected ? "Conectado" : "Desconectado"}</Chip>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">URL de integração (webhook)</label>
-              <input value={wsUrl} onChange={(e) => setWsUrl(e.target.value)} placeholder="https://workspace.reach.../api/intake" className="mt-1 w-full rounded-2xl border border-border bg-background/50 px-4 py-2 text-sm outline-none" />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">ID do cliente no Workspace</label>
-              <input value={wsClientId} onChange={(e) => setWsClientId(e.target.value)} className="mt-1 w-full rounded-2xl border border-border bg-background/50 px-4 py-2 text-sm outline-none" />
-            </div>
-            <label className="flex cursor-pointer items-center gap-2 text-[12.5px]">
-              <input type="checkbox" checked={connected} onChange={(e) => setConnected(e.target.checked)} className="h-4 w-4 accent-[var(--reach-coral)]" />
-              Marcar cliente como conectado ao Workspace
-            </label>
-          </div>
-
-          {error && <p className="text-xs text-destructive">{error}</p>}
-          <div className="flex justify-end gap-2">
-            <PillButton variant="secondary" onClick={onClose}>Cancelar</PillButton>
-            <PillButton onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar configuração"}</PillButton>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Usuários do cliente — administrador/colaborador, matriz de permissões
-// ---------------------------------------------------------------------------
-
-function ClientUsersSection({ brand }: { brand: Brand }) {
-  const [members, setMembers] = useState<BrandMemberRow[]>([]);
-  const [invites, setInvites] = useState<BrandInvite[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [inviting, setInviting] = useState(false);
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const [m, i] = await Promise.all([listBrandMembersFull(brand.id), listBrandInvites(brand.id)]);
-      setMembers(m);
-      setInvites(i);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível carregar usuários do cliente.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brand.id]);
-
-  const pendingInvites = invites.filter((i) => i.status === "pendente");
-
-  async function toggleActive(userId: string, active: boolean) {
-    setError(null);
-    setNotice(null);
-    try {
-      await setProfileActive(userId, active);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível alterar o status do usuário.");
-    }
-  }
-
-  async function remove(userId: string) {
-    setError(null);
-    try {
-      await removeBrandMember(brand.id, userId);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível remover o usuário.");
-    }
-  }
-
-  const editingMember = members.find((m) => m.user_id === editingUserId) ?? null;
-
-  return (
-    <div className="space-y-3 rounded-2xl border border-border p-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[12.5px] font-semibold">Usuários do cliente</h3>
-        <PillButton size="sm" onClick={() => setInviting(true)}>
-          <Plus className="h-3.5 w-3.5" /> Convidar usuário
-        </PillButton>
-      </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-      {notice && <p className="text-xs text-success">{notice}</p>}
-
-      {loading ? (
-        <p className="text-xs text-muted-foreground">Carregando…</p>
-      ) : (
-        <div className="space-y-1.5">
-          {members.length === 0 && <p className="text-xs text-muted-foreground">Nenhum usuário vinculado a este cliente ainda.</p>}
-          {members.map((m) => {
-            const active = m.profile?.active !== false;
-            return (
-              <div key={m.user_id} className="flex items-center justify-between gap-2 rounded-xl border border-border px-3 py-2">
-                <div className="min-w-0">
-                  <p className="truncate text-[12.5px] font-medium">{m.profile?.display_name || m.profile?.email || "Usuário"}</p>
-                  <p className="truncate text-[11px] text-muted-foreground">
-                    {m.profile?.email ?? "—"} · {m.is_admin ? "Administrador do cliente" : "Colaborador"} {!active && "· Inativo"}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <button onClick={() => setEditingUserId(m.user_id)} className="rounded-full border border-border px-2.5 py-1 text-[10.5px]">Permissões</button>
-                  <button onClick={() => toggleActive(m.user_id, !active)} className="rounded-full border border-border px-2.5 py-1 text-[10.5px]">
-                    {active ? "Desativar" : "Ativar"}
-                  </button>
-                  <button onClick={() => remove(m.user_id)} aria-label="Remover" title="Remover" className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-destructive">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {pendingInvites.length > 0 && (
-        <div className="space-y-1.5 border-t border-border pt-3">
-          <p className="text-[11px] font-medium text-muted-foreground">Convites pendentes</p>
-          {pendingInvites.map((inv) => (
-            <div key={inv.id} className="flex items-center justify-between gap-2 rounded-xl border border-border px-3 py-2">
-              <div className="min-w-0">
-                <p className="truncate text-[12.5px]">{inv.name || inv.email}</p>
-                <p className="truncate text-[11px] text-muted-foreground">{inv.email} · {inv.is_admin ? "Administrador" : "Colaborador"}</p>
-              </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <button onClick={async () => { const r = await resendInviteEmail({ data: { kind: "brand", inviteId: inv.id, redirectTo: `${window.location.origin}/auth` } }); if (r.sent) toast.success(`Convite reenviado para ${inv.email}.`); else toast.error(`Não foi possível reenviar: ${"warning" in r ? r.warning : "erro no envio de e-mail"}`); await load(); }} className="rounded-full border border-border px-2.5 py-1 text-[10.5px]">Reenviar</button>
-                <button onClick={async () => { await cancelBrandInvite(inv.id); await load(); }} aria-label="Cancelar convite" className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-destructive">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {editingMember && (
-        <ClientMemberPermissionsModal
-          brandId={brand.id}
-          member={editingMember}
-          onClose={() => setEditingUserId(null)}
-          onSaved={() => { setEditingUserId(null); load(); }}
-        />
-      )}
-
-      {inviting && (
-        <ClientInviteModal
-          brandId={brand.id}
-          onClose={() => setInviting(false)}
-          onInvited={() => { load(); }}
-        />
-      )}
-    </div>
-  );
-}
-
-function PermissionMatrix({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: string[];
-  onChange: (next: string[]) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[420px] border-collapse text-xs">
-        <thead>
-          <tr>
-            <th className="p-1.5 text-left font-medium text-muted-foreground">Módulo</th>
-            {PERMISSION_ACTIONS.map((a) => (
-              <th key={a.key} className="p-1.5 text-center font-medium text-muted-foreground">{a.label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {CLIENT_PERMISSION_MODULES.map((m) => (
-            <tr key={m.key} className="border-t border-border">
-              <td className="p-1.5 font-medium">{m.label}</td>
-              {PERMISSION_ACTIONS.map((a) => {
-                const applicable = m.actions.includes(a.key as PermissionAction);
-                if (!applicable) return <td key={a.key} className="p-1.5 text-center text-muted-foreground/30">—</td>;
-                const key = modulePermissionKey(m.key, a.key as PermissionAction);
-                return (
-                  <td key={a.key} className="p-1.5 text-center">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 accent-[var(--primary)]"
-                      checked={value.includes(key)}
-                      disabled={disabled}
-                      onChange={(e) => onChange(e.target.checked ? [...value, key] : value.filter((k) => k !== key))}
-                    />
-                  </td>
-                );
+        </Section>
+        <section className="invite-preview e-glass" aria-label="Prévia do e-mail">
+          <div className="e-label">Prévia</div>
+          <div className="mail">
+            <div className="mail-head">{s.logo_url ? <img src={s.logo_url} alt={s.agency_name} /> : <EchoLogo size={24} />}</div>
+            <div className="mail-subject">{renderInviteTemplate(draft.d[subjectKey], vars)}</div>
+            <div className="mail-body">
+              {preview.map((part, i) => {
+                const m = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+                return m ? <span key={i} className="mail-btn">{m[1]}</span> : <span key={i}>{part}</span>;
               })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function ClientMemberPermissionsModal({
-  brandId,
-  member,
-  onClose,
-  onSaved,
-}: {
-  brandId: string;
-  member: BrandMemberRow;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [isAdmin, setIsAdmin] = useState(member.is_admin);
-  const [perms, setPerms] = useState<string[]>(member.permissions);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function save() {
-    setSaving(true);
-    setError(null);
-    try {
-      await updateBrandMemberAccess(brandId, member.user_id, { is_admin: isAdmin, permissions: isAdmin ? [] : perms });
-      onSaved();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível salvar as permissões.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center overlay-scrim p-0 sm:items-center sm:p-6">
-      <div className="surface max-h-[92vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-t-3xl p-5 sm:rounded-3xl">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold">{member.profile?.display_name || member.profile?.email}</h2>
-          <button onClick={onClose} aria-label="Fechar" className="grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-        <label className="flex items-center gap-2 text-[12.5px]">
-          <input type="checkbox" checked={isAdmin} onChange={(e) => setIsAdmin(e.target.checked)} className="h-4 w-4 accent-[var(--primary)]" />
-          Administrador do cliente (acesso total ao próprio ambiente e gestão dos usuários dele)
-        </label>
-        {!isAdmin && (
-          <div>
-            <p className="mb-1.5 text-[11px] text-muted-foreground">O que este colaborador pode acessar dentro do ambiente do cliente.</p>
-            <PermissionMatrix value={perms} onChange={setPerms} />
+            </div>
+            <div className="mail-foot">{s.agency_name}{s.agency_site ? ` · ${s.agency_site}` : ""}</div>
           </div>
-        )}
-        <div className="flex justify-end gap-2">
-          <PillButton variant="secondary" onClick={onClose}>Cancelar</PillButton>
-          <PillButton onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar"}</PillButton>
-        </div>
+        </section>
       </div>
+      <SaveBar dirty={draft.dirty} saving={saving} onSave={save} onReset={draft.reset} canEdit={canEdit} />
     </div>
   );
 }
 
-function ClientInviteModal({ brandId, onClose, onInvited }: { brandId: string; onClose: () => void; onInvited: () => void }) {
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [perms, setPerms] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+// ----- Padrões do Like --------------------------------------------------------------
 
-  async function invite() {
-    if (!email.trim() || !email.includes("@")) {
-      setError("Informe um e-mail válido.");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const result = await inviteBrandUser({
-        data: {
-          brandId,
-          email: email.trim(),
-          name: name.trim() || undefined,
-          role: "client",
-          isAdmin,
-          permissions: isAdmin ? [] : perms,
-          redirectTo: `${window.location.origin}/auth`,
-        },
-      });
-      if (result.linked) setNotice(`${email} já tinha conta e foi vinculado ao cliente.`);
-      else if (result.sent) setNotice(`Convite enviado com sucesso para ${email}.`);
-      else setError(`O convite foi registrado, mas o e-mail NÃO pôde ser enviado${"warning" in result && result.warning ? `: ${result.warning}` : "."} Use "Reenviar" na lista de convites pendentes.`);
-      setDone(true);
-      onInvited();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível convidar o usuário.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const input = "w-full rounded-2xl border border-border bg-background/50 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
-
+function LikeTab({ s, canEdit }: { s: AgencySettings; canEdit: boolean }) {
+  const draft = useDraft<LikeDefaults>(s.like_defaults);
+  const { saving, save } = useSave(draft, (d) => ({ like_defaults: d }), "Padrões do Like salvos");
+  const d = draft.d;
+  const ro = !canEdit;
+  const row = (k: keyof LikeDefaults, title: string, desc: string) => (
+    <div className="module-row" key={k}><span className="e-grow"><b>{title}</b><small>{desc}</small></span><Switch checked={!!d[k]} disabled={ro} onChange={(v) => draft.set({ [k]: v } as Partial<LikeDefaults>)} label={<span className="e-sr">{title}</span>} /></div>
+  );
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center overlay-scrim p-0 sm:items-center sm:p-6">
-      <div className="surface max-h-[92vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-t-3xl p-5 sm:rounded-3xl">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold">Convidar usuário do cliente</h2>
-          <button onClick={onClose} aria-label="Fechar" className="grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground">
-            <X className="h-4 w-4" />
-          </button>
+    <div className="stack-lg">
+      <Alert kind="accent" title="Valores iniciais">Cada nova rodada de aprovação começa com estes padrões. Dá para mudar por cliente e em cada envio.</Alert>
+      <Section title="Prazo de decisão" desc="Quanto tempo o cliente tem para aprovar ou pedir ajustes, contado em dias úteis.">
+        <div className="stepper" role="group" aria-label="Prazo em dias úteis">
+          <Button variant="secondary" icon="minus" aria-label="Menos um dia" disabled={ro || d.decisionDays <= 1} onClick={() => draft.set({ decisionDays: d.decisionDays - 1 })} />
+          <span className="stepper-val tnum"><b>{d.decisionDays}</b> {d.decisionDays === 1 ? "dia útil" : "dias úteis"}</span>
+          <Button variant="secondary" icon="plus" aria-label="Mais um dia" disabled={ro || d.decisionDays >= 15} onClick={() => draft.set({ decisionDays: d.decisionDays + 1 })} />
         </div>
-        {error && <p className="rounded-2xl bg-destructive/10 p-3 text-xs text-destructive">{error}</p>}
-        {notice && <p className="rounded-2xl bg-success/10 p-3 text-xs text-success">{notice}</p>}
-        <label className="block space-y-1">
-          <span className="text-xs text-muted-foreground">E-mail *</span>
-          <input autoFocus type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={input} />
-        </label>
-        <label className="block space-y-1">
-          <span className="text-xs text-muted-foreground">Nome</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={input} />
-        </label>
-        <label className="flex items-center gap-2 text-[12.5px]">
-          <input type="checkbox" checked={isAdmin} onChange={(e) => setIsAdmin(e.target.checked)} className="h-4 w-4 accent-[var(--primary)]" />
-          Administrador do cliente
-        </label>
-        {!isAdmin && <PermissionMatrix value={perms} onChange={setPerms} />}
-        {done ? (
-          <PillButton onClick={onClose}>Fechar</PillButton>
-        ) : (
-          <PillButton onClick={invite} disabled={saving}>{saving ? "Convidando…" : "Enviar convite"}</PillButton>
-        )}
-      </div>
+      </Section>
+      <Section title="Lembretes automáticos" desc="Enviados ao cliente por e-mail e dentro do Echo.">
+        {row("remindBefore", "1 dia antes do prazo", "Um aviso gentil de que há material aguardando.")}
+        {row("remindOnDay", "No dia do prazo", "Lembrete pela manhã, com os itens pendentes.")}
+        {row("remindLate", "Após o atraso", "Aviso diário até a decisão; a equipe também é notificada.")}
+      </Section>
+      <Section title="Regras da revisão">
+        {row("requireCommentOnAdjust", "Exigir comentário ao pedir ajuste", "O cliente explica o que mudar; evita idas e voltas.")}
+        {row("allowDownload", "Permitir download pelo cliente", "Libera baixar os arquivos em alta antes da aprovação.")}
+        {row("watermark", "Marca d’água nas prévias", "Mostra “Prévia · não aprovado” sobre imagens e vídeos.")}
+      </Section>
+      {canEdit && JSON.stringify(d) !== JSON.stringify(DEFAULT_LIKE) && <div><Button variant="ghost" icon="refresh" onClick={() => draft.set(DEFAULT_LIKE)}>Voltar aos padrões do Echo</Button></div>}
+      <SaveBar dirty={draft.dirty} saving={saving} onSave={save} onReset={draft.reset} canEdit={canEdit} />
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Integrações com o Reach Workspace
-// ---------------------------------------------------------------------------
+// ----- Integrações ------------------------------------------------------------------
 
-function IntegrationsSection({ brands, onChanged }: { brands: Brand[]; onChanged: () => void }) {
-  const [dispatches, setDispatches] = useState<WorkspaceDispatch[]>([]);
-  const [editing, setEditing] = useState<Brand | null>(null);
+const DISPATCH_TONE: Record<string, "done" | "late" | "todo"> = { enviado: "done", erro: "late" };
 
-  useEffect(() => {
-    listWorkspaceDispatches().then(setDispatches).catch(() => setDispatches([]));
-  }, [brands]);
-
-  return (
-    <div className="space-y-5">
-      <div className="surface space-y-3 rounded-2xl p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">Clientes conectados</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {brands.map((b) => {
-            const conn = workspaceConnection(b);
-            return (
-              <div key={b.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border p-3">
-                <div className="min-w-0">
-                  <div className="truncate text-[13px] font-medium">{b.name}</div>
-                  <div className="truncate text-[11px] text-muted-foreground">{conn.url ?? "Sem URL de integração"}</div>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className={`rounded-full px-2.5 py-1 text-[10.5px] ${conn.connected ? "bg-reach-blue-soft text-reach-blue" : "bg-muted/60 text-muted-foreground"}`}>
-                    {conn.connected ? "Conectado" : "Desconectado"}
-                  </span>
-                  <button onClick={() => setEditing(b)} className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground">Configurar</button>
-                </div>
-              </div>
-            );
-          })}
-          {brands.length === 0 && <p className="text-sm text-muted-foreground">Nenhum cliente cadastrado.</p>}
-        </div>
-      </div>
-
-      <div className="surface space-y-3 rounded-2xl p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">Envios recentes ao Workspace</h2>
-        {dispatches.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum envio registrado até agora.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-[12.5px]">
-              <thead className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                <tr>
-                  <th className="py-2 pr-3">Título</th>
-                  <th className="py-2 pr-3">Origem</th>
-                  <th className="py-2 pr-3">Status</th>
-                  <th className="py-2">Data</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dispatches.map((d) => (
-                  <tr key={d.id} className="border-t border-border">
-                    <td className="py-2 pr-3">{d.title}</td>
-                    <td className="py-2 pr-3 text-muted-foreground">{d.origin === "solicitacao" ? "Solicitação" : "Criação"}</td>
-                    <td className="py-2 pr-3">
-                      <span className={`rounded-full px-2 py-0.5 text-[10.5px] ${d.status === "erro" ? "bg-destructive/15 text-destructive" : d.status === "enviado" ? "bg-reach-blue-soft text-reach-blue" : "bg-muted/60 text-muted-foreground"}`}>
-                        {d.status}
-                      </span>
-                    </td>
-                    <td className="py-2 text-muted-foreground">{new Date(d.created_at).toLocaleString("pt-BR")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {editing && <ClientSettingsDrawer brand={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); onChanged(); }} />}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Dados institucionais da agência
-// ---------------------------------------------------------------------------
-
-function AgencyProfileSection() {
-  const settings = useAppSettings();
-  const [form, setForm] = useState({
-    agency_name: "",
-    agency_description: "",
-    agency_email: "",
-    agency_phone: "",
-    agency_site: "",
-    agency_address: "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    if (!settings) return;
-    const s = settings as any;
-    setForm({
-      agency_name: s.agency_name ?? "",
-      agency_description: s.agency_description ?? "",
-      agency_email: s.agency_email ?? "",
-      agency_phone: s.agency_phone ?? "",
-      agency_site: s.agency_site ?? "",
-      agency_address: s.agency_address ?? "",
-    });
-  }, [settings]);
-
-  async function save() {
-    setSaving(true);
-    try {
-      await saveAppSettings(form as any);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const fields: { key: keyof typeof form; label: string; area?: boolean }[] = [
-    { key: "agency_name", label: "Nome da agência" },
-    { key: "agency_email", label: "E-mail institucional" },
-    { key: "agency_phone", label: "Telefone" },
-    { key: "agency_site", label: "Site" },
-    { key: "agency_address", label: "Endereço" },
-    { key: "agency_description", label: "Descrição institucional", area: true },
-  ];
-
-  return (
-    <section className="surface space-y-4 rounded-2xl p-5">
-      <div>
-        <h2 className="text-sm font-semibold">Dados institucionais</h2>
-        <p className="text-xs text-muted-foreground">Informações da Reach usadas em convites, relatórios e cabeçalhos.</p>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {fields.map((f) => (
-          <label key={f.key} className={cn("space-y-1", f.area && "sm:col-span-2")}>
-            <span className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{f.label}</span>
-            {f.area ? (
-              <textarea
-                rows={3}
-                value={form[f.key]}
-                onChange={(e) => setForm((v) => ({ ...v, [f.key]: e.target.value }))}
-                className="w-full rounded-2xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary"
-              />
-            ) : (
-              <input
-                value={form[f.key]}
-                onChange={(e) => setForm((v) => ({ ...v, [f.key]: e.target.value }))}
-                className="w-full rounded-full border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary"
-              />
-            )}
-          </label>
-        ))}
-      </div>
-      <PillButton onClick={save} disabled={saving}>
-        <Check className="h-4 w-4" /> {saved ? "Salvo" : saving ? "Salvando…" : "Salvar dados"}
-      </PillButton>
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Perfis e permissões
-// ---------------------------------------------------------------------------
-
-function PermissionsSection() {
-  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
-  const [editing, setEditing] = useState<ProfileRow | null>(null);
-  const [roles, setRoles] = useState<UserRole[]>([]);
-  const [busy, setBusy] = useState<string | null>(null);
+function IntegrationsTab({ canEdit }: { canEdit: boolean }) {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["integrations"], queryFn: loadIntegrations });
+  const [edit, setEdit] = useState<Connection | null>(null);
+  const [f, setF] = useState({ connected: false, url: "", clientId: "" });
   const [err, setErr] = useState<string | null>(null);
-
-  async function load() {
-    try {
-      const [p, r] = await Promise.all([listProfiles(), listUserRoles()]);
-      setProfiles(p);
-      setRoles(r);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Falha ao carregar permissões");
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const roleOf = (id: string): AppRole => (roles.find((r) => r.user_id === id)?.role ?? "client");
-
-  async function change(userId: string, role: AppRole) {
-    setBusy(userId);
-    setErr(null);
-    try {
-      await setUserRole(userId, role);
-      await load();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Falha ao atualizar papel");
-    } finally {
-      setBusy(null);
-    }
-  }
-
+  useEffect(() => { if (edit) { setF({ connected: edit.connected, url: edit.url ?? "", clientId: edit.clientId ?? "" }); setErr(null); } }, [edit]);
+  if (q.isLoading) return <Skeleton h={300} r={24} />;
+  if (!q.data) return <EmptyState kind="error" title="Não foi possível carregar as integrações" />;
+  const { connections, dispatches } = q.data;
   return (
-    <section className="surface space-y-4 rounded-2xl p-5">
-      <div>
-        <h2 className="text-sm font-semibold">Perfis e permissões</h2>
-        <p className="text-xs text-muted-foreground">
-          Usuário → Organização (Reach) → Papel → Permissões. Abra o colaborador para configurar permissões detalhadas.
-        </p>
-      </div>
-      {err && <p className="text-sm text-destructive">{err}</p>}
-      <div className="space-y-2">
-        {profiles.map((p) => (
-          <div key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-border px-4 py-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{p.display_name || p.email || "Sem nome"}</p>
-              <p className="truncate text-xs text-muted-foreground">{p.email ?? "—"}{p.job_title ? ` · ${p.job_title}` : ""}</p>
+    <div className="stack-lg">
+      <Section title="Workspace externo" desc="Clientes cujas criações e solicitações também são entregues ao Workspace anterior por webhook." aside={<Badge tone="glass">{connections.filter((c) => c.connected).length} de {connections.length} conectados</Badge>}>
+        <div className="conn-grid">
+          {connections.map((c) => (
+            <div key={c.brandId} className="conn-row">
+              <span className={`conn-dot${c.connected ? " on" : ""}`} aria-hidden="true" />
+              <span className="e-grow" style={{ minWidth: 0 }}><b className="e-ellipsis" style={{ display: "block" }}>{c.name}</b><span className="e-caption e-ellipsis" style={{ display: "block" }}>{c.url ?? "Sem webhook"}</span></span>
+              <Button size="sm" variant="ghost" disabled={!canEdit} onClick={() => setEdit(c)}>Configurar</Button>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <select
-                value={roleOf(p.id)}
-                disabled={busy === p.id}
-                onChange={(e) => change(p.id, e.target.value as AppRole)}
-                className="rounded-full border border-border bg-background/50 px-3 py-1.5 text-xs outline-none"
-              >
-                {(Object.keys(ROLE_LABELS) as AppRole[]).map((r) => (
-                  <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                ))}
-              </select>
-              <button onClick={() => setEditing(p)} className="rounded-full border border-border px-3 py-1.5 text-xs">
-                Permissões
-              </button>
-            </div>
+          ))}
+        </div>
+      </Section>
+      <Section title="Envios recentes" desc="Tudo que saiu do Echo para o Workspace externo.">
+        {dispatches.length === 0 ? <EmptyState compact icon="send" title="Nenhum envio ainda" /> : (
+          <div className="now-list">
+            {dispatches.map((d) => (
+              <div key={d.id} className="team-item">
+                <span className="e-grow" style={{ minWidth: 0 }}><b className="e-ellipsis" style={{ display: "block", fontWeight: 500 }}>{d.title}</b><span className="e-caption">{d.brandName} · {d.origin === "solicitacao" ? "Solicitação" : "Criação"}{d.response ? ` · ${d.response}` : ""}</span></span>
+                <Badge tone={DISPATCH_TONE[d.status] ?? "todo"} dot>{d.status === "enviado" ? "Enviado" : d.status === "erro" ? "Erro" : "Registrado"}</Badge>
+                <span className="team-due tnum">{new Date(d.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
+              </div>
+            ))}
           </div>
-        ))}
-        {profiles.length === 0 && <p className="text-sm text-muted-foreground">Nenhum perfil encontrado.</p>}
-      </div>
+        )}
+      </Section>
+      <Drawer open={!!edit} onClose={() => setEdit(null)} eyebrow="Integração" title={edit?.name ?? ""}
+        footer={<><Button variant="ghost" onClick={() => setEdit(null)}>Cancelar</Button><Button icon="check" onClick={async () => {
+          if (!edit) return;
+          if (f.connected && !/^https:\/\/\S+$/.test(f.url.trim())) { setErr("Use um endereço https:// válido."); return; }
+          try { await saveConnection(edit.brandId, f); toast.success("Integração salva", { description: edit.name }); setEdit(null); qc.invalidateQueries({ queryKey: ["integrations"] }); } catch { toast.error("Não foi possível salvar."); }
+        }}>Salvar</Button></>}>
+        <div className="module-row"><span className="e-grow"><b>Conectado</b><small>Novos envios deste cliente vão também para o Workspace externo.</small></span><Switch checked={f.connected} onChange={(v) => setF({ ...f, connected: v })} label={<span className="e-sr">Conectado</span>} /></div>
+        <Field label="Webhook" icon="link" value={f.url} error={err ?? undefined} placeholder="https://workspace…/api/intake" onChange={(e) => { setF({ ...f, url: e.target.value }); setErr(null); }} />
+        <Field label="ID do cliente no Workspace" value={f.clientId} optional onChange={(e) => setF({ ...f, clientId: e.target.value })} />
+      </Drawer>
+    </div>
+  );
+}
 
-      {editing && (
-        <ColaboradorDrawer
-          profile={editing as ProfileRow & { active?: boolean }}
-          role={roleOf(editing.id)}
-          canManage
-          onClose={() => setEditing(null)}
-          onSaved={() => load()}
-        />
-      )}
-    </section>
+// ----- Revisão ----------------------------------------------------------------------
+
+function ReviewTab() {
+  const [on, setOn] = useState(false);
+  const demo = useRef<HTMLDivElement>(null);
+  useEffect(() => setOn(isSlowmo()), []);
+  const play = () => demo.current?.querySelectorAll("i").forEach((el, i) => el.animate([{ transform: "translateY(10px) scale(.9)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 420, delay: i * 60, easing: "cubic-bezier(.23,1,.32,1)", fill: "backwards" }));
+  return (
+    <Section title="Câmera lenta 4×" desc="Desacelera todas as animações para inspecionar movimento, ritmo e suavidade. Vale só para você e só nesta sessão do navegador.">
+      <div className="module-row"><span className="e-grow"><b>Ativar câmera lenta</b><small>Transições, menus, drawers e contadores passam a rodar a 25% da velocidade.</small></span><Switch checked={on} onChange={(v) => { setSlowmo(v); setOn(v); toast(v ? "Câmera lenta ligada" : "Câmera lenta desligada"); }} label={<span className="e-sr">Câmera lenta</span>} /></div>
+      <div className="slowmo-demo" ref={demo}>{[0, 1, 2, 3, 4].map((i) => <i key={i} />)}</div>
+      <div><Button variant="secondary" icon="play" onClick={play}>Tocar animação de teste</Button></div>
+      <p className="e-caption" style={{ margin: 0 }}>Dica: com a câmera lenta ligada, abra um drawer ou um menu em outra tela. <Link to="/" className="e-link">Ir para o Início</Link></p>
+    </Section>
   );
 }
