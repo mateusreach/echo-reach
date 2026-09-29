@@ -16,7 +16,7 @@ export const Route = createFileRoute("/agencia")({
 const NAV = [
   { to: "/agencia", label: "Início", exact: true, icon: "home" as const },
   { to: "/agencia/equipe", label: "Equipe" },
-  { to: "/agencia/clientes", label: "Clientes" },
+  { to: "/clientes", label: "Clientes" },
 
   { to: "/agencia/calendario", label: "Calendário" },
   { to: "/agencia/comunicacao", label: "Comunicação" },

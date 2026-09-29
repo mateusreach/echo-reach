@@ -27,7 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 export type EnvDef = { id: "brand" | "workspace" | "like" | "e360"; name: string; tagline: string; icon: IconName; color: string; href?: string };
 
 export const ENVS: EnvDef[] = [
-  { id: "brand", name: "Brand", tagline: "Plano, identidade e biblioteca da marca", icon: "layers", color: "var(--env-brand)", href: "/agencia/clientes" },
+  { id: "brand", name: "Brand", tagline: "Plano, identidade e biblioteca da marca", icon: "layers", color: "var(--env-brand)", href: "/clientes" },
   { id: "workspace", name: "Workspace", tagline: "Entregas, tarefas, prazos e cobertura", icon: "grid", color: "var(--env-workspace)", href: "/workspace" },
   { id: "like", name: "Like", tagline: "Aprovação de materiais com o cliente", icon: "heart", color: "var(--env-like)", href: "/like" },
   { id: "e360", name: "Espaço 360", tagline: "Plano, campanhas e solicitações do cliente", icon: "orbit", color: "var(--env-360)", href: "/e360" },
@@ -108,7 +108,7 @@ function CommandPalette({ items, onClose, client }: { items: CommandItem[]; onCl
   }, [q, client]);
   const open = (h: { kind: HitKind; id: string; title: string; sub: string | null; href: string }) => { trackRecent({ kind: h.kind, id: h.id, title: h.title, sub: h.sub, href: h.href }); navigate({ to: h.href as never }); };
   const recentItems: CommandItem[] = q ? [] : listRecent().slice(0, 5).map((r) => ({ id: `rec-${r.href}`, group: "Recentes", label: r.title, sub: r.sub ?? KIND_META[r.kind]?.label, icon: (KIND_META[r.kind]?.icon ?? "history") as IconName, run: () => open(r) }));
-  const hitItems: CommandItem[] = hits.filter((h) => h.kind !== "cliente" || !items.some((it) => it.id === `cli-${h.brandSlug}`)).map((h) => ({ id: `hit-${h.kind}-${h.id}`, group: KIND_META[h.kind].plural, label: h.title, sub: h.sub ?? undefined, icon: KIND_META[h.kind].icon as IconName, run: () => open(h) }));
+  const hitItems: CommandItem[] = hits.filter((h) => h.kind !== "cliente" || !items.some((it) => it.id === `cli-${h.brandSlug}`)).map((h, n) => ({ id: `hit-${h.kind}-${h.brandSlug ?? ""}-${h.id}-${n}`, group: KIND_META[h.kind].plural, label: h.title, sub: h.sub ?? undefined, icon: KIND_META[h.kind].icon as IconName, run: () => open(h) }));
   const filtered = useMemo(() => items.filter((it) => norm(it.label + " " + (it.sub ?? "")).includes(norm(q))), [items, q]);
   const more: CommandItem[] = q.trim().length >= 2 ? [{ id: "all", group: "Pesquisa", label: `Ver todos os resultados para “${q.trim()}”`, icon: "search", run: () => navigate({ to: "/pesquisa" as never, search: { q: q.trim() } as never }) }] : [];
   const list = [...recentItems, ...filtered, ...hitItems, ...more];

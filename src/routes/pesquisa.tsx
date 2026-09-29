@@ -70,8 +70,8 @@ function SearchPage() {
             <section className="settings-section e-glass">
               <p className="e-caption" style={{ margin: 0 }}>{shown.length} {shown.length === 1 ? "resultado" : "resultados"}{client ? " · só o que você pode ver" : ""}</p>
               <ul className="sr-list">
-                {shown.map((h) => (
-                  <li key={`${h.kind}-${h.id}`}>
+                {shown.map((h, i) => (
+                  <li key={`${h.kind}-${h.brandSlug ?? ""}-${h.id}-${i}`}>
                     <Link to={h.href as never} className="sr-hit" onClick={() => open(h)}>
                       <span className="sr-ic" style={{ ["--c" as string]: ENV_COLOR[KIND_META[h.kind].env] }}><Icon name={KIND_META[h.kind].icon} size="sm" /></span>
                       <span className="sr-txt"><b><Mark text={h.title} q={term} /></b>{h.sub && <small><Mark text={h.sub} q={term} /></small>}</span>

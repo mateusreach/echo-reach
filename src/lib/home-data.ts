@@ -137,7 +137,7 @@ async function loadLive(): Promise<HomeData | "unauthenticated"> {
       isAdmin: access.isAdmin,
       person: { name, firstName: first(name) },
       envs: [
-        { id: "brand", available: true, count: brands.filter((b) => brandModules(b).biblioteca).length, label: "clientes com biblioteca", href: "/agencia/clientes" },
+        { id: "brand", available: true, count: brands.filter((b) => brandModules(b).biblioteca).length, label: "clientes com biblioteca", href: "/clientes" },
         { id: "workspace", available: true, count: openTasks, label: "tarefas abertas", sub: lateAll ? `${lateAll} atrasadas` : "nenhuma atrasada", href: "/workspace" },
         { id: "like", available: true, count: external.length, label: "em avaliação externa", sub: "vão para o Like" },
         { id: "e360", available: with360 > 0, reason: "Nenhum cliente com Espaço 360", count: requestsNew, label: "solicitações novas", sub: `${with360} espaços ativos`, href: "/e360" },
@@ -228,7 +228,7 @@ function demo(role: "team" | "client"): HomeData {
       isAdmin: true,
       person: { name: "Helena Duarte", firstName: "Helena" },
       envs: [
-        { id: "brand", available: true, count: 11, label: "clientes com biblioteca", sub: "38 ideias a construir", href: "/agencia/clientes" },
+        { id: "brand", available: true, count: 11, label: "clientes com biblioteca", sub: "38 ideias a construir", href: "/clientes" },
         { id: "workspace", available: true, count: 47, label: "tarefas abertas", sub: "6 atrasadas", href: "/workspace" },
         { id: "like", available: true, count: 9, label: "em avaliação externa", sub: "vão para o Like" },
         { id: "e360", available: true, count: 4, label: "solicitações novas", sub: "3 espaços ativos", href: "/e360" },
@@ -268,7 +268,7 @@ function demo(role: "team" | "client"): HomeData {
     envs: [
       { id: "like", available: true, count: 3, label: "materiais para decidir", sub: "o primeiro vence amanhã" },
       { id: "e360", available: true, count: 2, label: "solicitações em andamento", href: "/e360" },
-      { id: "brand", available: true, count: 19, label: "estratégias no plano", sub: "leitura", href: "/agencia/clientes" },
+      { id: "brand", available: true, count: 19, label: "estratégias no plano", sub: "leitura", href: "/clientes" },
     ],
     client: {
       brand: { name: "Fina Fragrância", slug: "fina-fragrancia", segment: "Perfumaria artesanal" },

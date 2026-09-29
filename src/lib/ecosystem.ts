@@ -36,7 +36,7 @@ export const MODULES: EcosystemModule[] = [
     tagline: "Biblioteca de conteúdo",
     description: "Ideias, conteúdos e referências de cada cliente.",
     icon: BookOpen,
-    path: "/agencia/clientes",
+    path: "/clientes",
     prefixes: ["/agencia", "/b/"],
     accent: "var(--brand)",
     originEnvKey: "VITE_REACH_BRAND_ORIGIN",
