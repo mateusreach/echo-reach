@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { LoadFailed } from "@/components/echo/blocks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type DragEvent } from "react";
 import { toast } from "sonner";
@@ -44,6 +45,7 @@ function FeedGrid() {
 
   const nav = <LikeBrandNav slug={brandSlug} team={team} />;
   if (!ready || items.isLoading || brand.isLoading) return <EchoLayout env="like" wide demoData nav={nav}><Skeleton h={520} r={24} /></EchoLayout>;
+  if (items.isError) return <EchoLayout env="like" wide nav={nav}><LoadFailed what="os materiais" onRetry={() => items.refetch()} /></EchoLayout>;
   const b = brand.data;
   const since = new Date(Date.now() - 30 * 86400e3).toISOString();
   const all = (items.data ?? []).filter((i) => i.status !== "cancelado" && i.status !== "reprovado" && (team || i.status !== "rascunho"));

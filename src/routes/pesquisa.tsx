@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { LoadFailed } from "@/components/echo/blocks";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { EchoLayout } from "@/components/echo/layout";
@@ -62,6 +63,7 @@ function SearchPage() {
         </div>
 
         {term.length < 2 ? <div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="search" title="Pesquise em todo o Echo" text="Clientes, tarefas, entregas, ideias, conteúdos, campanhas, solicitações, materiais do Like, pessoas e seções do plano." /></div>
+          : res.isError ? <LoadFailed what="a pesquisa" onRetry={() => res.refetch()} />
           : res.isLoading ? <Skeleton h={300} r={24} />
           : shown.length === 0 ? <div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="search" title={`Nada encontrado para “${term}”`} text={hits.length ? "Tente tirar algum filtro." : "Confira a grafia ou use outra palavra."} /></div>
           : (

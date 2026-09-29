@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { LoadFailed } from "@/components/echo/blocks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -45,6 +46,7 @@ function SpaceAgenda() {
   const d = q.data;
   const shell = (c: React.ReactNode) => <SpaceShell demoData brandSlug={brandSlug} brandName={d?.space.brand.name ?? ""} primaryColor={d?.space.brand.primary} accentColor={d?.space.brand.accent}>{c}</SpaceShell>;
   if (!ready || q.isLoading) return shell(<div className="stack-lg"><Skeleton h={56} r={18} /><Skeleton h={520} r={24} /></div>);
+  if (q.isError) return shell(<LoadFailed what="a agenda" onRetry={() => q.refetch()} />);
   if (!d) return shell(<div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState icon="lock" title="Espaço 360 indisponível" /></div>);
   const todayISO = toISO(today());
   const items = d.items.filter((i) => (!kinds.length || kinds.includes(i.kind)) && (!status || i.status === status));

@@ -2,6 +2,7 @@
 // Echo · Shell (barra superior, ambientes, ⌘K e aparência)
 // ---------------------------------------------------------------------------
 import { Link, useNavigate } from "@tanstack/react-router";
+import { ROSTER } from "@/lib/clients-data";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Icon, type IconName } from "./icon";
 import { EchoLogo, type EchoLogoHandle } from "./logo";
@@ -15,11 +16,9 @@ import { KIND_META, listRecent, norm, searchAll, trackRecent, warmSearch, type H
 import { isViewingAsClient, startViewAsClient } from "@/lib/view-as";
 import { NotificationBell } from "./notifications";
 
-const DEMO_CLIENTS = ["Dra. Giuliana", "Fina Fragrância", "A Emporium", "Esense", "Eliza", "Pão de Queijo da Maria", "Gaby Mota Cachos", "Gamô Ateliê", "Zelus", "Spirale", "Isabela Gomes"];
-const slugify = (n: string) => n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 async function loadClients(): Promise<{ name: string; slug: string; segment?: string | null }[]> {
-  if (isDemoMode()) return DEMO_CLIENTS.map((name) => ({ name, slug: slugify(name) }));
+  if (isDemoMode()) return ROSTER.map(([name, slug]) => ({ name, slug }));
   const { data } = await supabase.from("brands").select("name, slug, segment").order("name");
   return (data ?? []) as { name: string; slug: string; segment: string | null }[];
 }

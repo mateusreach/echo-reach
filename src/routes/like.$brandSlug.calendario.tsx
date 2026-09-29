@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { LoadFailed } from "@/components/echo/blocks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -41,6 +42,7 @@ function PublishCalendar() {
 
   const nav = <LikeBrandNav slug={brandSlug} team={team} />;
   if (!ready || items.isLoading) return <EchoLayout env="like" wide demoData nav={nav}><Skeleton h={560} r={24} /></EchoLayout>;
+  if (items.isError) return <EchoLayout env="like" wide nav={nav}><LoadFailed what="os materiais" onRetry={() => items.refetch()} /></EchoLayout>;
 
   const campaigns = space.data?.campaigns ?? [];
   const campaignName = (id: string) => campaigns.find((c) => c.id === id)?.title ?? "Campanha";

@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { LoadFailed } from "@/components/echo/blocks";
 import { isViewingAsClient, viewingAsClientBrandName } from "@/lib/view-as";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -29,6 +30,7 @@ function LikeHome() {
   const items = useQuery({ queryKey: ["like-items", "all"], queryFn: () => listItems(), enabled: ready });
   const spaces = useQuery({ queryKey: ["spaces"], queryFn: listSpaces, enabled: ready && !!isTeam });
   if (!ready || rounds.isLoading || items.isLoading) return <EchoLayout env="like" wide demoData eyebrow="Like" title="Aprovações"><div className="stack-lg"><Skeleton h={120} r={24} /><Skeleton h={320} r={24} /></div></EchoLayout>;
+  if (rounds.isError || items.isError) return <EchoLayout env="like" wide eyebrow="Like" title="Aprovações"><LoadFailed what="as aprovações" onRetry={() => { rounds.refetch(); items.refetch(); }} /></EchoLayout>;
   const all = items.data ?? [];
   const adjust = all.filter((i) => i.status === "ajustes");
   const waiting = all.filter((i) => ["aguardando", "em_revisao", "nova_versao"].includes(i.status));

@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { LoadFailed } from "@/components/echo/blocks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -53,6 +54,7 @@ function LikeSettings() {
   useEffect(() => { if (prefsQ.data && !prefs) setPrefs(prefsQ.data); }, [prefsQ.data]);
 
   const nav = <LikeBrandNav slug={brandSlug} team={team} />;
+  if (approversQ.isError || settingsQ.isError || brand.isError) return <EchoLayout env="like" wide nav={nav} eyebrow="Like" title="Configurações"><LoadFailed what="as configurações do Like" onRetry={() => { brand.refetch(); approversQ.refetch(); settingsQ.refetch(); }} /></EchoLayout>;
   if (!ready || !b || !appr || !st) return <EchoLayout env="like" wide demoData nav={nav} eyebrow="Like" title="Configurações"><Skeleton h={480} r={24} /></EchoLayout>;
 
   const dirtyA = JSON.stringify(appr) !== JSON.stringify(approversQ.data);

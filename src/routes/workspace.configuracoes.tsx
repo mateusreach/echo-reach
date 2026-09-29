@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { LoadFailed } from "@/components/echo/blocks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -33,6 +34,7 @@ function WorkspaceSettings() {
   const canEdit = !!session?.isAdmin || can("configuracoes.administrar") || can("modelos.editar");
 
   if (!ready || templates.isLoading || sectors.isLoading) return <div className="stack-lg"><Skeleton h={110} r={22} /><Skeleton h={320} r={22} /></div>;
+  if (templates.isError || sectors.isError) return <LoadFailed what="as configurações" onRetry={() => { templates.refetch(); sectors.refetch(); }} />;
 
   return (
     <div className="stack-lg">

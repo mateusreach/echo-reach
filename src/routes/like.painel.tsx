@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { LoadFailed } from "@/components/echo/blocks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { toast } from "sonner";
@@ -46,6 +47,7 @@ function LikeBoard() {
   const all = useMemo(() => (items.data ?? []).filter((i) => i.status !== "cancelado"), [items.data]);
   if (ready && (!isTeam || viewAs)) return <EchoLayout env="like"><EchoBlocked title="Painel da equipe" text="Este painel é só para a equipe da Reach." /></EchoLayout>;
   if (!ready || items.isLoading) return <EchoLayout env="like" wide demoData eyebrow="Like" title="Painel"><Skeleton h={520} r={24} /></EchoLayout>;
+  if (items.isError) return <EchoLayout env="like" wide eyebrow="Like" title="Painel"><LoadFailed what="o painel" onRetry={() => items.refetch()} /></EchoLayout>;
 
   const refresh = () => { for (const k of [["like-items"], ["like-rounds"], ["like-item"], ["ops-fronts"]]) qc.invalidateQueries({ queryKey: k }); };
   const opt = (xs: (string | null | undefined)[]) => [...new Set(xs.filter(Boolean))] as string[];

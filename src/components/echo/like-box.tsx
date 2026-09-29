@@ -4,6 +4,7 @@
 // interna (setor, responsável, prioridade, comentários internos) aparece aqui.
 // ---------------------------------------------------------------------------
 import { Link, useNavigate } from "@tanstack/react-router";
+import { LoadFailed } from "@/components/echo/blocks";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { EchoLayout } from "./layout";
@@ -52,6 +53,7 @@ export function ClientBox({ brandSlug, roundId }: { brandSlug: string; roundId?:
   const canDecide = myRole === "aprovador";
 
   if (!ready || brand.isLoading || items.isLoading) return <EchoLayout env="like" wide demoData><div className="stack-lg"><Skeleton h={180} r={28} /><Skeleton h={120} r={24} /><div className="mat-grid">{[0, 1, 2].map((i) => <Skeleton key={i} h={420} r={22} />)}</div></div></EchoLayout>;
+  if (items.isError || brand.isError) return <EchoLayout env="like" wide><LoadFailed what="os materiais" onRetry={() => { items.refetch(); brand.refetch(); }} /></EchoLayout>;
   if (!b) return <EchoLayout env="like"><div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="search" title="Espaço não encontrado" /></div></EchoLayout>;
 
   const all = (items.data ?? []).filter((i) => i.status !== "cancelado");

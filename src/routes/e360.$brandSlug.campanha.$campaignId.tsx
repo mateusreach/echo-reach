@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { LoadFailed } from "@/components/echo/blocks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -34,6 +35,7 @@ function CampaignPage() {
   const d = q.data;
   const shell = (c: React.ReactNode) => <SpaceShell demoData brandSlug={brandSlug} brandName={d?.space.brand.name ?? ""} primaryColor={d?.space.brand.primary} accentColor={d?.space.brand.accent}>{c}</SpaceShell>;
   if (!ready || q.isLoading) return shell(<div className="stack-lg"><Skeleton h={150} r={24} /><Skeleton h={90} r={20} /><Skeleton h={300} r={24} /></div>);
+  if (q.isError) return shell(<LoadFailed what="a campanha" onRetry={() => q.refetch()} />);
   if (!d) return shell(<div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="search" title="Campanha não encontrada" actions={<Link to="/e360/$brandSlug" params={{ brandSlug }} search={{ tab: "campanhas", filtro: undefined }} className="e-btn secondary">Ver campanhas</Link>} /></div>);
   const { campaign: c, space: s, likeMaterials } = d;
   const canEdit = s.canEdit && s.isTeam;

@@ -5,6 +5,7 @@
 // direita; barra de decisão sempre visível (no celular, fixa no rodapé).
 // ---------------------------------------------------------------------------
 import { Link, useNavigate } from "@tanstack/react-router";
+import { LoadFailed } from "@/components/echo/blocks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -154,6 +155,7 @@ export function MaterialReview({ brandSlug, itemId, v, sequence }: { brandSlug: 
   const nextPending = queue.find((x) => x.id !== itemId);
 
   if (!ready || itemQ.isLoading) return <EchoLayout env="like" wide demoData><div className="rv-layout"><Skeleton h={560} r={24} /><Skeleton h={560} r={24} /></div></EchoLayout>;
+  if (itemQ.isError) return <EchoLayout env="like" wide><LoadFailed what="o material" onRetry={() => itemQ.refetch()} /></EchoLayout>;
   if (!it || !viewing || (it.brandSlug !== brandSlug)) return <EchoLayout env="like" wide demoData><div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="search" title="Material não encontrado" text="Ele pode ter sido cancelado ou você não tem acesso." actions={<Link to={`/like/${brandSlug}` as never} className="e-btn secondary">Voltar para a caixa</Link>} /></div></EchoLayout>;
 
   const brandName = brand.data?.name ?? it.brandName;

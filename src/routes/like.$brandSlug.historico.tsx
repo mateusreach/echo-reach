@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { LoadFailed } from "@/components/echo/blocks";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { EchoLayout } from "@/components/echo/layout";
@@ -40,6 +41,7 @@ function History() {
 
   const nav = <LikeBrandNav slug={brandSlug} team={team} />;
   if (!ready || items.isLoading) return <EchoLayout env="like" wide demoData nav={nav}><Skeleton h={520} r={24} /></EchoLayout>;
+  if (items.isError) return <EchoLayout env="like" wide nav={nav}><LoadFailed what="os materiais" onRetry={() => items.refetch()} /></EchoLayout>;
 
   const from = new Date(cursor.y, cursor.m, 1).toISOString();
   const to = new Date(cursor.y, cursor.m + 1, 1).toISOString();

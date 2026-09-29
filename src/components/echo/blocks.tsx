@@ -5,7 +5,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "./icon";
-import { Avatar, Badge, type Tone } from "./primitives";
+import { Avatar, Badge, Button, EmptyState, type Tone } from "./primitives";
 import { useCountUp } from "./motion";
 import { toISO, today } from "@/lib/workspace-data";
 
@@ -90,6 +90,16 @@ export function PersonLoad({ name, role, open, late, max, leader }: { name: stri
         <div className={`e-bar sm ${cls}`} role="progressbar" aria-valuenow={open} aria-valuemin={0} aria-valuemax={max} aria-label={`Carga de ${name}`}><i style={{ ["--v" as string]: `${pct}%` }} /></div>
         <span className="e-caption tnum">{open} {open === 1 ? "item" : "itens"}{late ? ` · ${late} atrasado${late > 1 ? "s" : ""}` : ""}</span>
       </div>
+    </div>
+  );
+}
+
+/** Falha ao carregar: diz o que não carregou e oferece "Tentar novamente". */
+export function LoadFailed({ what, onRetry }: { what: string; onRetry: () => void }) {
+  return (
+    <div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}>
+      <EmptyState kind="error" title={`Não foi possível carregar ${what}`} text="Confira sua conexão e tente de novo. Se continuar, avise a equipe da Reach."
+        actions={<Button variant="secondary" icon="refresh" onClick={onRetry}>Tentar novamente</Button>} />
     </div>
   );
 }

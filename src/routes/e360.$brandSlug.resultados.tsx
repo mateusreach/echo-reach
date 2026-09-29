@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { LoadFailed } from "@/components/echo/blocks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -33,6 +34,7 @@ function SpaceResults() {
   const d = q.data;
   const shell = (c: React.ReactNode) => <SpaceShell demoData brandSlug={brandSlug} brandName={d?.space.brand.name ?? ""} primaryColor={d?.space.brand.primary} accentColor={d?.space.brand.accent}>{c}</SpaceShell>;
   if (!ready || q.isLoading) return shell(<div className="stack-lg"><Skeleton h={160} r={24} /><Skeleton h={260} r={24} /></div>);
+  if (q.isError) return shell(<LoadFailed what="os resultados" onRetry={() => q.refetch()} />);
   if (!d) return shell(<div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState icon="lock" title="Espaço 360 indisponível" /></div>);
   const objectives = d.objectives as { id: string; title: string; period_type: string; status: string; target_value: number | null; current_value: number | null; unit: string | null; period_label: string | null }[];
   const withTarget = objectives.filter((o) => o.target_value);
