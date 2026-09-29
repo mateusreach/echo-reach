@@ -7,6 +7,7 @@ import { Alert, Field, LineTabs, Segmented, Switch, TextArea } from "@/component
 import { Drawer } from "@/components/echo/overlays";
 import { Icon, type IconName } from "@/components/echo/icon";
 import { EchoLogo } from "@/components/echo/logo";
+import { ImagePick } from "@/components/echo/image-pick";
 import { useAccess } from "@/components/echo/session";
 import { PATHS, type Base, type PathKey } from "@/components/echo/appearance";
 import { isSlowmo, setSlowmo } from "@/components/echo/slowmo";
@@ -112,37 +113,6 @@ function useSave<T>(draft: ReturnType<typeof useDraft<T>>, toPatch: (d: T) => Pa
 }
 
 // ----- Identidade --------------------------------------------------------------------
-
-function ImagePick({ label, value, onChange, disabled, round, hint }: { label: string; value: string | null; onChange: (v: string | null) => void; disabled?: boolean; round?: boolean; hint: string }) {
-  const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const pick = async (f: File | undefined) => {
-    if (!f) return;
-    if (!f.type.startsWith("image/")) { toast.error("Escolha um arquivo de imagem."); return; }
-    if (f.size > 2 * 1024 * 1024) { toast.error("A imagem precisa ter até 2 MB."); return; }
-    setBusy(true);
-    try {
-      if (isDemoMode()) onChange(URL.createObjectURL(f));
-      else { const { uploadFile } = await import("@/lib/storage"); onChange((await uploadFile(f, "marca-plataforma")).url); }
-    } catch { toast.error("Não foi possível enviar a imagem."); } finally { setBusy(false); }
-  };
-  return (
-    <div className="e-field">
-      <span className="e-field-label">{label}</span>
-      <div className="img-pick">
-        <span className={`img-pick-prev${round ? " round" : ""}`}>{value ? <img src={value} alt="" /> : <Icon name="image" />}</span>
-        <div className="e-stack" style={{ gap: 6 }}>
-          <div className="e-row" style={{ gap: 6 }}>
-            <Button size="sm" variant="secondary" icon="upload" loading={busy} disabled={disabled} onClick={() => input.current?.click()}>{value ? "Trocar" : "Enviar"}</Button>
-            {value && <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onChange(null)}>Remover</Button>}
-          </div>
-          <span className="e-caption">{hint}</span>
-        </div>
-        <input ref={input} type="file" accept="image/*" hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
-      </div>
-    </div>
-  );
-}
 
 function IdentityTab({ s, canEdit }: { s: AgencySettings; canEdit: boolean }) {
   const pickKeys = ({ agency_name, agency_description, agency_email, agency_phone, agency_site, agency_address, logo_url, favicon_url, default_base, default_path }: AgencySettings) => ({ agency_name, agency_description, agency_email, agency_phone, agency_site, agency_address, logo_url, favicon_url, default_base, default_path });

@@ -1,895 +1,301 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { goToLogin } from "@/lib/login-redirect";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, LogOut, Mail, Plus, Send, X } from "lucide-react";
-import { ReachIconAnimation } from "@/components/reach/reach-icon-animation";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { BrandShell } from "@/components/reach/brand-shell";
-import { PageHeader } from "@/components/reach/page-header";
-import { GlassCard } from "@/components/reach/glass-card";
-import { Btn } from "@/components/ui-reach/primitives";
-import { isViewingAsClient } from "@/lib/view-as";
+import { Avatar, Badge, Button, EmptyState, Skeleton } from "@/components/echo/primitives";
+import { Alert, Checkbox, Field, LineTabs, Segmented, Select, Switch, TextArea } from "@/components/echo/controls";
+import { Drawer, Modal } from "@/components/echo/overlays";
+import { Icon, type IconName } from "@/components/echo/icon";
+import { IdentityEditor, SpaceCustomizer } from "@/components/echo/identity";
+import { PATHS, useAppearance, type Base, type PathKey } from "@/components/echo/appearance";
+import { useAccess } from "@/components/echo/session";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  ACCESS_ROLES,
-  addBrandMember,
-  cancelBrandInvite,
-  getBrandBySlug,
-  getProfile,
-  listBrandAccessLogs,
-  listBrandInvites,
-  listClientProfiles,
-  removeBrandMember,
-  updateBrandMemberAccess,
-  updateBrand,
-  type Brand,
-  type BrandAccessLog,
-  type BrandInvite,
-  type Profile,
-} from "@/lib/reach-data";
-import { inviteBrandUser } from "@/lib/invites.functions";
-import { ImageField, UploadButton } from "@/components/reach/uploader";
-import { FormModal } from "@/components/reach/form-modal";
-import { CLIENT_PERMISSION_MODULES, modulePermissionKey } from "@/lib/agency-data";
-import { FramedImage } from "@/components/reach/framed-image";
-import { FrameConfigButton } from "@/components/reach/image-crop-editor";
-import { ColorPaletteEditor } from "@/components/reach/identidade-visual-section";
-import { applySuggestedPalette, listMasterColors, saveSuggestedPalettes, type BrandIdentityColor } from "@/lib/identity-data";
-import { generatePaletteSuggestions, type PaletteSuggestion } from "@/lib/color-extraction";
-import { applyBrandColors, useTheme, type ThemeMode } from "@/lib/branding";
-import { cn } from "@/lib/utils";
+import { isViewingAsClient } from "@/lib/view-as";
+import { isDemoMode, relDay } from "@/lib/home-data";
+import { cancelInvite, inviteClientUser, linkExisting, loadAccess, loadBrandInfo, removeMember, saveBrandPatch, setMemberAccess, type BrandInfo, type Member } from "@/lib/brand-settings-data";
+import { loadIntegrations } from "@/lib/settings-data";
+
+type Tab = "informacoes" | "identidade" | "acessos" | "historico" | "integracoes" | "preferencias";
+const TABS: { value: Tab; label: string; icon: IconName }[] = [
+  { value: "informacoes", label: "Informações", icon: "briefcase" },
+  { value: "identidade", label: "Identidade", icon: "palette" },
+  { value: "acessos", label: "Usuários e acessos", icon: "users" },
+  { value: "historico", label: "Histórico", icon: "history" },
+  { value: "integracoes", label: "Integrações", icon: "link" },
+  { value: "preferencias", label: "Preferências", icon: "sliders" },
+];
 
 export const Route = createFileRoute("/b/$brandSlug/configuracoes")({
-  component: ConfiguracoesPage,
-  validateSearch: (search: Record<string, unknown>) => ({
-    tab: typeof search.tab === "string" ? search.tab : undefined,
-  }),
+  head: () => ({ meta: [{ title: "Configurações do cliente · Echo" }] }),
+  component: BrandSettings,
+  validateSearch: (search: Record<string, unknown>) => ({ tab: typeof search.tab === "string" ? search.tab : undefined }),
 });
 
-const PROFILES = ["Agência (owner)", "Estrategista", "Atendimento", "Designer", "Social Media", "Cliente"];
-const INTEGRATIONS = ["Meta", "Google", "WhatsApp", "OpenAI", "Claude", "Google Drive", "Calendário", "E-mail", "Webhooks"];
-const CLIENT_ACCESS_MODULES = CLIENT_PERMISSION_MODULES.filter((module) => ["plano", "biblioteca", "espaco360", "like", "calendario", "referencias"].includes(module.key));
-const DEFAULT_CLIENT_PERMISSIONS = [modulePermissionKey("espaco360", "visualizar")];
+/** O que o cliente pode fazer: ver cada área e, no Like, comentar e aprovar. */
+const CLIENT_RIGHTS: { key: string; label: string; desc: string; needs?: string }[] = [
+  { key: "espaco360.visualizar", label: "Espaço 360", desc: "Plano, campanhas, agenda e solicitações." },
+  { key: "like.visualizar", label: "Like · ver materiais", desc: "Abre a caixa de aprovação." },
+  { key: "like.comentar", label: "Like · comentar", desc: "Comenta e marca pontos no material.", needs: "like.visualizar" },
+  { key: "like.aprovar", label: "Like · decidir", desc: "Aprova ou pede ajustes.", needs: "like.visualizar" },
+  { key: "biblioteca.visualizar", label: "Biblioteca", desc: "Consulta ideias e referências." },
+  { key: "biblioteca.criar", label: "Sugerir ideias", desc: "Envia sugestões para a equipe classificar.", needs: "biblioteca.visualizar" },
+  { key: "plano.visualizar", label: "Plano", desc: "Acompanha o plano estratégico." },
+  { key: "calendario.visualizar", label: "Calendário", desc: "Vê datas e publicações." },
+];
+const DEFAULT_RIGHTS = ["espaco360.visualizar", "like.visualizar", "like.comentar"];
+const ROLE_LABEL: Record<string, string> = { client: "Cliente", viewer: "Visualizador", agency: "Agência" };
 
-type Member = { user_id: string; member_role: string; name: string | null; email: string | null; created_at: string | null; permissions: string[]; is_admin: boolean };
-
-function fmtDateTime(value?: string | null) {
-  if (!value) return "—";
-  return new Date(value).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
-}
-
-function ConfiguracoesPage() {
+function BrandSettings() {
   const { brandSlug } = Route.useParams();
-  const navigate = useNavigate();
   const search = Route.useSearch();
-  const tab = search.tab ?? "informacoes";
-  const [loading, setLoading] = useState(true);
-  const [brand, setBrand] = useState<Brand | null>(null);
-  const [displayName, setDisplayName] = useState("Você");
-  const [accountEmail, setAccountEmail] = useState("");
-  const [isAgency, setIsAgency] = useState(false);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [invites, setInvites] = useState<BrandInvite[]>([]);
-  const [logs, setLogs] = useState<BrandAccessLog[]>([]);
-  const [clientProfiles, setClientProfiles] = useState<Profile[]>([]);
-  const [adding, setAdding] = useState(false);
-  const [selectedProfileId, setSelectedProfileId] = useState("");
-  const [editingAccess, setEditingAccess] = useState<Member | null>(null);
-
-  async function refresh() {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData.session;
-    if (!session) {
-      goToLogin(navigate as never);
-      return;
-    }
-    setAccountEmail(session.user.email ?? "");
-    const b = await getBrandBySlug(brandSlug);
-    if (!b) {
-      setLoading(false);
-      return;
-    }
-    setBrand(b);
-    const profile = await getProfile(session.user.id);
-    const agency = profile?.role === "agency" && !isViewingAsClient();
-    setIsAgency(agency);
-    if (profile?.display_name) setDisplayName(profile.display_name);
-
-    const { data, error: membersError } = await supabase
-      .from("brand_members")
-      .select("user_id, member_role, is_admin, permissions, created_at, profiles!brand_members_user_id_profiles_fkey(display_name, email)")
-      .eq("brand_id", b.id);
-    if (membersError) console.error("Falha ao carregar membros da marca:", membersError);
-    setMembers(
-      (data ?? []).map((m: any) => ({
-        user_id: m.user_id,
-        member_role: m.member_role,
-        created_at: m.created_at ?? null,
-        name: m.profiles?.display_name ?? null,
-        email: m.profiles?.email ?? null,
-        permissions: m.permissions ?? [],
-        is_admin: !!m.is_admin,
-      })),
-    );
-
-    const [inv, lg] = await Promise.all([
-      listBrandInvites(b.id).catch(() => [] as BrandInvite[]),
-      listBrandAccessLogs(b.id).catch(() => [] as BrandAccessLog[]),
-    ]);
-    setInvites(inv);
-    setLogs(lg);
-
-    if (agency) setClientProfiles(await listClientProfiles());
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    setLoading(true);
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandSlug]);
-
-  const lastAccessByUser = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const l of logs) if (l.user_id && !map.has(l.user_id)) map.set(l.user_id, l.created_at);
-    return map;
-  }, [logs]);
-
-  async function handleAddMember() {
-    if (!brand || !selectedProfileId) return;
-    await addBrandMember(brand.id, selectedProfileId, "client");
-    setSelectedProfileId("");
-    setAdding(false);
-    refresh();
-  }
-
-  async function handleRemoveMember(userId: string) {
-    if (!brand) return;
-    await removeBrandMember(brand.id, userId);
-    refresh();
-  }
-
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    navigate({ to: "/auth" });
-  }
-
-  const availableProfiles = clientProfiles.filter((p) => !members.some((m) => m.user_id === p.id));
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <ReachIconAnimation size={48} context="page-loading" />
-        <p className="text-sm text-muted-foreground">Carregando Configurações…</p>
-      </div>
-    );
-  }
-  if (!brand) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-4 text-center">
-        <p className="text-lg font-semibold">Marca não encontrada</p>
-      </div>
-    );
-  }
-
-  const MOBILE_TABS = [
-    ["informacoes", "Informações"],
-    ["identidade", "Identidade"],
-    ["acessos", "Acessos"],
-    ["historico", "Histórico"],
-    ["integracoes", "Integrações"],
-    ["preferencias", "Preferências"],
-  ] as const;
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const { isTeam } = useAccess();
+  const [ready, setReady] = useState(false);
+  const [viewAs, setViewAs] = useState(false);
+  useEffect(() => { setReady(true); setViewAs(isViewingAsClient()); }, []);
+  const tab: Tab = TABS.some((t) => t.value === search.tab) ? (search.tab as Tab) : "informacoes";
+  const setTab = (t: Tab) => navigate({ to: "/b/$brandSlug/configuracoes", params: { brandSlug }, search: { tab: t }, replace: true });
+  const info = useQuery({ queryKey: ["brand-info", brandSlug], queryFn: () => loadBrandInfo(brandSlug), enabled: ready });
+  const canEdit = !!isTeam && !viewAs;
+  const refreshInfo = () => qc.invalidateQueries({ queryKey: ["brand-info", brandSlug] });
+  const b = info.data;
 
   return (
-    <BrandShell basePath={`/b/${brandSlug}`} displayName={displayName} primaryColor={(brand as any)?.primary_color} accentColor={(brand as any)?.accent_color}>
-      <PageHeader eyebrow="Administração" title="Configurações" description={`Cadastro, identidade, usuários, acessos e integrações de ${brand.name}.`} />
-
-      <GlassCard level={1} className="mb-6 flex flex-wrap gap-1 p-1 lg:hidden">
-        {MOBILE_TABS.map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => navigate({ to: "/b/$brandSlug/configuracoes", params: { brandSlug }, search: { tab: key } })}
-            className={tab === key ? "rounded-xl bg-reach-coral px-3 py-1.5 text-[12.5px] font-medium text-primary-foreground" : "rounded-xl px-3 py-1.5 text-[12.5px] text-muted-foreground hover:bg-muted"}
-          >
-            {label}
-          </button>
-        ))}
-      </GlassCard>
-
-      {tab === "informacoes" && <BrandInfoCard brand={brand} canEdit={isAgency} onSaved={refresh} />}
-
-      {tab === "identidade" && <BrandIdentityCard brand={brand} canEdit={isAgency} onSaved={refresh} />}
-
-      {tab === "acessos" && (
-        <div className="space-y-6">
-          <GlassCard level={2} className="p-6">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-title">Usuários com acesso a {brand.name}</h2>
-                <p className="text-[12.5px] text-muted-foreground">Perfil, status e último acesso de cada pessoa.</p>
-              </div>
-              {isAgency && !adding && availableProfiles.length > 0 && (
-                <Btn variant="outline" size="sm" onClick={() => setAdding(true)}>
-                  <Plus className="h-3.5 w-3.5" /> Vincular pessoa existente
-                </Btn>
-              )}
-            </div>
-
-            {adding && (
-              <div className="mb-4 flex flex-wrap items-center gap-2">
-                <select value={selectedProfileId} onChange={(e) => setSelectedProfileId(e.target.value)} className="input-reach min-w-0 flex-1">
-                  <option value="">Selecione um usuário-cliente</option>
-                  {availableProfiles.map((p) => (
-                    <option key={p.id} value={p.id}>{p.display_name ?? p.id}</option>
-                  ))}
-                </select>
-                <Btn size="sm" onClick={handleAddMember} disabled={!selectedProfileId}>Vincular</Btn>
-                <Btn size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancelar</Btn>
-              </div>
-            )}
-
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-left text-[12.5px]">
-                <thead>
-                  <tr className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">Nome</th>
-                    <th className="py-2 pr-4 font-medium">E-mail</th>
-                    <th className="py-2 pr-4 font-medium">Perfil</th>
-                    <th className="py-2 pr-4 font-medium">Status</th>
-                    <th className="py-2 pr-4 font-medium">Último acesso</th>
-                    <th className="py-2 pr-4 font-medium">Criado em</th>
-                    <th className="py-2" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {members.map((m) => (
-                    <tr key={m.user_id}>
-                      <td className="py-2.5 pr-4">{m.name ?? "—"}</td>
-                      <td className="py-2.5 pr-4 text-muted-foreground">{m.email ?? "—"}</td>
-                      <td className="py-2.5 pr-4">{m.member_role === "agency" ? "Agência" : m.member_role === "viewer" ? "Visualizador" : "Cliente"}</td>
-                      <td className="py-2.5 pr-4">
-                        <span className="rounded-full bg-reach-mint-soft px-2.5 py-0.5 text-[11px] text-reach-mint">Ativo</span>
-                      </td>
-                      <td className="py-2.5 pr-4 text-muted-foreground">{fmtDateTime(lastAccessByUser.get(m.user_id))}</td>
-                      <td className="py-2.5 pr-4 text-muted-foreground">{fmtDateTime(m.created_at)}</td>
-                      <td className="py-2.5 text-right">
-                        {isAgency && (
-                          <div className="flex items-center justify-end gap-3">
-                            <button type="button" onClick={() => setEditingAccess(m)} className="text-xs text-primary hover:underline">Permissões</button>
-                            <button onClick={() => handleRemoveMember(m.user_id)} aria-label="Remover acesso" className="text-muted-foreground hover:text-reach-rose">
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {invites.filter((i) => i.status === "pendente").map((i) => (
-                    <tr key={i.id} className="opacity-80">
-                      <td className="py-2.5 pr-4">{i.name ?? "—"}</td>
-                      <td className="py-2.5 pr-4 text-muted-foreground">{i.email}</td>
-                      <td className="py-2.5 pr-4">{ACCESS_ROLES.find((r) => r.key === i.member_role)?.label ?? i.member_role}</td>
-                      <td className="py-2.5 pr-4">
-                        <span className="rounded-full bg-reach-amber-soft px-2.5 py-0.5 text-[11px] text-reach-amber">Convite pendente</span>
-                      </td>
-                      <td className="py-2.5 pr-4 text-muted-foreground">—</td>
-                      <td className="py-2.5 pr-4 text-muted-foreground">{fmtDateTime(i.created_at)}</td>
-                      <td className="py-2.5 text-right">
-                        {isAgency && (
-                          <button
-                            onClick={async () => {
-                              await cancelBrandInvite(i.id);
-                              refresh();
-                            }}
-                            aria-label="Cancelar convite"
-                            className="text-muted-foreground hover:text-reach-rose"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {members.length === 0 && invites.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="py-4 text-muted-foreground">Nenhum usuário vinculado a este cliente ainda.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </GlassCard>
-
-          {isAgency && <InviteCard brandId={brand.id} onInvited={refresh} />}
-          {isAgency && editingAccess && <MemberAccessEditor member={editingAccess} brandId={brand.id} onClose={() => setEditingAccess(null)} onSaved={() => { setEditingAccess(null); void refresh(); }} />}
-
-          <GlassCard level={2} className="p-6">
-            <h2 className="text-title mb-3">Perfis de permissão</h2>
-            <div className="flex flex-wrap gap-2">
-              {PROFILES.map((p) => (
-                <span key={p} className="rounded-full border border-border bg-card px-3 py-1 text-[12px]">{p}</span>
-              ))}
-            </div>
-          </GlassCard>
-        </div>
-      )}
-
-      {tab === "historico" && (
-        <GlassCard level={2} className="p-6">
-          <h2 className="text-title mb-1">Histórico de acessos</h2>
-          <p className="mb-4 text-[12.5px] text-muted-foreground">Registros de entrada no ambiente deste cliente.</p>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-left text-[12.5px]">
-              <thead>
-                <tr className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                  <th className="py-2 pr-4 font-medium">Usuário</th>
-                  <th className="py-2 pr-4 font-medium">Data e hora</th>
-                  <th className="py-2 pr-4 font-medium">Evento</th>
-                  <th className="py-2 pr-4 font-medium">Contexto</th>
-                  <th className="py-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {logs.map((l) => (
-                  <tr key={l.id}>
-                    <td className="py-2.5 pr-4">{l.user_email ?? l.user_id ?? "—"}</td>
-                    <td className="py-2.5 pr-4 text-muted-foreground">{fmtDateTime(l.created_at)}</td>
-                    <td className="py-2.5 pr-4 capitalize">{l.event}</td>
-                    <td className="py-2.5 pr-4 text-muted-foreground">{l.context ?? "—"}</td>
-                    <td className="py-2.5">
-                      <span className="rounded-full bg-reach-mint-soft px-2.5 py-0.5 text-[11px] capitalize text-reach-mint">{l.status}</span>
-                    </td>
-                  </tr>
-                ))}
-                {logs.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="py-4 text-muted-foreground">Nenhum acesso registrado ainda.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </GlassCard>
-      )}
-
-      {tab === "integracoes" && (
-        <GlassCard level={2} className="p-6">
-          <h2 className="text-title mb-1">Integrações</h2>
-          <p className="mb-4 text-[12.5px] text-muted-foreground">Serviços conectados ao ambiente deste cliente.</p>
-          <div className="flex flex-wrap gap-2">
-            {INTEGRATIONS.map((i) => (
-              <span key={i} className="rounded-full bg-reach-blue-soft px-3 py-1 text-[12px] text-reach-blue">{i}</span>
-            ))}
-          </div>
-        </GlassCard>
-      )}
-
-      {tab === "preferencias" && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <GlassCard level={2} className="p-6">
-            <h2 className="text-title mb-3">Aparência</h2>
-            <p className="mb-3 text-[12.5px] text-muted-foreground">Escolha como a plataforma é exibida para você neste dispositivo.</p>
-            <ThemePicker />
-          </GlassCard>
-          <GlassCard level={2} className="p-6">
-            <h2 className="text-title mb-3">Sua conta</h2>
-            <p className="text-[13px]">{accountEmail}</p>
-            <p className="mt-1 text-[11.5px] capitalize text-muted-foreground">{isAgency ? "Agência" : "Cliente"}</p>
-            <Btn variant="outline" size="sm" className="mt-4" onClick={handleSignOut}>
-              <LogOut className="h-3.5 w-3.5" /> Sair
-            </Btn>
-          </GlassCard>
+    <BrandShell basePath={`/b/${brandSlug}`} brandName={b?.name} brandLogoUrl={b?.logo_url} primaryColor={b?.primary_color} accentColor={b?.accent_color}>
+      {!ready || info.isLoading ? <Skeleton h={420} r={24} /> : !b ? (
+        <div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="search" title="Cliente não encontrado" actions={<Link to="/clientes" className="e-btn secondary">Ver clientes</Link>} /></div>
+      ) : (
+        <div className="stack-lg">
+          <LineTabs<Tab> value={tab} onChange={setTab} items={TABS} />
+          {tab === "informacoes" && <InfoTab info={b} canEdit={canEdit} onSaved={refreshInfo} />}
+          {tab === "identidade" && <><SpaceCustomizer info={b} canEdit={canEdit} onSaved={refreshInfo} /><IdentityEditor info={b} canEdit={canEdit} onBrandChanged={refreshInfo} /></>}
+          {tab === "acessos" && <AccessTab info={b} canEdit={canEdit} />}
+          {tab === "historico" && <HistoryTab info={b} />}
+          {tab === "integracoes" && <IntegrationsTab info={b} />}
+          {tab === "preferencias" && <PreferencesTab />}
         </div>
       )}
     </BrandShell>
   );
 }
 
-function MemberAccessEditor({ member, brandId, onClose, onSaved }: {
-  member: Member;
-  brandId: string;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [permissions, setPermissions] = useState<string[]>(member.permissions);
+function Section({ title, desc, aside, children }: { title: string; desc?: string; aside?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="settings-section e-glass">
+      <header className="e-row between wrap" style={{ gap: 12, alignItems: "flex-start" }}>
+        <div><h2 className="e-h3" style={{ margin: 0 }}>{title}</h2>{desc && <p className="e-small" style={{ margin: "4px 0 0" }}>{desc}</p>}</div>
+        {aside}
+      </header>
+      {children}
+    </section>
+  );
+}
+
+// ----- Informações -------------------------------------------------------------------
+
+function InfoTab({ info, canEdit, onSaved }: { info: BrandInfo; canEdit: boolean; onSaved: () => void }) {
+  const pick = (i: BrandInfo) => ({ name: i.name, segment: i.segment, contact_name: i.contact_name, contact_email: i.contact_email, description: i.description, notes: i.notes });
+  const [d, setD] = useState(pick(info));
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function save() {
-    setSaving(true);
-    setError(null);
-    try {
-      await updateBrandMemberAccess(brandId, member.user_id, { permissions });
-      onSaved();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Não foi possível salvar as permissões.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return <FormModal title={`Acesso de ${member.name ?? member.email ?? "cliente"}`} description="Defina o que esta pessoa pode visualizar neste cliente." onClose={onClose} size="md" footer={<><Btn variant="ghost" onClick={onClose}>Cancelar</Btn><Btn onClick={save} disabled={saving}>{saving ? "Salvando…" : "Salvar acesso"}</Btn></>}>
-    {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
-    <div className="space-y-2">
-      {CLIENT_ACCESS_MODULES.map((module) => {
-        const key = modulePermissionKey(module.key, "visualizar");
-        return <label key={module.key} className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm">
-          <span>{module.label}</span>
-          <input type="checkbox" checked={permissions.includes(key)} onChange={(event) => setPermissions((current) => event.target.checked ? [...new Set([...current, key])] : current.filter((permission) => permission !== key && !permission.startsWith(`${module.key}.`)))} className="h-4 w-4 accent-[var(--primary)]" />
-        </label>;
-      })}
-    </div>
-    <label className="flex items-center gap-3 rounded-md border border-border px-3 py-2 text-sm">
-      <input type="checkbox" checked={permissions.includes("biblioteca.criar")} onChange={(event) => setPermissions((current) => event.target.checked ? [...new Set([...current, "biblioteca.visualizar", "biblioteca.criar"])] : current.filter((permission) => permission !== "biblioteca.criar"))} className="h-4 w-4 accent-[var(--primary)]" />
-      Pode sugerir ideias no Banco de Ideias
-    </label>
-  </FormModal>;
-}
-
-/** Convite de acesso ao ambiente do cliente, usando a autenticação do sistema. */
-function InviteCard({ brandId, onInvited }: { brandId: string; onInvited: () => void }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"agency" | "client" | "viewer">("client");
-  const [permissions, setPermissions] = useState<string[]>(DEFAULT_CLIENT_PERMISSIONS);
-  const [sending, setSending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function send() {
-    setSending(true);
-    setError(null);
-    setMessage(null);
-    try {
-      const result = await inviteBrandUser({
-        data: { brandId, email: email.trim(), name: name.trim() || undefined, role, permissions, redirectTo: `${window.location.origin}/auth` },
-      });
-      if (result.linked) setMessage("Essa pessoa já tinha conta — o acesso foi liberado imediatamente.");
-      else if (result.sent) setMessage("Convite enviado por e-mail.");
-      else setMessage(`Convite registrado, mas o e-mail não pôde ser enviado: ${(result as any).warning ?? "verifique o envio de e-mails."}`);
-      setName("");
-      setEmail("");
-      onInvited();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível enviar o convite.");
-    } finally {
-      setSending(false);
-    }
-  }
-
+  useEffect(() => setD(pick(info)), [info]);
+  const dirty = JSON.stringify(d) !== JSON.stringify(pick(info));
+  const emailOk = !d.contact_email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.contact_email);
   return (
-    <GlassCard level={2} className="p-6">
-      <h2 className="text-title mb-1 inline-flex items-center gap-2">
-        <Mail className="h-4 w-4 text-reach-coral" /> Convidar usuário
-      </h2>
-      <p className="mb-4 text-[12.5px] text-muted-foreground">
-        A pessoa recebe um e-mail e entra pelo mesmo fluxo de autenticação do Reach Brand.
-      </p>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <input className="input-reach" placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} />
-        <input className="input-reach" placeholder="e-mail@cliente.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <select className="input-reach" value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
-          {ACCESS_ROLES.map((r) => (
-            <option key={r.key} value={r.key}>{r.label}</option>
-          ))}
-        </select>
+    <Section title="Informações do cliente" desc="Dados cadastrais usados em todos os ambientes. Módulos e contrato ficam no hub do cliente."
+      aside={<Link to={`/clientes/${info.slug}` as never} className="e-btn ghost sm"><Icon name="briefcase" size="sm" /> Hub do cliente</Link>}>
+      <div className="grid-2" style={{ gap: 12 }}>
+        <Field label="Nome" value={d.name} disabled={!canEdit} onChange={(e) => setD({ ...d, name: e.target.value })} />
+        <Field label="Segmento" optional value={d.segment} disabled={!canEdit} onChange={(e) => setD({ ...d, segment: e.target.value })} />
+        <Field label="Contato principal" optional icon="user" value={d.contact_name} disabled={!canEdit} onChange={(e) => setD({ ...d, contact_name: e.target.value })} />
+        <Field label="E-mail do contato" type="email" optional value={d.contact_email} error={emailOk ? undefined : "Confira o e-mail."} disabled={!canEdit} onChange={(e) => setD({ ...d, contact_email: e.target.value })} />
       </div>
-      <div className="mt-4 flex flex-wrap gap-3">
-        {CLIENT_ACCESS_MODULES.map((module) => {
-          const key = modulePermissionKey(module.key, "visualizar");
-          return <label key={module.key} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <input type="checkbox" checked={permissions.includes(key)} onChange={(event) => setPermissions((current) => event.target.checked ? [...new Set([...current, key])] : current.filter((permission) => permission !== key && !permission.startsWith(`${module.key}.`)))} className="h-4 w-4 accent-[var(--primary)]" /> {module.label}
-          </label>;
-        })}
-        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <input type="checkbox" checked={permissions.includes("biblioteca.criar")} onChange={(event) => setPermissions((current) => event.target.checked ? [...new Set([...current, "biblioteca.visualizar", "biblioteca.criar"])] : current.filter((permission) => permission !== "biblioteca.criar"))} className="h-4 w-4 accent-[var(--primary)]" /> Sugerir ideias
-        </label>
-      </div>
-      {error && <p className="mt-3 text-[12px] text-destructive">{error}</p>}
-      {message && <p className="mt-3 text-[12px] text-reach-mint">{message}</p>}
-      <Btn size="sm" className="mt-4" onClick={send} disabled={sending || !email.trim()}>
-        <Send className="h-3.5 w-3.5" /> {sending ? "Enviando…" : "Enviar convite"}
-      </Btn>
-    </GlassCard>
+      <TextArea label="Descrição" optional rows={3} value={d.description} disabled={!canEdit} onChange={(e) => setD({ ...d, description: e.target.value })} />
+      {canEdit && <TextArea label="Observações internas" optional rows={3} help="Só a equipe vê." value={d.notes} onChange={(e) => setD({ ...d, notes: e.target.value })} />}
+      {canEdit && <div className="e-row" style={{ gap: 8, justifyContent: "flex-end" }}>
+        <Button variant="ghost" disabled={!dirty} onClick={() => setD(pick(info))}>Desfazer</Button>
+        <Button icon="check" loading={saving} disabled={!dirty || !d.name.trim() || !emailOk} onClick={async () => { setSaving(true); try { await saveBrandPatch(info.slug, info.id, d); toast.success("Informações salvas"); onSaved(); } catch { toast.error("Não foi possível salvar."); } finally { setSaving(false); } }}>Salvar</Button>
+      </div>}
+    </Section>
   );
 }
 
-/** Dados cadastrais do cliente. */
-function BrandInfoCard({ brand, canEdit, onSaved }: { brand: Brand; canEdit: boolean; onSaved: () => void }) {
-  const extra = brand as Brand & { contact_name?: string | null; contact_email?: string | null; notes?: string | null };
-  const [name, setName] = useState(brand.name);
-  const [segment, setSegment] = useState(brand.segment ?? "");
-  const [contactName, setContactName] = useState(extra.contact_name ?? "");
-  const [contactEmail, setContactEmail] = useState(extra.contact_email ?? "");
-  const [description, setDescription] = useState(brand.description ?? "");
-  const [notes, setNotes] = useState(extra.notes ?? "");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+// ----- Acessos ---------------------------------------------------------------------
 
-  async function save() {
-    setSaving(true);
-    setError(null);
-    try {
-      await updateBrand(brand.id, {
-        name,
-        segment: segment || null,
-        contact_name: contactName || null,
-        contact_email: contactEmail || null,
-        description: description || null,
-        notes: notes || null,
-      } as any);
-      onSaved();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível salvar os dados do cliente.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <GlassCard level={2} className="p-6">
-      <h2 className="text-title mb-1">Informações do cliente</h2>
-      <p className="mb-4 text-[12.5px] text-muted-foreground">Dados cadastrais usados em todo o ambiente deste cliente.</p>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block">
-          <span className="text-label mb-1.5 block">Nome</span>
-          <input className="input-reach w-full" disabled={!canEdit} value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label className="block">
-          <span className="text-label mb-1.5 block">Segmento</span>
-          <input className="input-reach w-full" disabled={!canEdit} value={segment} onChange={(e) => setSegment(e.target.value)} />
-        </label>
-        <label className="block">
-          <span className="text-label mb-1.5 block">Contato principal</span>
-          <input className="input-reach w-full" disabled={!canEdit} value={contactName} onChange={(e) => setContactName(e.target.value)} />
-        </label>
-        <label className="block">
-          <span className="text-label mb-1.5 block">E-mail de contato</span>
-          <input className="input-reach w-full" disabled={!canEdit} value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
-        </label>
-      </div>
-      <label className="mt-4 block">
-        <span className="text-label mb-1.5 block">Descrição</span>
-        <textarea className="input-reach min-h-20 w-full" disabled={!canEdit} value={description} onChange={(e) => setDescription(e.target.value)} />
-      </label>
-      <label className="mt-4 block">
-        <span className="text-label mb-1.5 block">Observações internas</span>
-        <textarea className="input-reach min-h-20 w-full" disabled={!canEdit} value={notes} onChange={(e) => setNotes(e.target.value)} />
-      </label>
-      {error && <p className="mt-3 text-[12px] text-destructive">{error}</p>}
-      {canEdit && (
-        <Btn size="sm" className="mt-4" onClick={save} disabled={saving}>
-          {saving ? "Salvando…" : "Salvar informações"}
-        </Btn>
-      )}
-    </GlassCard>
-  );
-}
-
-function ThemePicker() {
-  const theme = useTheme();
-  return (
-    <div className="inline-flex gap-1 rounded-full border border-border bg-card p-1">
-      {([["dark", "Escuro"], ["light", "Claro"], ["auto", "Automático"]] as const).map(([k, label]) => (
-        <button
-          key={k}
-          onClick={() => theme.change(k as ThemeMode)}
-          className={theme.mode === k ? "rounded-full bg-reach-coral px-3.5 py-1.5 text-[12px] font-medium text-primary-foreground" : "rounded-full px-3.5 py-1.5 text-[12px] text-muted-foreground hover:text-foreground"}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/** Identidade visual do cliente — uma marca, uma logo, várias aplicações.
- * O avatar circular NÃO é um segundo arquivo: é uma configuração de
- * enquadramento (logo_frame) sobre a própria logo. A capa é o único outro
- * ativo central, com seu próprio enquadramento (cover_frame). Cores ficam
- * numa seção própria, reaproveitando a mesma paleta estruturada usada em
- * Acabamento da Marca → Identidade Visual (brand_identity_colors) — não é
- * um componente novo. */
-export function BrandIdentityCard({ brand, canEdit, onSaved }: { brand: Brand; canEdit: boolean; onSaved: () => void }) {
-  const extra = brand as Brand & {
-    primary_color?: string | null;
-    accent_color?: string | null;
-    cover_url?: string | null;
-    logo_frame?: unknown;
-    cover_frame?: unknown;
+function RightsEditor({ value, onChange, disabled }: { value: string[]; onChange: (v: string[]) => void; disabled?: boolean }) {
+  const toggle = (k: string, on: boolean, needs?: string) => {
+    let next = on ? [...new Set([...value, k, ...(needs ? [needs] : [])])] : value.filter((x) => x !== k);
+    if (!on) for (const r of CLIENT_RIGHTS) if (r.needs === k) next = next.filter((x) => x !== r.key);
+    onChange(next);
   };
-  const [logo, setLogo] = useState<string | null>(brand.logo_url ?? null);
-  const [logoFrame, setLogoFrame] = useState<unknown>(extra.logo_frame ?? null);
-  const [cover, setCover] = useState<string | null>(extra.cover_url ?? null);
-  const [coverFrame, setCoverFrame] = useState<unknown>(extra.cover_frame ?? null);
-  const [primary, setPrimary] = useState(extra.primary_color ?? "");
-  const [accent, setAccent] = useState(extra.accent_color ?? "");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function persist(patch: Record<string, unknown>) {
-    setSaving(true);
-    setError(null);
-    try {
-      await updateBrand(brand.id, patch as any);
-      onSaved();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível salvar.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveMedia() {
-    await persist({ logo_url: logo, logo_frame: logoFrame, cover_url: cover, cover_frame: coverFrame });
-  }
-
-  async function saveColors() {
-    await persist({ primary_color: primary || null, accent_color: accent || null });
-    applyBrandColors(primary || null, accent || null);
-  }
-
-  return (
-    <div className="space-y-5">
-      <GlassCard level={2} className="p-6">
-        <h2 className="text-title mb-1">Mídia da marca</h2>
-        <p className="mb-4 text-[12.5px] text-muted-foreground">A logo oficial é a única fonte — o avatar circular é apenas uma aplicação dela.</p>
-
-        <div className="grid gap-6 sm:grid-cols-2">
-          <div>
-            <span className="text-label mb-1.5 block">Logo</span>
-            <p className="mb-2 text-[11px] text-muted-foreground">Proporção original preservada, sem recorte automático.</p>
-            <div className="flex items-start gap-4">
-              <ImageField value={logo} folder={`marcas/${brand.slug}`} canEdit={canEdit} onChange={(url) => { setLogo(url); setLogoFrame(null); }} previewClassName="h-20 w-20 rounded-2xl object-contain" />
-              {logo && (
-                <div className="space-y-1.5 pt-1 text-center">
-                  <FramedImage src={logo} frame={logoFrame} shape="circle" className="h-16 w-16 border border-border" alt="Prévia do avatar" />
-                  <p className="text-[10px] text-muted-foreground">como avatar</p>
-                </div>
-              )}
-            </div>
-            {logo && <LogoBackgroundPreview src={logo} />}
-            {canEdit && logo && (
-              <div className="mt-2">
-                <FrameConfigButton
-                  src={logo}
-                  shape="circle"
-                  aspect={1}
-                  frame={logoFrame}
-                  label="Ajustar aplicação"
-                  recommendedLabel="Como esta logo aparece em avatares e ícones circulares pelo sistema."
-                  onSave={(f) => { setLogoFrame(f); persist({ logo_frame: f }); }}
-                />
-              </div>
-            )}
-          </div>
-
-          <div>
-            <span className="text-label mb-1.5 block">Capa</span>
-            <p className="mb-2 text-[11px] text-muted-foreground">Tamanho recomendado: 1600 × 400px · Proporção 4:1 — usada no topo da página do cliente e do Espaço 360.</p>
-            {cover ? (
-              <FramedImage src={cover} frame={coverFrame} shape="rect" className="mb-2 h-20 w-full rounded-xl border border-border" />
-            ) : (
-              <div className="mb-2 grid h-20 w-full place-items-center rounded-xl border border-dashed border-border text-muted-foreground">
-                <ImagePlus className="h-5 w-5" />
-              </div>
-            )}
-            {canEdit && (
-              <div className="flex flex-wrap items-center gap-2">
-                <UploadButton
-                  folder={`marcas/${brand.slug}`}
-                  multiple={false}
-                  accept="image/*"
-                  label={cover ? "Trocar capa" : "Enviar capa"}
-                  onUploaded={(files) => { if (files[0]) { setCover(files[0].url); setCoverFrame(null); } }}
-                />
-                {cover && (
-                  <FrameConfigButton
-                    src={cover}
-                    shape="rect"
-                    aspect={4}
-                    frame={coverFrame}
-                    label="Ajustar enquadramento"
-                    recommendedLabel="Tamanho recomendado: 1600 × 400px · Proporção 4:1"
-                    onSave={(f) => { setCoverFrame(f); persist({ cover_frame: f }); }}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {error && <p className="mt-3 text-[12px] text-destructive">{error}</p>}
-        {canEdit && (logo !== (brand.logo_url ?? null) || cover !== (extra.cover_url ?? null)) && (
-          <Btn size="sm" className="mt-4" onClick={saveMedia} disabled={saving}>
-            {saving ? "Salvando…" : "Salvar mídia"}
-          </Btn>
-        )}
-      </GlassCard>
-
-      <GlassCard level={2} className="p-6">
-        <h2 className="text-title mb-1">Paleta da marca</h2>
-        <p className="mb-4 text-[12.5px] text-muted-foreground">Identidade cromática do cliente — extraída automaticamente da logo e da capa, não confundir com os temas oficiais da Reach.</p>
-
-        <SuggestedPaletteSection brand={brand} logo={logo} cover={cover} canEdit={canEdit} onApplied={onSaved} />
-
-        <div className="mt-5 border-t border-border pt-4">
-          <p className="text-label mb-2">Paleta ativa</p>
-          <BrandColorPalette brandId={brand.id} canEdit={canEdit} />
-        </div>
-
-        <div className="mt-5 border-t border-border pt-4">
-          <p className="text-label mb-2">Cor da interface neste ambiente</p>
-          <p className="mb-2 text-[11px] text-muted-foreground">Controla a cor de destaque do sistema quando alguém está neste cliente — diferente da paleta da marca acima.</p>
-          <div className="flex flex-wrap items-center gap-4">
-            <label className="flex items-center gap-2">
-              <input type="color" disabled={!canEdit} value={primary || "#2f6be0"} onChange={(e) => setPrimary(e.target.value)} className="h-8 w-8 cursor-pointer rounded-lg border border-border" />
-              <span className="text-[12px] text-muted-foreground">Principal</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="color" disabled={!canEdit} value={accent || "#a855f7"} onChange={(e) => setAccent(e.target.value)} className="h-8 w-8 cursor-pointer rounded-lg border border-border" />
-              <span className="text-[12px] text-muted-foreground">Destaque</span>
-            </label>
-            {canEdit && (primary !== (extra.primary_color ?? "") || accent !== (extra.accent_color ?? "")) && (
-              <Btn size="sm" onClick={saveColors} disabled={saving}>{saving ? "Salvando…" : "Salvar"}</Btn>
-            )}
-          </div>
-        </div>
-      </GlassCard>
-    </div>
-  );
+  return <div className="rights-grid">{CLIENT_RIGHTS.map((r) => <Checkbox key={r.key} checked={value.includes(r.key)} disabled={disabled} desc={r.desc} onChange={(v) => toggle(r.key, v, r.needs)} label={r.label} />)}</div>;
 }
 
-/** Sugestões de paleta geradas a partir da logo/capa — nunca sobrescreve
- * uma escolha manual sem confirmação (item 21 do pedido): se os ativos
- * mudarem depois de já existir uma paleta ativa, avisa em vez de recalcular
- * sozinho. */
-function SuggestedPaletteSection({
-  brand,
-  logo,
-  cover,
-  canEdit,
-  onApplied,
-}: {
-  brand: Brand;
-  logo: string | null;
-  cover: string | null;
-  canEdit: boolean;
-  onApplied: () => void;
-}) {
-  const cached = (brand as any).suggested_palettes as PaletteSuggestion[] | null;
-  const [palettes, setPalettes] = useState<PaletteSuggestion[]>(cached ?? []);
-  const [generating, setGenerating] = useState(false);
-  const [applying, setApplying] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [staleAssets, setStaleAssets] = useState(false);
-  const generatedFor = useRef({ logo, cover });
-
-  useEffect(() => {
-    if (palettes.length > 0 && (generatedFor.current.logo !== logo || generatedFor.current.cover !== cover)) {
-      setStaleAssets(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [logo, cover]);
-
-  async function generate() {
-    if (!logo && !cover) return;
-    setGenerating(true);
-    setError(null);
-    try {
-      const suggestions = await generatePaletteSuggestions({ logoUrl: logo, coverUrl: cover });
-      setPalettes(suggestions);
-      setStaleAssets(false);
-      generatedFor.current = { logo, cover };
-      await saveSuggestedPalettes(brand.id, suggestions);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível analisar as imagens.");
-    } finally {
-      setGenerating(false);
-    }
-  }
-
-  async function apply(index: number) {
-    setApplying(index);
-    setError(null);
-    try {
-      await applySuggestedPalette(brand.id, palettes[index].colors);
-      onApplied();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível aplicar a paleta.");
-    } finally {
-      setApplying(null);
-    }
-  }
-
-  if (!logo && !cover) {
-    return <p className="text-xs text-muted-foreground">Envie a logo ou a capa para o sistema sugerir uma paleta automaticamente.</p>;
-  }
-
+function AccessTab({ info, canEdit }: { info: BrandInfo; canEdit: boolean }) {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["brand-access", info.slug], queryFn: () => loadAccess(info.slug, info.id, canEdit) });
+  const refresh = () => qc.invalidateQueries({ queryKey: ["brand-access", info.slug] });
+  const [inviting, setInviting] = useState(false);
+  const [editing, setEditing] = useState<Member | null>(null);
+  const [removing, setRemoving] = useState<Member | null>(null);
+  const [linkId, setLinkId] = useState("");
+  if (q.isLoading) return <Skeleton h={300} r={24} />;
+  if (!q.data) return <EmptyState kind="error" title="Não foi possível carregar os acessos" />;
+  const { members, invites, linkable } = q.data;
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        {canEdit && (
-          <Btn size="sm" onClick={generate} disabled={generating}>
-            {generating ? "Analisando imagens…" : palettes.length > 0 ? "Recalcular sugestões" : "Gerar sugestões"}
-          </Btn>
-        )}
-        {staleAssets && (
-          <span className="rounded-full bg-warning/12 px-2.5 py-1 text-[11px] text-warning">Novas cores identificadas nos ativos — atualize as sugestões.</span>
-        )}
-      </div>
-      {error && <p className="text-[11px] text-destructive">{error}</p>}
-      {palettes.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {palettes.map((p, i) => (
-            <div key={p.name} className="rounded-2xl border border-border p-3">
-              <p className="text-[12.5px] font-medium">{p.name}</p>
-              <p className="mb-2 text-[10.5px] text-muted-foreground">{p.description}</p>
-              <div className="mb-2 flex gap-1">
-                {p.colors.map((c) => (
-                  <span key={c.hex} className="h-6 flex-1 rounded-md border border-border" style={{ backgroundColor: c.hex }} title={c.hex} />
-                ))}
-              </div>
-              {canEdit && (
-                <button
-                  onClick={() => apply(i)}
-                  disabled={applying !== null}
-                  className="w-full rounded-full border border-border px-2.5 py-1 text-[11px] transition-colors hover:bg-muted"
-                >
-                  {applying === i ? "Aplicando…" : "Usar esta paleta"}
-                </button>
-              )}
+    <div className="stack-lg">
+      <Section title={`Pessoas com acesso a ${info.name}`} desc="Cada pessoa vê só o que foi liberado. Administradores do cliente também mudam capa e cores do espaço."
+        aside={canEdit ? <Button icon="send" onClick={() => setInviting(true)}>Convidar pessoa</Button> : undefined}>
+        <div className="e-stack" style={{ gap: 6 }}>
+          {members.map((m) => (
+            <div key={m.user_id} className="member-row">
+              <Avatar name={m.name ?? m.email ?? "?"} size="sm" />
+              <span className="e-grow" style={{ minWidth: 0 }}>
+                <span className="e-row" style={{ gap: 6 }}><b className="e-ellipsis">{m.name ?? m.email}</b>{m.is_admin && <Badge tone="glass">Admin</Badge>}<Badge tone="glass">{ROLE_LABEL[m.member_role] ?? m.member_role}</Badge></span>
+                <span className="e-caption e-ellipsis" style={{ display: "block" }}>{m.email ?? "—"} · {m.permissions.filter((p) => CLIENT_RIGHTS.some((r) => r.key === p)).length} permissões</span>
+              </span>
+              <span className="e-caption hide-sm">{m.last_access ? `acessou ${relDay(m.last_access.slice(0, 10)).toLowerCase()}` : "nunca acessou"}</span>
+              {canEdit && <>
+                <Button size="sm" variant="ghost" onClick={() => setEditing(m)}>Permissões</Button>
+                <Button size="sm" variant="ghost" icon="x" aria-label={`Remover ${m.name ?? m.email}`} onClick={() => setRemoving(m)} />
+              </>}
             </div>
           ))}
+          {invites.map((i) => (
+            <div key={i.id} className="member-row pending">
+              <Avatar name={i.name || i.email} size="sm" />
+              <span className="e-grow" style={{ minWidth: 0 }}><b className="e-ellipsis" style={{ display: "block" }}>{i.name || i.email}</b><span className="e-caption">{i.email} · convite enviado {relDay(i.created_at.slice(0, 10)).toLowerCase()}</span></span>
+              <Badge tone="review" dot>Convite pendente</Badge>
+              {canEdit && <Button size="sm" variant="ghost" icon="x" aria-label="Cancelar convite" onClick={async () => { await cancelInvite(info.slug, i.id); toast.success("Convite cancelado"); refresh(); }} />}
+            </div>
+          ))}
+          {members.length === 0 && invites.length === 0 && <EmptyState compact icon="users" title="Ninguém do cliente ainda" text="Convide a pessoa responsável para aprovar materiais no Like e acompanhar o 360." />}
         </div>
-      )}
+        {canEdit && linkable.length > 0 && (
+          <div className="e-row" style={{ gap: 8, marginTop: 4 }}>
+            <div className="e-grow"><Select value={linkId} placeholder="Vincular pessoa que já tem conta…" onChange={setLinkId} options={linkable.map((l) => ({ value: l.id, label: l.name }))} icon="user" /></div>
+            <Button variant="secondary" disabled={!linkId} onClick={async () => { await linkExisting(info.slug, info.id, linkId); setLinkId(""); toast.success("Pessoa vinculada"); refresh(); }}>Vincular</Button>
+          </div>
+        )}
+      </Section>
+      <InviteDrawer open={inviting} info={info} onClose={() => setInviting(false)} onDone={refresh} />
+      <MemberDrawer member={editing} info={info} onClose={() => setEditing(null)} onDone={refresh} />
+      <Modal open={!!removing} onClose={() => setRemoving(null)} icon="x" tone="danger" title="Remover o acesso?" sub={removing?.name ?? removing?.email ?? ""}
+        footer={<><Button variant="secondary" onClick={() => setRemoving(null)}>Cancelar</Button><Button variant="danger" onClick={async () => { if (!removing) return; await removeMember(info.slug, info.id, removing.user_id); toast.success("Acesso removido"); setRemoving(null); refresh(); }}>Remover acesso</Button></>}>
+        <p className="e-small" style={{ margin: 0 }}>A pessoa deixa de ver {info.name}. Comentários e decisões que ela já registrou continuam no histórico.</p>
+      </Modal>
     </div>
   );
 }
 
-/** Confere se a logo (especialmente com fundo transparente) permanece
- * legível sobre diferentes fundos — claro, escuro e a cor da própria marca. */
-function LogoBackgroundPreview({ src }: { src: string }) {
-  const [bg, setBg] = useState<"claro" | "escuro" | "marca">("claro");
-  const bgStyle = bg === "claro" ? "#ffffff" : bg === "escuro" ? "#1a1a1a" : "var(--primary)";
+function InviteDrawer({ open, info, onClose, onDone }: { open: boolean; info: BrandInfo; onClose: () => void; onDone: () => void }) {
+  const [f, setF] = useState({ name: "", email: "", role: "client" as "client" | "viewer", isAdmin: false, rights: DEFAULT_RIGHTS });
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { if (open) { setF({ name: "", email: "", role: "client", isAdmin: false, rights: DEFAULT_RIGHTS }); setErr(null); } }, [open]);
   return (
-    <div className="mt-2 flex items-center gap-2">
-      <div className="grid h-12 w-16 shrink-0 place-items-center rounded-lg border border-border p-1.5" style={{ backgroundColor: bgStyle }}>
-        <img src={src} alt="" className="max-h-full max-w-full object-contain" />
+    <Drawer open={open} onClose={onClose} eyebrow={info.name} title="Convidar pessoa do cliente"
+      footer={<><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button icon="send" loading={busy} onClick={async () => {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) { setErr("Informe um e-mail válido."); return; }
+        setBusy(true);
+        try { const r = await inviteClientUser(info.slug, info.id, { name: f.name, email: f.email, role: f.role, permissions: f.role === "viewer" ? f.rights.filter((x) => x.endsWith(".visualizar")) : f.rights, isAdmin: f.isAdmin }); if (r.linked) toast.success("Acesso liberado", { description: "A pessoa já tinha conta no Echo." }); else if (r.sent) toast.success("Convite enviado", { description: f.email }); else toast.warning("Convite registrado, mas o e-mail não saiu", { description: r.warning }); onDone(); onClose(); }
+        catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível convidar."); } finally { setBusy(false); }
+      }}>Enviar convite</Button></>}>
+      <div className="grid-2" style={{ gap: 12 }}>
+        <Field label="Nome" optional autoFocus value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+        <Field label="E-mail" type="email" value={f.email} error={err ?? undefined} onChange={(e) => { setF({ ...f, email: e.target.value }); setErr(null); }} />
       </div>
-      <div className="flex gap-1">
-        {(["claro", "escuro", "marca"] as const).map((k) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => setBg(k)}
-            className={cn(
-              "rounded-full border px-2 py-1 text-[10px] transition-colors",
-              bg === k ? "border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {k}
-          </button>
-        ))}
-      </div>
+      <div className="e-field"><span className="e-field-label">Perfil</span><Segmented value={f.role} onChange={(v) => setF({ ...f, role: v })} label="Perfil" items={[{ value: "client", label: "Cliente" }, { value: "viewer", label: "Só visualiza" }]} /></div>
+      {f.role === "viewer" && <Alert kind="info" title="Só visualiza">Comentar, decidir e sugerir ficam desligados para este perfil.</Alert>}
+      <Switch checked={f.isAdmin} onChange={(v) => setF({ ...f, isAdmin: v })} label={<span><b>Administrador do cliente</b><br /><span className="e-caption">Muda capa, logo e cores do espaço e vê todos os módulos contratados.</span></span>} />
+      <div className="e-stack" style={{ gap: 8 }}><span className="e-label">O que a pessoa pode fazer</span><RightsEditor value={f.rights} onChange={(rights) => setF({ ...f, rights })} /></div>
+    </Drawer>
+  );
+}
+
+function MemberDrawer({ member, info, onClose, onDone }: { member: Member | null; info: BrandInfo; onClose: () => void; onDone: () => void }) {
+  const [rights, setRights] = useState<string[]>([]);
+  const [admin, setAdmin] = useState(false);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { if (member) { setRights(member.permissions); setAdmin(member.is_admin); } }, [member?.user_id]);
+  return (
+    <Drawer open={!!member} onClose={onClose} eyebrow="Acesso" title={member?.name ?? member?.email ?? ""}
+      footer={<><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button icon="check" loading={busy} onClick={async () => { if (!member) return; setBusy(true); try { await setMemberAccess(info.slug, info.id, member.user_id, { permissions: rights, is_admin: admin }); toast.success("Acesso atualizado"); onDone(); onClose(); } catch { toast.error("Não foi possível salvar."); } finally { setBusy(false); } }}>Salvar</Button></>}>
+      <Switch checked={admin} onChange={setAdmin} label={<span><b>Administrador do cliente</b><br /><span className="e-caption">Muda capa, logo e cores do espaço.</span></span>} />
+      <RightsEditor value={rights} onChange={setRights} />
+      <p className="e-caption" style={{ margin: 0 }}>Uma permissão removida some da interface da pessoa e o banco passa a negar a ação.</p>
+    </Drawer>
+  );
+}
+
+// ----- Histórico ---------------------------------------------------------------------
+
+function HistoryTab({ info }: { info: BrandInfo }) {
+  const q = useQuery({ queryKey: ["brand-access", info.slug], queryFn: () => loadAccess(info.slug, info.id, true) });
+  const [filter, setFilter] = useState("");
+  if (q.isLoading) return <Skeleton h={300} r={24} />;
+  const logs = (q.data?.logs ?? []).filter((l) => !filter || l.event === filter);
+  const events = [...new Set((q.data?.logs ?? []).map((l) => l.event))];
+  return (
+    <Section title="Histórico de acessos" desc="Entradas e ações registradas no ambiente deste cliente." aside={events.length > 1 ? <div style={{ width: 200 }}><Select value={filter} onChange={setFilter} options={[{ value: "", label: "Todos os eventos" }, ...events.map((e) => ({ value: e, label: e[0].toUpperCase() + e.slice(1) }))]} /></div> : undefined}>
+      {logs.length === 0 ? <EmptyState compact icon="history" title="Nenhum acesso registrado" /> : (
+        <ol className="hub-activity">
+          {logs.map((l) => (
+            <li key={l.id}>
+              <span className="node" style={{ ["--c" as string]: l.event === "acesso" ? "var(--env-360)" : "var(--env-like)" }}><Icon name={l.event === "acesso" ? "user" : "heart"} size="sm" /></span>
+              <div><b>{l.user_email ?? "Pessoa"}</b> <span>{l.event}{l.context ? ` · ${l.context}` : ""}</span><div className="e-caption tnum">{new Date(l.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</div></div>
+            </li>
+          ))}
+        </ol>
+      )}
+    </Section>
+  );
+}
+
+// ----- Integrações e preferências -------------------------------------------------
+
+function IntegrationsTab({ info }: { info: BrandInfo }) {
+  const q = useQuery({ queryKey: ["integrations"], queryFn: loadIntegrations });
+  const conn = q.data?.connections.find((c) => c.slug === info.slug);
+  const soon = ["Meta (Instagram e Facebook)", "Google Drive", "Calendário", "WhatsApp", "E-mail", "Webhooks"];
+  return (
+    <div className="stack-lg">
+      <Section title="Workspace externo" desc="Criações e solicitações deste cliente também são entregues ao Workspace anterior." aside={<Link to="/agencia/configuracoes" search={{ tab: "integracoes" } as never} className="e-btn ghost sm">Configurar</Link>}>
+        {q.isLoading ? <Skeleton h={48} r={14} /> : <div className="conn-row"><span className={`conn-dot${conn?.connected ? " on" : ""}`} /><span className="e-grow"><b>{conn?.connected ? "Conectado" : "Não conectado"}</b><span className="e-caption" style={{ display: "block" }}>{conn?.url ?? "Sem webhook configurado"}</span></span>{conn?.clientId && <Badge tone="glass">{conn.clientId}</Badge>}</div>}
+      </Section>
+      <Section title="Próximas integrações" desc="Serão configuradas por cliente quando chegarem.">
+        <div className="e-row wrap" style={{ gap: 6 }}>{soon.map((s) => <span key={s} className="member-tag">{s}</span>)}</div>
+      </Section>
     </div>
   );
 }
 
-function BrandColorPalette({ brandId, canEdit }: { brandId: string; canEdit: boolean }) {
-  const [colors, setColors] = useState<BrandIdentityColor[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  async function refresh() {
-    setColors(await listMasterColors(brandId));
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    refresh().catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandId]);
-
-  if (loading) return <p className="text-xs text-muted-foreground">Carregando paleta…</p>;
-  return <ColorPaletteEditor brandId={brandId} channelId={null} colors={colors} canEdit={canEdit} onChanged={refresh} />;
+function PreferencesTab() {
+  const [a, set] = useAppearance();
+  const [email, setEmail] = useState("");
+  const navigate = useNavigate();
+  useEffect(() => { if (!isDemoMode()) supabase.auth.getSession().then(({ data }) => setEmail(data.session?.user.email ?? "")).catch(() => undefined); else setEmail("helena@reach.com.br"); }, []);
+  return (
+    <div className="grid-2" style={{ gap: 16, alignItems: "start" }}>
+      <Section title="Sua aparência" desc="Vale para você em todo o Echo, em qualquer dispositivo.">
+        <Segmented<Base> label="Base" value={a.base} onChange={(v) => set({ base: v })} items={[{ value: "light", label: "Clara", icon: "sun" }, { value: "dark", label: "Escura", icon: "moon" }, { value: "system", label: "Automática" }]} />
+        <div className="path-pick" role="radiogroup" aria-label="Caminho de cor">
+          {(Object.keys(PATHS) as PathKey[]).map((k) => (
+            <button key={k} type="button" role="radio" aria-checked={a.path === k} className="path-opt" onClick={() => set({ path: k })}>
+              <i style={{ background: `linear-gradient(135deg, ${PATHS[k].p1}, ${PATHS[k].p2} 60%, ${PATHS[k].mix})` }} /><b>{PATHS[k].name}</b>
+            </button>
+          ))}
+        </div>
+      </Section>
+      <Section title="Sua conta">
+        <div className="conn-row"><Icon name="user" /><span className="e-grow">{email || "—"}</span></div>
+        <div className="e-row" style={{ gap: 8 }}>
+          <Link to="/meu-acesso" className="e-btn secondary sm">Meu acesso</Link>
+          <Button size="sm" variant="ghost" icon="logout" onClick={async () => { if (!isDemoMode()) await supabase.auth.signOut(); navigate({ to: "/auth" }); }}>Sair</Button>
+        </div>
+      </Section>
+    </div>
+  );
 }
+
