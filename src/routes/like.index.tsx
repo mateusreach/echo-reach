@@ -34,7 +34,7 @@ function LikeHome() {
   const waiting = all.filter((i) => ["aguardando", "em_revisao", "nova_versao"].includes(i.status));
   const drafts = all.filter((i) => i.status === "rascunho");
   return (
-    <EchoLayout env="like" wide demoData eyebrow="Like" title="Aprovações">
+    <EchoLayout env="like" wide demoData eyebrow="Like" title="Aprovações" titleAside={isTeam ? <Link to={"/like/painel" as never} className="e-btn primary sm"><Icon name="kanban" size="sm" /> Painel da agência</Link> : undefined}>
       <div className="stack-lg">
         <div className="stat-row four">
           <div className="stat-tile e-glass"><span className="e-kpi tnum">{waiting.length}</span><span className="stat-lbl">com o cliente</span></div>

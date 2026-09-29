@@ -20,7 +20,7 @@ export function EchoSubnav({ items, secondary, label }: { items: SubnavItem[]; s
   const resolve = (it: SubnavItem) => Object.entries(it.params ?? {}).reduce((p, [k, v]) => p.replace(`$${k}`, v), it.to);
   const isOn = (it: SubnavItem) => { const href = resolve(it); return it.exact ? pathname === href || pathname === `${href}/` : pathname === href || pathname.startsWith(`${href}/`); };
   const link = (it: SubnavItem, cls: string) => (
-    <Link key={it.to + it.label} to={it.to as never} params={it.params as never} search={it.search as never} className={`${cls}${isOn(it) ? " on" : ""}`} aria-current={isOn(it) ? "page" : undefined}>
+    <Link key={it.to + it.label} to={it.to as never} params={it.params as never} search={it.search as never} activeOptions={{ exact: !!it.exact }} className={`${cls}${isOn(it) ? " on" : ""}`} aria-current={isOn(it) ? "page" : undefined}>
       {it.icon && <Icon name={it.icon} size="sm" />}{it.label}
     </Link>
   );
