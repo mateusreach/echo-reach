@@ -361,6 +361,7 @@ export function likeIndicators(decisions: LikeDecision[], monthPrefix: string) {
 
 export type AgendaItem = { id: string; kind: "compromisso" | "reuniao" | "gravacao" | "publicacao" | "prazo" | "campanha" | "entrega"; title: string; date: string; start?: string | null; end?: string | null; status: string; responsible?: string | null; deliveryTitle?: string | null; deliveryDate?: string | null; auto?: boolean };
 const eventStore = new Map<string, AgendaItem[]>();
+const seededAgenda = new Set<string>();
 
 export async function loadAgenda(slug: string): Promise<{ space: Space; items: AgendaItem[] } | null> {
   const space = await loadSpace(slug);
@@ -368,10 +369,10 @@ export async function loadAgenda(slug: string): Promise<{ space: Space; items: A
   let events: AgendaItem[] = [];
   let pubs: AgendaItem[] = [];
   if (isDemoMode()) {
-    if (!eventStore.has(slug)) eventStore.set(slug, [
+    if (!seededAgenda.has(slug)) { seededAgenda.add(slug); eventStore.set(slug, [...(eventStore.get(slug) ?? []),
       { id: "ev1", kind: "gravacao", title: "Gravação do Reels no ateliê", date: iso(2), start: "14:00", end: "16:00", status: "confirmado", responsible: "Theo Almeida", deliveryTitle: "Reels de lançamento", deliveryDate: iso(6) },
       { id: "ev2", kind: "compromisso", title: "Visita à loja", date: iso(5), start: "10:00", end: "11:00", status: "agendado", responsible: "Júlia Castro" },
-    ]);
+    ]); }
     events = structuredClone(eventStore.get(slug)!);
     pubs = [{ id: "pub1", kind: "publicacao", title: "Teaser da coleção", date: iso(1), status: "agendado", auto: true }, { id: "pub2", kind: "publicacao", title: "Guia: como guardar seu perfume", date: iso(4), status: "agendado", auto: true }];
   } else {
@@ -429,3 +430,16 @@ export async function saveKpi(slug: string, brandId: string, id: string | null, 
   const { error } = id ? await db.from("kpis").update(row).eq("id", id) : await db.from("kpis").insert(row);
   if (error) throw error;
 }
+
+// ----- Acesso do Like ao exemplo em memória ------------------------------------------------
+export const demoSpaceStore = (slug: string) => demo(slug);
+export function demoUpsertEvent(slug: string, ev: AgendaItem & { likeItemId: string }) {
+  const list = eventStore.get(slug) ?? [];
+  const i = list.findIndex((x) => (x as AgendaItem & { likeItemId?: string }).likeItemId === ev.likeItemId);
+  if (i >= 0) list[i] = { ...list[i], ...ev }; else list.push(ev);
+  eventStore.set(slug, list);
+}
+export function demoRemoveEvent(slug: string, likeItemId: string) {
+  eventStore.set(slug, (eventStore.get(slug) ?? []).filter((x) => (x as AgendaItem & { likeItemId?: string }).likeItemId !== likeItemId));
+}
+export function demoEventsFor(slug: string, likeItemId: string) { return (eventStore.get(slug) ?? []).filter((x) => (x as AgendaItem & { likeItemId?: string }).likeItemId === likeItemId); }

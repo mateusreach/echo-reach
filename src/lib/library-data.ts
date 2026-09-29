@@ -117,6 +117,8 @@ function demo(slug: string): LibraryData | null {
 }
 
 const clone = <T,>(x: T): T => structuredClone(x);
+/** Armazenamento do exemplo (usado pelo Like para atualizar conteúdos). */
+export const demoLibraryStore = (slug: string) => demo(slug);
 
 // ----- leitura ----------------------------------------------------------------
 

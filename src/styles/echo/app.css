@@ -969,3 +969,16 @@ button.member-card:focus-visible { outline: none; box-shadow: var(--e-ring); }
 .like-kpis span { font-size: 11.5px; color: var(--ink-3); }
 .like-history summary { cursor: pointer; margin: 4px 0; font-size: 13px; }
 .like-history .ops-row { margin-top: 4px; }
+
+/* ---------- Like · diagnóstico ---------- */
+.diag-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.diag-grid > div { display: flex; flex-wrap: wrap; gap: 4px; align-content: start; }
+.diag-grid .e-label { flex-basis: 100%; margin-bottom: 2px; }
+.diag-grid code { font-size: 11.5px; padding: 3px 8px; border-radius: 8px; background: var(--hover); }
+.diag-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.diag-steps li { display: grid; grid-template-columns: auto 220px 1fr; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 12px; background: var(--hover); font-size: 13px; animation: bulk-in .25s var(--ease-out); }
+.diag-steps li.ok svg { color: var(--ok-fill); }
+.diag-steps li.fail { background: color-mix(in oklab, var(--danger-fill) 12%, transparent); }
+.diag-steps li.fail svg { color: var(--danger); }
+.diag-error { margin: 0; padding: 10px 12px; border-radius: 12px; color: var(--danger); background: color-mix(in oklab, var(--danger-fill) 10%, transparent); font-size: 13px; }
+@media (max-width: 700px) { .diag-steps li { grid-template-columns: auto 1fr; } .diag-steps li .e-caption { grid-column: 2; } }

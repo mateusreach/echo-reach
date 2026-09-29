@@ -40,6 +40,7 @@ import { Route as ClientesIndexRouteImport } from './routes/clientes.index'
 import { Route as ClientesBrandSlugRouteImport } from './routes/clientes.$brandSlug'
 import { Route as E360IndexRouteImport } from './routes/e360.index'
 import { Route as E360BrandSlugRouteImport } from './routes/e360.$brandSlug'
+import { Route as LikeDiagnosticoRouteImport } from './routes/like.diagnostico'
 import { Route as WorkspaceIndexRouteImport } from './routes/workspace.index'
 import { Route as WorkspaceAgendaRouteImport } from './routes/workspace.agenda'
 import { Route as WorkspaceAvaliacoesRouteImport } from './routes/workspace.avaliacoes'
@@ -222,6 +223,11 @@ const E360BrandSlugRoute = E360BrandSlugRouteImport.update({
   path: '/$brandSlug',
   getParentRoute: () => E360Route,
 } as any)
+const LikeDiagnosticoRoute = LikeDiagnosticoRouteImport.update({
+  id: '/like/diagnostico',
+  path: '/like/diagnostico',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceIndexRoute = WorkspaceIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -386,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/agencia/modelos': typeof AgenciaModelosRoute
   '/clientes/$brandSlug': typeof ClientesBrandSlugRoute
   '/e360/$brandSlug': typeof E360BrandSlugRouteWithChildren
+  '/like/diagnostico': typeof LikeDiagnosticoRoute
   '/workspace/agenda': typeof WorkspaceAgendaRoute
   '/workspace/avaliacoes': typeof WorkspaceAvaliacoesRoute
   '/workspace/clientes': typeof WorkspaceClientesRoute
@@ -441,6 +448,7 @@ export interface FileRoutesByTo {
   '/agencia/modelos': typeof AgenciaModelosRoute
   '/clientes/$brandSlug': typeof ClientesBrandSlugRoute
   '/e360/$brandSlug': typeof E360BrandSlugRouteWithChildren
+  '/like/diagnostico': typeof LikeDiagnosticoRoute
   '/workspace/agenda': typeof WorkspaceAgendaRoute
   '/workspace/avaliacoes': typeof WorkspaceAvaliacoesRoute
   '/workspace/clientes': typeof WorkspaceClientesRoute
@@ -501,6 +509,7 @@ export interface FileRoutesById {
   '/agencia/modelos': typeof AgenciaModelosRoute
   '/clientes/$brandSlug': typeof ClientesBrandSlugRoute
   '/e360/$brandSlug': typeof E360BrandSlugRouteWithChildren
+  '/like/diagnostico': typeof LikeDiagnosticoRoute
   '/workspace/agenda': typeof WorkspaceAgendaRoute
   '/workspace/avaliacoes': typeof WorkspaceAvaliacoesRoute
   '/workspace/clientes': typeof WorkspaceClientesRoute
@@ -562,6 +571,7 @@ export interface FileRouteTypes {
     | '/agencia/modelos'
     | '/clientes/$brandSlug'
     | '/e360/$brandSlug'
+    | '/like/diagnostico'
     | '/workspace/agenda'
     | '/workspace/avaliacoes'
     | '/workspace/clientes'
@@ -617,6 +627,7 @@ export interface FileRouteTypes {
     | '/agencia/modelos'
     | '/clientes/$brandSlug'
     | '/e360/$brandSlug'
+    | '/like/diagnostico'
     | '/workspace/agenda'
     | '/workspace/avaliacoes'
     | '/workspace/clientes'
@@ -676,6 +687,7 @@ export interface FileRouteTypes {
     | '/agencia/modelos'
     | '/clientes/$brandSlug'
     | '/e360/$brandSlug'
+    | '/like/diagnostico'
     | '/workspace/agenda'
     | '/workspace/avaliacoes'
     | '/workspace/clientes'
@@ -728,6 +740,7 @@ export interface RootRouteChildren {
   ResultadosRoute: typeof ResultadosRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WorkspaceRoute: typeof WorkspaceRouteWithChildren
+  LikeDiagnosticoRoute: typeof LikeDiagnosticoRoute
   BBrandSlugAgendaRoute: typeof BBrandSlugAgendaRoute
   BBrandSlugBibliotecaRoute: typeof BBrandSlugBibliotecaRoute
   BBrandSlugConfiguracoesRoute: typeof BBrandSlugConfiguracoesRoute
@@ -956,6 +969,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/e360/$brandSlug'
       preLoaderRoute: typeof E360BrandSlugRouteImport
       parentRoute: typeof E360Route
+    }
+    '/like/diagnostico': {
+      id: '/like/diagnostico'
+      path: '/like/diagnostico'
+      fullPath: '/like/diagnostico'
+      preLoaderRoute: typeof LikeDiagnosticoRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/workspace/': {
       id: '/workspace/'
@@ -1268,6 +1288,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResultadosRoute: ResultadosRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WorkspaceRoute: WorkspaceRouteWithChildren,
+  LikeDiagnosticoRoute: LikeDiagnosticoRoute,
   BBrandSlugAgendaRoute: BBrandSlugAgendaRoute,
   BBrandSlugBibliotecaRoute: BBrandSlugBibliotecaRoute,
   BBrandSlugConfiguracoesRoute: BBrandSlugConfiguracoesRoute,
