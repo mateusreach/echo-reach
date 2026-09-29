@@ -69,7 +69,7 @@ function ClientHub() {
   const envBlocks = [
     { id: "brand", name: "Brand", on: c.modules.biblioteca || c.modules.plano, to: `/b/${c.slug}/biblioteca`, metrics: [{ n: counts.ideias, label: "ideias" }, { n: counts.conteudos, label: "conteúdos" }], note: c.modules.plano ? "Plano estratégico ativo" : "Biblioteca de conteúdo" },
     { id: "workspace", name: "Workspace", on: c.modules.workspace, to: `/workspace/cliente/${c.slug}`, metrics: [{ n: c.openTasks, label: "tarefas abertas" }, { n: c.lateTasks, label: "atrasadas", tone: c.lateTasks ? "var(--danger)" : undefined }, { n: counts.entregas, label: "entregas em aberto" }], note: c.nextDue ? `Próximo prazo ${relDay(c.nextDue).toLowerCase()}` : "Sem prazos abertos" },
-    { id: "like", name: "Like", on: c.modules.like, to: null, metrics: [{ n: c.awaitingClient, label: "aguardando decisão" }], note: "Em construção: a aprovação passa para o cliente" },
+    { id: "like", name: "Like", on: c.modules.like, to: `/like/${c.slug}/enviar`, metrics: [{ n: c.awaitingClient, label: "aguardando decisão" }], note: "Enviar materiais e acompanhar decisões" },
     { id: "e360", name: "Espaço 360", on: c.modules.espaco360, to: `/e360/${c.slug}`, metrics: [{ n: counts.campanhas, label: "campanhas" }, { n: counts.solicitacoes, label: "solicitações abertas" }], note: "Plano, campanhas e solicitações" },
   ];
 

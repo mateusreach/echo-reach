@@ -247,7 +247,7 @@ function TeamNow({ data }: { data: HomeData }) {
         <List items={t.myTasks} empty={<EmptyState kind="ok" compact title="Nada vencendo hoje" text="Suas próximas tarefas estão na Minha agenda." />} />
       </Panel>
       <Panel title="Aguardando o cliente" icon="heart" count={t.waitingClient.length} tone="var(--env-like)"
-        foot={<span className="e-caption"><Icon name="info" size="sm" /> Em breve o cliente decide pelo Like.</span>}>
+        foot={<Link to={"/like" as never} className="e-link">Abrir o Like <Icon name="arrowRight" size="sm" /></Link>}>
         <List items={t.waitingClient} empty={<EmptyState kind="ok" compact title="Nenhum material parado" text="Nada em avaliação externa há mais de 2 dias." />} />
       </Panel>
       <Panel title="Cobertura em risco" icon="feed" count={t.coverage.length} tone="var(--danger)"

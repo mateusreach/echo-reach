@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { isViewingAsClient, viewingAsClientBrandName } from "@/lib/view-as";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { EchoLayout } from "@/components/echo/layout";
@@ -17,8 +18,13 @@ export const LIKE_TONE: Record<ItemStatus, Tone> = { rascunho: "draft", aguardan
 
 function LikeHome() {
   const { isTeam } = useAccess();
+  const navigate = useNavigate();
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
+  // Cliente (ou "ver como cliente") vai direto para a própria caixa de aprovação.
+  const asClient = ready && (!isTeam || isViewingAsClient());
+  const clientSpaces = useQuery({ queryKey: ["spaces", "client-box"], queryFn: listSpaces, enabled: asClient });
+  useEffect(() => { const list = clientSpaces.data?.spaces ?? []; const first = list.find((s) => s.name === viewingAsClientBrandName()) ?? list[0]; if (asClient && first) navigate({ to: `/like/${first.slug}` as never, replace: true }); }, [asClient, clientSpaces.data]);
   const rounds = useQuery({ queryKey: ["like-rounds", "all"], queryFn: () => listRounds(), enabled: ready });
   const items = useQuery({ queryKey: ["like-items", "all"], queryFn: () => listItems(), enabled: ready });
   const spaces = useQuery({ queryKey: ["spaces"], queryFn: listSpaces, enabled: ready && !!isTeam });

@@ -139,7 +139,7 @@ async function loadLive(): Promise<HomeData | "unauthenticated"> {
       envs: [
         { id: "brand", available: true, count: brands.filter((b) => brandModules(b).biblioteca).length, label: "clientes com biblioteca", href: "/agencia/clientes" },
         { id: "workspace", available: true, count: openTasks, label: "tarefas abertas", sub: lateAll ? `${lateAll} atrasadas` : "nenhuma atrasada", href: "/workspace" },
-        { id: "like", available: false, reason: "Em construção", count: external.length, label: "em avaliação externa", sub: "vão para o Like" },
+        { id: "like", available: true, count: external.length, label: "em avaliação externa", sub: "vão para o Like" },
         { id: "e360", available: with360 > 0, reason: "Nenhum cliente com Espaço 360", count: requestsNew, label: "solicitações novas", sub: `${with360} espaços ativos`, href: "/e360" },
       ],
       team: {
@@ -190,7 +190,7 @@ async function loadLive(): Promise<HomeData | "unauthenticated"> {
     isAdmin: false,
     person: { name, firstName: first(name) },
     envs: [
-      { id: "like", available: false, reason: "Em construção", count: 0, label: "materiais para decidir" },
+      { id: "like", available: true, count: 0, label: "materiais para decidir" },
       { id: "e360", available: has360, reason: "Espaço 360 não contratado", count: (reqRes.data ?? []).length, label: "solicitações em andamento", href: `/e360/${brand.slug}` },
       { id: "brand", available: brandModules(brand).biblioteca, reason: "Biblioteca não contratada", count: prog.total, label: "estratégias no plano", href: `/b/${brand.slug}/biblioteca` },
     ],
@@ -230,7 +230,7 @@ function demo(role: "team" | "client"): HomeData {
       envs: [
         { id: "brand", available: true, count: 11, label: "clientes com biblioteca", sub: "38 ideias a construir", href: "/agencia/clientes" },
         { id: "workspace", available: true, count: 47, label: "tarefas abertas", sub: "6 atrasadas", href: "/workspace" },
-        { id: "like", available: false, reason: "Em construção", count: 9, label: "em avaliação externa", sub: "vão para o Like" },
+        { id: "like", available: true, count: 9, label: "em avaliação externa", sub: "vão para o Like" },
         { id: "e360", available: true, count: 4, label: "solicitações novas", sub: "3 espaços ativos", href: "/e360" },
       ],
       team: {
@@ -266,7 +266,7 @@ function demo(role: "team" | "client"): HomeData {
     isAdmin: false,
     person: { name: "Carla Mendes", firstName: "Carla" },
     envs: [
-      { id: "like", available: false, reason: "Em construção", count: 3, label: "materiais para decidir", sub: "o primeiro vence amanhã" },
+      { id: "like", available: true, count: 3, label: "materiais para decidir", sub: "o primeiro vence amanhã" },
       { id: "e360", available: true, count: 2, label: "solicitações em andamento", href: "/e360" },
       { id: "brand", available: true, count: 19, label: "estratégias no plano", sub: "leitura", href: "/agencia/clientes" },
     ],

@@ -10,6 +10,7 @@
 @import "./styles/echo/brand.css";
 @import "./styles/echo/app.css";
 @import "./styles/echo/operations.css";
+@import "./styles/echo/like.css";
 
 @custom-variant dark (&:is(.dark *));
 
