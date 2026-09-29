@@ -96,7 +96,7 @@ export function TaskDrawer({ task, onClose, onChanged }: { task: OpsTask | null;
       {t.likeMaterial && <div className="like-send">
         <Icon name="heart" />
         <span className="e-grow"><b>Material para aprovação</b><span className="e-caption" style={{ display: "block" }}>{canSendLike ? "Passou pela avaliação interna: pode seguir para o cliente." : "Fica disponível depois da avaliação interna."}</span></span>
-        <Tooltip text="O envio abre no Like"><span><Button size="sm" icon="send" disabled>Enviar para aprovação</Button></span></Tooltip>
+        {canSendLike ? <Link to={`/like/${t.brand.slug}/enviar?tarefa=${t.id}` as never} className="e-btn primary sm"><Icon name="send" size="sm" /> Enviar para aprovação</Link> : <Tooltip text="Disponível depois da avaliação interna"><span><Button size="sm" icon="send" disabled>Enviar para aprovação</Button></span></Tooltip>}
       </div>}
       {(reviews.data ?? []).length > 0 && <div className="e-stack" style={{ gap: 6 }}>
         <span className="e-label">Histórico de avaliações</span>

@@ -982,3 +982,74 @@ button.member-card:focus-visible { outline: none; box-shadow: var(--e-ring); }
 .diag-steps li.fail svg { color: var(--danger); }
 .diag-error { margin: 0; padding: 10px 12px; border-radius: 12px; color: var(--danger); background: color-mix(in oklab, var(--danger-fill) 10%, transparent); font-size: 13px; }
 @media (max-width: 700px) { .diag-steps li { grid-template-columns: auto 1fr; } .diag-steps li .e-caption { grid-column: 2; } }
+
+/* ---------- Like · prévia do material ---------- */
+.lk-frame-wrap { display: grid; gap: 8px; justify-items: center; }
+.lk-frame { position: relative; width: 100%; max-height: 72vh; border-radius: 14px; overflow: hidden; background: #0e0d12; box-shadow: 0 18px 40px -24px rgba(20,10,40,.5); display: grid; place-items: center; color: var(--ink-3); }
+.lk-frame img, .lk-frame video, .lk-frame iframe { width: 100%; height: 100%; object-fit: cover; display: block; border: 0; user-select: none; }
+.lk-frame.empty { background: var(--hover); gap: 4px; }
+.lk-watermark { position: absolute; inset: auto 0 44% 0; text-align: center; transform: rotate(-18deg); font-size: clamp(14px, 4vw, 28px); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.28); pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,.2); }
+.lk-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border-radius: 50%; border: 0; display: grid; place-items: center; background: rgba(255,255,255,.85); color: #1d1b26; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.18); transition: opacity var(--dur-1) ease, transform var(--dur-2) var(--ease-out); }
+.lk-nav:disabled { opacity: 0; pointer-events: none; }
+.lk-nav:active { transform: translateY(-50%) scale(.92); }
+.lk-nav.prev { left: 10px; } .lk-nav.next { right: 10px; }
+.lk-dots { display: flex; gap: 5px; }
+.lk-dots button { width: 7px; height: 7px; padding: 0; border: 0; border-radius: 999px; background: var(--line-2); cursor: pointer; transition: width var(--dur-2) var(--ease-out), background var(--dur-2) ease; }
+.lk-dots button[aria-selected="true"] { width: 18px; background: var(--env-like); }
+.lk-client { display: grid; gap: 10px; max-width: 460px; margin: 0 auto; }
+.lk-post-head { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.lk-avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 600; background: var(--grad); }
+.lk-caption { margin: 0; font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; }
+.lk-tags { color: var(--e-info); }
+.lk-cta-pill { justify-self: start; font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: color-mix(in oklab, var(--env-like) 14%, var(--solid)); color: var(--env-like); }
+.lk-script { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.lk-script li { padding: 10px 12px; border-radius: 12px; background: var(--hover); font-size: 13.5px; }
+.lk-script p { margin: 4px 0 0; white-space: pre-wrap; }
+.lk-off { color: var(--ink-2); font-style: italic; }
+.lk-cta { color: var(--env-like); font-weight: 500; }
+.lk-textbody { white-space: pre-wrap; font-size: 14px; line-height: 1.6; padding: 14px; border-radius: 14px; background: var(--hover); }
+
+/* ---------- Like · envio ---------- */
+.send-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr) 320px; gap: 14px; align-items: start; }
+.send-layout.is-done .send-editor { animation: send-out .6s var(--ease-out) forwards; }
+@keyframes send-out { to { transform: translateY(-12px) scale(.98); opacity: .4; } }
+.send-list { display: grid; gap: 8px; position: sticky; top: 90px; }
+.send-item { display: flex; align-items: center; gap: 10px; padding: 8px; border: 0; border-radius: 16px; font: inherit; color: var(--ink); text-align: left; cursor: pointer; font-size: 13px; transition: box-shadow var(--dur-2) ease; }
+.send-item.on { box-shadow: var(--glass-inset), inset 0 0 0 1.5px var(--env-like); }
+.send-item > svg:last-child { color: var(--warn-fill); flex: none; }
+.send-item:has(.send-thumb) > svg[data-icon="checkCircle"] { color: var(--ok-fill); }
+.send-thumb { width: 40px; height: 50px; border-radius: 8px; overflow: hidden; display: grid; place-items: center; background: var(--hover); color: var(--ink-3); flex: none; }
+.send-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.send-editor { display: grid; gap: 14px; padding: 18px; border-radius: var(--r-xl); min-width: 0; }
+.send-side { display: grid; gap: 14px; position: sticky; top: 90px; }
+.send-coverage { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 12px; font-size: 13px; background: color-mix(in oklab, var(--ok-fill) 12%, transparent); color: var(--ink); }
+.send-coverage svg { color: var(--ok-fill); }
+.send-actions { gap: 8px; }
+.send-missing { padding: 10px 12px; border-radius: 12px; font-size: 12.5px; background: color-mix(in oklab, var(--warn-fill) 14%, transparent); }
+.send-missing ul { margin: 4px 0 0; padding-left: 18px; }
+.send-cancel { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+.upload-area { border-radius: 16px; padding: 10px; background: var(--hover); box-shadow: inset 0 0 0 1.5px transparent; transition: box-shadow var(--dur-2) ease, background var(--dur-2) ease; }
+.upload-area.over { background: color-mix(in oklab, var(--env-like) 10%, var(--hover)); box-shadow: inset 0 0 0 1.5px var(--env-like); }
+.upload-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.upload-tile { position: relative; border-radius: 12px; overflow: hidden; background: var(--solid); display: grid; place-items: center; color: var(--ink-3); cursor: grab; box-shadow: inset 0 0 0 1px var(--line); }
+.upload-tile img { width: 100%; height: 100%; object-fit: cover; }
+.upload-tile.erro { box-shadow: inset 0 0 0 1.5px var(--danger-fill); cursor: default; }
+.upload-spin, .upload-err { display: grid; justify-items: center; gap: 4px; padding: 8px; text-align: center; font-size: 11px; }
+.upload-spin svg { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.upload-err svg { color: var(--danger); }
+.upload-n { position: absolute; left: 6px; top: 6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; background: rgba(0,0,0,.45); backdrop-filter: blur(6px); }
+.upload-x { position: absolute; right: 6px; top: 6px; width: 24px; height: 24px; border-radius: 50%; border: 0; display: grid; place-items: center; background: rgba(255,255,255,.9); color: #1d1b26; cursor: pointer; opacity: 0; transition: opacity var(--dur-1) ease; }
+.upload-tile:hover .upload-x, .upload-tile:focus-within .upload-x { opacity: 1; }
+@media (hover: none) { .upload-x { opacity: 1; } }
+.upload-dim { position: absolute; left: 6px; bottom: 6px; font-size: 10px; padding: 2px 6px; border-radius: 6px; color: #fff; background: rgba(0,0,0,.45); }
+.upload-cover { position: absolute; right: 6px; bottom: 6px; border: 0; font: inherit; font-size: 10.5px; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,.9); cursor: pointer; }
+.upload-add { display: grid; place-items: center; align-content: center; gap: 4px; border: 1.5px dashed var(--line-2); border-radius: 12px; background: none; font: inherit; color: var(--ink-2); cursor: pointer; padding: 8px; text-align: center; transition: background var(--dur-1) ease; }
+.upload-add:hover { background: var(--solid); }
+.upload-add b { font-size: 12.5px; }
+.upload-add small { font-size: 11px; color: var(--ink-3); }
+.script-edit { display: grid; gap: 6px; padding: 10px; border-radius: 12px; background: var(--hover); }
+.round-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: 14px; background: var(--hover); font-size: 13.5px; }
+.stat-row.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .send-layout { grid-template-columns: 1fr; } .send-list, .send-side { position: static; } .send-list { grid-auto-flow: column; grid-auto-columns: minmax(200px, 1fr); overflow-x: auto; } }
+@media (max-width: 760px) { .stat-row.four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -161,6 +161,7 @@ function Orders({ d, onOpenTask, onChanged }: { d: ClientOps; onOpenTask: (id: s
                 )}
                 <div className="e-row wrap" style={{ gap: 6 }}>
                   <Button size="sm" variant="secondary" icon="layers" onClick={() => setApplying(o)}>Aplicar modelo</Button>
+                  {o.tasks.some((t) => t.likeMaterial && t.status !== "Concluído") && <Link to={`/like/${d.brand.slug}/enviar?entrega=${o.id}` as never} className="e-btn secondary sm"><Icon name="heart" size="sm" /> Enviar entrega ao Like</Link>}
                   <AddTaskInline onAdd={async (title) => { await addTask(d, o.id, title); onChanged(); }} />
                 </div>
               </div>

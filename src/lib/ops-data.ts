@@ -289,7 +289,9 @@ async function writeReview(task: OpsTask, r: Omit<TaskReview, "id" | "taskId" | 
  */
 export async function submitInternalReview(task: OpsTask, input: { decision: "aprovado" | "ajuste"; phrases: string[]; comment: string; checklist: { item: string; ok: boolean }[] }): Promise<WorkStatus> {
   await writeReview(task, { scope: "interna", decision: input.decision, phrases: input.phrases, comment: input.comment.trim() || null, checklist: input.checklist });
-  const next: WorkStatus = input.decision === "ajuste" ? "Ajuste" : task.likeMaterial ? EXTERNAL : DONE;
+  // Material do Like aprovado internamente segue para o envio ao cliente (que o leva a Avaliação externa).
+  if (input.decision === "aprovado" && task.likeMaterial) return EXTERNAL;
+  const next: WorkStatus = input.decision === "ajuste" ? "Ajuste" : DONE;
   await setTaskStatus(task.id, next, { from: task.status });
   if (input.decision === "ajuste") await patchTask(task.id, { note: [task.note, `Ajuste pedido: ${[...input.phrases, input.comment.trim()].filter(Boolean).join(" · ")}`].filter(Boolean).join("\n") });
   return next;

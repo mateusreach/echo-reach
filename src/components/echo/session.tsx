@@ -28,15 +28,15 @@ export type EchoSession = {
   appearance?: { base: string; path: string; mix: string; angle: number; aura: number } | null;
 };
 
-const LIKE_SOON = { available: false, reason: "Em construção" };
+const LIKE_ON = { available: true };
 
 async function loadSession(): Promise<EchoSession> {
   if (isDemoMode()) {
     let role: "team" | "client" = "team";
     try { if (sessionStorage.getItem("echo.demo-role") === "client") role = "client"; } catch { /* ok */ }
     return role === "team"
-      ? { mode: "demo", signedIn: true, name: "Helena Duarte", role, isAdmin: true, permissions: [], envs: { brand: { available: true }, workspace: { available: true }, like: LIKE_SOON, e360: { available: true } } }
-      : { mode: "demo", signedIn: true, name: "Carla Mendes", role, isAdmin: false, permissions: [], envs: { like: LIKE_SOON, e360: { available: true }, brand: { available: true } } };
+      ? { mode: "demo", signedIn: true, name: "Helena Duarte", role, isAdmin: true, permissions: [], envs: { brand: { available: true }, workspace: { available: true }, like: LIKE_ON, e360: { available: true } } }
+      : { mode: "demo", signedIn: true, name: "Carla Mendes", role, isAdmin: false, permissions: [], envs: { like: LIKE_ON, e360: { available: true }, brand: { available: true } } };
   }
   const { data } = await supabase.auth.getSession();
   if (!data.session) return { mode: "live", signedIn: false, name: "", role: "client", isAdmin: false, permissions: [], envs: {} };
@@ -50,14 +50,14 @@ async function loadSession(): Promise<EchoSession> {
     const blocked = access.permissions.includes(WORKSPACE_DENY_PERMISSION);
     return {
       mode: "live", signedIn: true, name, role: "team", isAdmin: access.isAdmin, permissions: access.permissions, userId: access.userId ?? undefined, appearance,
-      envs: { brand: { available: true }, workspace: blocked ? { available: false, reason: "Acesso desativado" } : { available: true }, like: LIKE_SOON, e360: { available: true } },
+      envs: { brand: { available: true }, workspace: blocked ? { available: false, reason: "Acesso desativado" } : { available: true }, like: LIKE_ON, e360: { available: true } },
     };
   }
   const brands = await myBrands().catch(() => []);
   return {
     mode: "live", signedIn: true, name, role: "client", isAdmin: false, permissions: [], userId: access.userId ?? undefined, appearance,
     envs: {
-      like: LIKE_SOON,
+      like: LIKE_ON,
       e360: brands.some((b) => brandModules(b).espaco360) ? { available: true } : { available: false, reason: "Não contratado" },
       brand: brands.some((b) => brandModules(b).biblioteca) ? { available: true } : { available: false, reason: "Não contratado" },
     },

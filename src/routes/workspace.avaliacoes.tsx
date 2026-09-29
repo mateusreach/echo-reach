@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -66,6 +66,7 @@ function Reviews() {
 }
 
 function ReviewCard({ task: t, onOpen, onDone }: { task: OpsTask; onOpen: () => void; onDone: () => void }) {
+  const navigate = useNavigate();
   const identity = useQuery({ queryKey: ["identity", t.brand.slug], queryFn: () => loadIdentity(t.brand.slug, t.brand.id), staleTime: 60_000 });
   const format = t.likeMaterial ? FORMAT_OF[t.likeMaterial] : null;
   const models = (identity.data?.channels ?? []).filter((c) => c.active).flatMap((c) => c.models.filter((m) => m.status !== "inativo" && (!format || m.format === format)));
@@ -82,7 +83,8 @@ function ReviewCard({ task: t, onOpen, onDone }: { task: OpsTask; onOpen: () => 
     setBusy(decision);
     try {
       const next = await submitInternalReview(t, { decision, phrases, comment, checklist: items.map((i) => ({ item: i.item, ok: checked.includes(i.item) })) });
-      toast.success(decision === "ajuste" ? "Ajuste pedido" : next === "Avaliação externa" ? "Aprovado e enviado ao cliente no Like" : "Aprovado e concluído", { description: t.title });
+      if (decision === "aprovado" && t.likeMaterial) { toast.success("Aprovado internamente", { description: "Agora é só montar o envio para o cliente." }); navigate({ to: `/like/${t.brand.slug}/enviar?tarefa=${t.id}` as never }); return; }
+      toast.success(decision === "ajuste" ? "Ajuste pedido" : "Aprovado e concluído", { description: t.title });
       onDone();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível registrar."); } finally { setBusy(null); }
   };
@@ -111,7 +113,7 @@ function ReviewCard({ task: t, onOpen, onDone }: { task: OpsTask; onOpen: () => 
           <TextArea label="Comentário" optional rows={2} value={comment} onChange={(e) => setComment(e.target.value)} />
           <div className="e-row" style={{ gap: 8, justifyContent: "flex-end" }}>
             <Button variant="secondary" icon="edit" loading={busy === "ajuste"} disabled={!!busy} onClick={() => decide("ajuste")}>Pedir ajuste</Button>
-            <Button icon={t.likeMaterial ? "send" : "check"} loading={busy === "aprovado"} disabled={!!busy} onClick={() => decide("aprovado")}>{t.likeMaterial ? "Aprovar e enviar ao cliente" : "Aprovar e concluir"}</Button>
+            <Button icon={t.likeMaterial ? "send" : "check"} loading={busy === "aprovado"} disabled={!!busy} onClick={() => decide("aprovado")}>{t.likeMaterial ? "Aprovar e montar envio" : "Aprovar e concluir"}</Button>
           </div>
         </div>
       </div>

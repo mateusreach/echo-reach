@@ -27,7 +27,7 @@ export type EnvDef = { id: "brand" | "workspace" | "like" | "e360"; name: string
 export const ENVS: EnvDef[] = [
   { id: "brand", name: "Brand", tagline: "Plano, identidade e biblioteca da marca", icon: "layers", color: "var(--env-brand)", href: "/agencia/clientes" },
   { id: "workspace", name: "Workspace", tagline: "Entregas, tarefas, prazos e cobertura", icon: "grid", color: "var(--env-workspace)", href: "/workspace" },
-  { id: "like", name: "Like", tagline: "Aprovação de materiais com o cliente", icon: "heart", color: "var(--env-like)" },
+  { id: "like", name: "Like", tagline: "Aprovação de materiais com o cliente", icon: "heart", color: "var(--env-like)", href: "/like" },
   { id: "e360", name: "Espaço 360", tagline: "Plano, campanhas e solicitações do cliente", icon: "orbit", color: "var(--env-360)", href: "/e360" },
 ];
 

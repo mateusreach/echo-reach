@@ -596,3 +596,49 @@ function mapItemFull(i: any): ItemFull {
     views: [],
   };
 }
+
+// ----- Arquivos (envio) --------------------------------------------------------------------
+
+/** Lê largura, altura e duração no navegador e gera a capa do vídeo (quadro em 1s). */
+export async function inspectFile(file: File): Promise<Omit<Asset, "url">> {
+  const type: Asset["type"] = file.type.startsWith("video/") ? "video" : file.type === "application/pdf" ? "pdf" : "image";
+  const url = URL.createObjectURL(file);
+  try {
+    if (type === "image") {
+      const img = await new Promise<HTMLImageElement>((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error("Imagem inválida")); i.src = url; });
+      return { type, width: img.naturalWidth, height: img.naturalHeight, name: file.name };
+    }
+    if (type === "video") {
+      const v = document.createElement("video");
+      v.muted = true; v.preload = "metadata"; v.src = url;
+      await new Promise((ok, bad) => { v.onloadedmetadata = ok; v.onerror = () => bad(new Error("Vídeo inválido")); });
+      v.currentTime = Math.min(1, (v.duration || 1) / 2);
+      await new Promise((ok) => { v.onseeked = ok; setTimeout(ok, 1500); });
+      const c = document.createElement("canvas");
+      c.width = v.videoWidth; c.height = v.videoHeight;
+      c.getContext("2d")?.drawImage(v, 0, 0);
+      return { type, width: v.videoWidth, height: v.videoHeight, duration: Math.round(v.duration), poster: c.toDataURL("image/jpeg", 0.7), name: file.name };
+    }
+    return { type, name: file.name };
+  } finally { if (type !== "video") setTimeout(() => URL.revokeObjectURL(url), 5000); }
+}
+
+/** Envia o arquivo para o bucket privado (ou mantém local no exemplo). */
+export async function uploadAsset(brandId: string, file: File, meta: Omit<Asset, "url">): Promise<Asset> {
+  if (file.size > 200 * 1024 * 1024) throw new Error("O arquivo passa de 200 MB.");
+  if (isDemoMode()) return { ...meta, url: URL.createObjectURL(file) };
+  const path = `${brandId}/rascunhos/${crypto.randomUUID()}/${file.name.replace(/[^\w.-]+/g, "-")}`;
+  const { error } = await supabase.storage.from("like-assets").upload(path, file, { contentType: file.type || undefined });
+  if (error) throw error;
+  const { data } = await supabase.storage.from("like-assets").createSignedUrl(path, 60 * 60 * 24 * 7);
+  return { ...meta, url: data?.signedUrl ?? path, name: meta.name ?? file.name };
+}
+
+/** Soma dias úteis (seg–sex) a uma data. */
+export function addBusinessDays(from: Date, days: number) {
+  const d = new Date(from);
+  let n = 0;
+  while (n < days) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) n++; }
+  d.setHours(18, 0, 0, 0);
+  return d;
+}

@@ -533,6 +533,7 @@ function ContentDrawer({ conteudo, d, canEdit, slug, onClose, onChanged, onOpenI
         <Badge tone={CONT_TONE[cur.status]} dot>{label(CONTEUDO_STATUSES, cur.status)}</Badge>
         {like && <Link to={"/like" as never} className="e-btn ghost sm"><Icon name="heart" size="sm" /> Ver no Like · {LIKE_LABEL[like.status]}{like.round > 1 ? ` · rodada ${like.round}` : ""}</Link>}
         <span style={{ flex: 1 }} />
+        {canEdit && <Link to={`/like/${slug}/enviar?conteudo=${cur.id}` as never} className="e-btn secondary sm"><Icon name="heart" size="sm" /> Enviar para aprovação</Link>}
         <WorkspaceButton d={d} type="conteudo" id={cur.id} title={cur.title} description={cur.briefing} due={cur.publish_date} slug={slug} onChanged={onChanged} canEdit={canEdit} />
       </div>
       {origin && <button type="button" className="origin-link" onClick={() => onOpenIdeia(origin.id)}><Icon name="sparkle" size="sm" /> Nasceu da ideia <b>{origin.title}</b><Icon name="chevRight" size="sm" /></button>}
