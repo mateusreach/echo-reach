@@ -11,12 +11,15 @@ export function SpaceShell({
   brandName,
   primaryColor,
   accentColor,
+  demoData,
 }: {
   children: ReactNode;
   brandSlug: string;
   brandName: string;
   primaryColor?: string | null;
   accentColor?: string | null;
+  /** A página já tem dados de exemplo para o modo demonstração. */
+  demoData?: boolean;
 }) {
   useEffect(() => {
     applyBrandColors(primaryColor, accentColor);
@@ -29,6 +32,7 @@ export function SpaceShell({
     <EchoLayout
       env="e360"
       wide
+      demoData={demoData}
       eyebrow={<Link to="/e360" className="e-link" style={{ fontSize: "inherit", fontWeight: 500 }}><Icon name="chevLeft" size="sm" /> Espaço 360</Link>}
       title={brandName}
       nav={

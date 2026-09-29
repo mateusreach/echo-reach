@@ -646,3 +646,62 @@ button.member-card:focus-visible { outline: none; box-shadow: var(--e-ring); }
 .member-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: var(--hover); font-size: 13.5px; flex-wrap: wrap; }
 .member-row.pending { opacity: .85; }
 .rights-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px 16px; }
+
+/* ---------- Plano estratégico ---------- */
+.plan-summary { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border-radius: var(--r-xl); flex-wrap: wrap; }
+.plan-summary > b, .plan-summary .e-grow > b { font-size: 16px; }
+.plan-kpis { display: flex; gap: 24px; flex-wrap: wrap; }
+.plan-kpis span { display: grid; font-size: 12px; color: var(--ink-3); }
+.plan-kpis b { font-size: 22px; font-weight: 500; color: var(--ink); letter-spacing: -.02em; }
+.stage-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+.stage-tab { display: grid; gap: 6px; padding: 12px 14px; border: 0; border-radius: 16px; background: var(--hover); color: var(--ink-2); font: inherit; text-align: left; cursor: pointer; transition: background var(--dur-2) ease, box-shadow var(--dur-2) ease, transform var(--dur-2) var(--ease-out); }
+.stage-tab[aria-selected="true"] { background: var(--glass-strong); color: var(--ink); box-shadow: var(--glass-inset), var(--sh-2), inset 0 0 0 1.5px color-mix(in oklab, var(--e-accent) 50%, transparent); }
+.stage-tab:active { transform: scale(.98); }
+.stage-tab:focus-visible { outline: none; box-shadow: var(--e-ring); }
+.stage-name { font-weight: 600; font-size: 14px; text-transform: capitalize; }
+.stage-bar { height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.stage-bar i { display: block; height: 100%; width: var(--v); background: var(--grad); border-radius: inherit; transition: width var(--dur-4) var(--ease-out); }
+.plan-link { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; color: var(--env-brand); }
+.plan-link b { color: var(--ink); }
+.plan-section { display: grid; gap: 14px; padding: 18px; border-radius: var(--r-xl); transition: box-shadow var(--dur-3) ease; }
+.plan-section.editing { box-shadow: var(--glass-inset), var(--sh-3), inset 0 0 0 1.5px color-mix(in oklab, var(--e-accent) 40%, transparent); }
+.plan-section-head { display: flex; align-items: flex-start; gap: 10px; }
+.plan-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px 20px; margin: 0; }
+.plan-fields .wide { grid-column: 1 / -1; }
+.plan-fields > div { border-radius: 12px; transition: background var(--dur-4) ease; }
+.plan-fields > div.flash { background: color-mix(in oklab, var(--ok) 14%, transparent); box-shadow: 0 0 0 6px color-mix(in oklab, var(--ok) 14%, transparent); }
+.plan-fields dt { font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+.plan-fields dt .req { color: var(--e-accent); margin-left: 4px; }
+.plan-fields dd { margin: 0; font-size: 14px; color: var(--ink); }
+.plan-text { margin: 0; white-space: pre-wrap; line-height: 1.55; }
+.plan-list { margin: 0; padding-left: 18px; display: grid; gap: 2px; line-height: 1.5; }
+.plan-empty { font-size: 13px; color: var(--ink-3); font-style: italic; }
+.plan-img { max-width: 240px; border-radius: 12px; }
+.plan-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.scale-pick { display: inline-flex; gap: 4px; }
+.scale-pick button { width: 36px; height: 36px; border-radius: 10px; border: 0; background: var(--hover); color: var(--ink-2); font: inherit; font-weight: 600; cursor: pointer; transition: background var(--dur-1) ease, transform var(--dur-1) var(--ease-out); }
+.scale-pick button[aria-checked="true"] { background: var(--grad); color: #fff; }
+.scale-pick button:active { transform: scale(.92); }
+.scale-show { display: inline-flex; align-items: center; gap: 4px; }
+.scale-show i { width: 18px; height: 6px; border-radius: 999px; background: var(--line-2); }
+.scale-show i.on { background: var(--grad); }
+.scale-show b { margin-left: 6px; font-size: 13px; }
+.plan-section-foot { display: flex; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+.plan-toggle { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; font: inherit; font-size: 12.5px; color: var(--ink-3); padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+.plan-toggle:hover, .plan-toggle.on { background: var(--hover); color: var(--ink); }
+.plan-panel { display: grid; gap: 10px; padding: 12px; border-radius: 14px; background: var(--hover); }
+.plan-comment { display: flex; gap: 10px; font-size: 13.5px; }
+.plan-comment p { margin: 2px 0 0; color: var(--ink-2); }
+.diff { display: grid; gap: 4px; margin-top: 6px; font-size: 12.5px; }
+.diff del { color: var(--danger); text-decoration: line-through; opacity: .8; }
+.diff ins { color: var(--ok); text-decoration: none; }
+.obj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.obj-card { display: grid; gap: 8px; padding: 14px; border: 0; border-radius: 18px; text-align: left; font: inherit; color: var(--ink); cursor: pointer; transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) ease; }
+.obj-card:disabled { cursor: default; }
+.obj-card b { font-size: 14.5px; line-height: 1.3; }
+@media (hover: hover) and (pointer: fine) { .obj-card:not(:disabled):hover { transform: translateY(-2px); box-shadow: var(--glass-inset), var(--sh-3); } }
+.ini-card { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 18px; }
+.ini-ic { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--hover); color: var(--ink-2); }
+.ini-ic.concluida { color: var(--ok); background: color-mix(in oklab, var(--ok) 14%, transparent); }
+.ini-ic.nao_concluida { color: var(--danger); background: color-mix(in oklab, var(--danger) 12%, transparent); }
+.ini-ic.em_andamento { color: var(--e-accent); background: color-mix(in oklab, var(--e-accent) 12%, transparent); }

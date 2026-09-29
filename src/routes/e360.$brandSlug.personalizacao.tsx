@@ -37,11 +37,11 @@ function SpacePersonalization() {
   const clientAdmin = isDemoMode() ? viewAs : !!member.data?.isAdmin;
   const refresh = () => qc.invalidateQueries({ queryKey: ["brand-info", brandSlug] });
 
-  if (!ready || info.isLoading) return <SpaceShell brandSlug={brandSlug} brandName=""><Skeleton h={420} r={24} /></SpaceShell>;
-  if (!b) return <SpaceShell brandSlug={brandSlug} brandName=""><div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="search" title="Espaço não encontrado" actions={<Link to="/e360" className="e-btn secondary">Voltar ao 360</Link>} /></div></SpaceShell>;
+  if (!ready || info.isLoading) return <SpaceShell demoData brandSlug={brandSlug} brandName=""><Skeleton h={420} r={24} /></SpaceShell>;
+  if (!b) return <SpaceShell demoData brandSlug={brandSlug} brandName=""><div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="search" title="Espaço não encontrado" actions={<Link to="/e360" className="e-btn secondary">Voltar ao 360</Link>} /></div></SpaceShell>;
 
   return (
-    <SpaceShell brandSlug={brandSlug} brandName={b.name} primaryColor={b.primary_color} accentColor={b.accent_color}>
+    <SpaceShell demoData brandSlug={brandSlug} brandName={b.name} primaryColor={b.primary_color} accentColor={b.accent_color}>
       <div className="stack-lg">
         <SpaceCustomizer info={b} canEdit={team || clientAdmin} onSaved={refresh} />
         {!team && !clientAdmin && <p className="e-caption" style={{ margin: 0 }}>Só administradores do cliente mudam a aparência do espaço.</p>}
