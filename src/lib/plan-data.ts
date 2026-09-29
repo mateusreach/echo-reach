@@ -14,6 +14,7 @@ import {
 import { applyTemplateToBrand, resolveBrandStage, type PlanTemplate } from "@/lib/agency-data";
 import { listPlans } from "@/lib/settings-data";
 import { isDemoMode } from "@/lib/home-data";
+import { ROSTER } from "@/lib/clients-data";
 
 const db = supabase as any;
 const now = () => new Date().toISOString();
@@ -22,7 +23,7 @@ const clone = <T,>(x: T): T => structuredClone(x);
 const ago = (d: number) => new Date(Date.now() - d * 86400e3).toISOString();
 
 export type PlanBrand = { id: string; name: string; slug: string; description: string | null; primary: string | null; accent: string | null; logoUrl: string | null };
-export type PlanCampaign = { id: string; title: string; status: string; initiative_id: string | null };
+export type PlanCampaign = { id: string; title: string; status: string; initiative_id: string | null; stage?: string; start_date?: string | null; end_date?: string | null; description?: string | null; responsible?: string | null; objective_id?: string | null };
 export type PlanData = { brand: PlanBrand; sections: BrandHomeSection[]; objectives: Objective[]; initiatives: Initiative[]; campaigns: PlanCampaign[] };
 export type SectionComment = { id: string; section_id: string; author_name: string | null; body: string; created_at: string };
 export type SectionVersion = { id: string; section_id: string; author_name: string | null; field_label: string | null; before_value: string | null; after_value: string | null; created_at: string };
@@ -77,9 +78,9 @@ function demo(slug: string): DemoPlan {
     ini("in4", "Guia de uso de perfume", "o3", "imediato", "concluida", "Série educativa sobre aplicação e conservação."),
   ];
   const data: DemoPlan = {
-    brand: { id: b, name: "Fina Fragrância", slug, description: "Ateliê de perfumaria artesanal.", primary: null, accent: null, logoUrl: null },
+    brand: { id: b, name: ROSTER.find((r) => r[1] === slug)?.[0] ?? slug, slug, description: "Ateliê de perfumaria artesanal.", primary: null, accent: null, logoUrl: null },
     sections, objectives, initiatives,
-    campaigns: [{ id: "cp1", title: "Lançamento Coleção Outono", status: "em_andamento", initiative_id: "in2" }, { id: "cp2", title: "Mês do cliente", status: "planejada", initiative_id: "in1" }],
+    campaigns: [{ id: "cp1", title: "Lançamento Coleção Outono", status: "em_andamento", initiative_id: "in2", stage: "producao", start_date: ago(10).slice(0, 10), end_date: new Date(Date.now() + 20 * 86400e3).toISOString().slice(0, 10), description: "Três fragrâncias de outono com pré-venda e evento no ateliê.", responsible: "Rafael Monteiro", objective_id: "o2" }, { id: "cp2", title: "Mês do cliente", status: "planejada", initiative_id: "in1", stage: "planejamento", start_date: new Date(Date.now() + 30 * 86400e3).toISOString().slice(0, 10), end_date: new Date(Date.now() + 60 * 86400e3).toISOString().slice(0, 10), description: "Depoimentos e benefícios para quem já comprou.", responsible: "Júlia Castro", objective_id: "o1" }],
     comments: [{ id: "cm1", section_id: "s2", author_name: "Rafael Monteiro", body: "Precisamos validar as dores com a Carla na reunião de quinta.", created_at: ago(1) }],
     versions: [{ id: "v1", section_id: "s3", author_name: "Rafael Monteiro", field_label: "Proposta de valor", before_value: "Perfumes autorais feitos à mão.", after_value: "Perfumes com alma de ateliê: cada frasco conta de onde vêm suas notas.", created_at: ago(4) }],
     solicitacoes: [],
@@ -167,6 +168,9 @@ export async function suggestChange(slug: string, section: BrandHomeSection, tex
   if (isDemoMode()) { demo(slug).solicitacoes.push({ id: uid("so"), title, description: text, created_at: now() }); return; }
   await createSolicitacao({ brand_id: section.brand_id, title, description: text, tipo: "plano", status: "nova", priority: "media" } as never);
 }
+
+/** Armazenamento do exemplo compartilhado com o Espaço 360 (mesmos objetivos, estratégias e campanhas). */
+export const demoPlanStore = (slug: string) => demo(slug);
 
 export const demoSuggestions = (slug: string) => (isDemoMode() ? clone(demo(slug).solicitacoes) : []);
 
