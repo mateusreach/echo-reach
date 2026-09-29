@@ -53,7 +53,7 @@ function summarizeFront(f: { id: string; name: string; recurrence: string | null
 
 // ----- exemplo: a carteira real da Reach -----------------------------------------------------
 
-const ROSTER: [string, string, boolean, [string, string, number][]][] = [
+export const ROSTER: [string, string, boolean, [string, string, number][]][] = [
   ["Dra. Giuliana", "dra-giuliana", false, [["Feed", "2026-10-02", 3]]],
   ["Fina Fragrância", "fina-fragrancia", true, [["Feed", "2026-10-02", 3], ["TikTok", "2026-09-30", 4]]],
   ["A Emporium", "emporium", false, [["Feed", "2026-09-30", 3]]],

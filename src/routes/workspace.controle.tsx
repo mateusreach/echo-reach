@@ -1,241 +1,162 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { PageHeader } from "@/components/reach/ui";
-import { EmptyState, RiskBadge, StatCard } from "@/components/reach/workspace-ui";
-import { Btn, SelectInput } from "@/components/ui-reach/primitives";
-import { cn } from "@/lib/utils";
-import {
-  addDays,
-  listFrontsWithRisk,
-  localDate,
-  RECURRENCES,
-  RISK_LABELS,
-  toISO,
-  today,
-  type RiskLevel,
-} from "@/lib/workspace-data";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Badge, Button, ClientLogo, EmptyState, Skeleton } from "@/components/echo/primitives";
+import { Menu, Select } from "@/components/echo/controls";
+import { Icon } from "@/components/echo/icon";
+import { addDays, localDate, RECURRENCES, RISK_LABELS, toISO, today, type FrontWithRisk, type RiskLevel } from "@/lib/workspace-data";
+import { demoApprove, ensureCycle, listOpsFronts, subscribeFronts } from "@/lib/ops-data";
+import { isDemoMode } from "@/lib/home-data";
 
 export const Route = createFileRoute("/workspace/controle")({
-  head: () => ({
-    meta: [
-      { title: "Controle — Reach Echo · Workspace" },
-      {
-        name: "description",
-        content: "Nenhum cliente sem post: cobertura mensal, antecedência de produção e risco por frente de conteúdo.",
-      },
-      { property: "og:title", content: "Controle — Reach Echo · Workspace" },
-      { property: "og:description", content: "Linha do tempo mensal da cobertura de conteúdo de cada cliente." },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "Controle · Workspace · Echo" }, { name: "description", content: "Nenhum cliente sem post: cobertura mensal por frente." }] }),
   component: CoverageControl,
 });
 
-const MONTHS = [
-  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
-];
+const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+const LEVELS: RiskLevel[] = ["red", "orange", "yellow", "green"];
+const RISK_TONE: Record<RiskLevel, "late" | "adjust" | "review" | "done"> = { red: "late", orange: "adjust", yellow: "review", green: "done" };
+const RISK_COLOR: Record<RiskLevel, string> = { red: "var(--danger)", orange: "var(--warn)", yellow: "var(--review)", green: "var(--ok)" };
+const ddmm = (d?: string | null) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}` : "—");
+const recLabel = (k: string) => (RECURRENCES as Record<string, string>)[k] ?? k;
+const prefersReduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const approvedDate = (date: string | null) => date ? date.split("-").reverse().join("/") : "—";
-
-/**
- * CONTROLE — o coração do "nenhum cliente sem post".
- * Uma linha por CLIENTE + FRENTE, com a linha do tempo do mês inteiro:
- * até que dia existe conteúdo aprovado, onde está hoje e a partir de quando
- * a próxima pauta precisa começar (aprovado até − antecedência).
- */
 function CoverageControl() {
-  const navigate = useNavigate();
-  const fronts = useQuery({ queryKey: ["ws-fronts-risk"], queryFn: listFrontsWithRisk });
+  const qc = useQueryClient();
+  const [ready, setReady] = useState(false);
   const now = today();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth());
-  const [brandId, setBrandId] = useState("");
-  const [recurrence, setRecurrence] = useState("");
-  const [level, setLevel] = useState("");
+  const [ym, setYm] = useState({ y: now.getFullYear(), m: now.getMonth() });
+  const [dir, setDir] = useState<1 | -1 | 0>(0);
+  const [f, setF] = useState({ brand: "", front: "", rec: "", level: "" as RiskLevel | "" });
+  const [flash, setFlash] = useState<string[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEffect(() => setReady(true), []);
+  const q = useQuery({ queryKey: ["ops-fronts"], queryFn: listOpsFronts, enabled: ready });
 
-  const all = fronts.data ?? [];
-  const brands = useMemo(() => {
-    const map = new Map(all.map((item) => [item.brand.id, item.brand]));
-    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-  }, [all]);
+  // Tempo real: uma aprovação no Like que avança a cobertura faz a linha piscar.
+  useEffect(() => subscribeFronts((id) => { qc.invalidateQueries({ queryKey: ["ops-fronts"] }); pulse(id); }), []);
+  const pulse = (id: string) => { setFlash((x) => [...x, id]); window.setTimeout(() => setFlash((x) => x.filter((y) => y !== id)), 1800); };
 
-  const visible = all
-    .filter((item) => !brandId || item.brand.id === brandId)
-    .filter((item) => !recurrence || item.front.recurrence === recurrence)
-    .filter((item) => !level || item.level === level);
+  const all = q.data ?? [];
+  const brands = useMemo(() => [...new Map(all.map((x) => [x.brand.id, x.brand])).values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")), [all]);
+  const frontNames = useMemo(() => [...new Set(all.map((x) => x.front.name))].sort(), [all]);
+  const visible = all.filter((x) => (!f.brand || x.brand.id === f.brand) && (!f.front || x.front.name === f.front) && (!f.rec || x.front.recurrence === f.rec) && (!f.level || x.level === f.level));
+  const count = (l: RiskLevel) => all.filter((x) => x.level === l).length;
 
-  const days = new Date(year, month + 1, 0).getDate();
-  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
-  const todayDay = isCurrentMonth ? now.getDate() : null;
+  const days = new Date(ym.y, ym.m + 1, 0).getDate();
+  const first = new Date(ym.y, ym.m, 1);
+  const isNow = ym.y === now.getFullYear() && ym.m === now.getMonth();
+  const shift = (by: 1 | -1) => { setDir(by); const d = new Date(ym.y, ym.m + by, 1); setYm({ y: d.getFullYear(), m: d.getMonth() }); };
+  /** Posição (0..days) de uma data dentro do mês exibido, recortada nas bordas. */
+  const pos = (isoDate: string | null | undefined, end = true) => {
+    if (!isoDate) return null;
+    const d = localDate(isoDate);
+    if (d < first) return 0;
+    if (d.getFullYear() > ym.y || (d.getFullYear() === ym.y && d.getMonth() > ym.m)) return days;
+    return end ? d.getDate() : d.getDate() - 1;
+  };
+  useEffect(() => {
+    if (!gridRef.current || prefersReduced() || !dir) return;
+    gridRef.current.animate([{ transform: `translateX(${dir * 24}px)`, opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 320, easing: "cubic-bezier(.23,1,.32,1)" });
+  }, [ym.y, ym.m]);
 
-  function shift(by: number) {
-    const d = new Date(year, month + by, 1);
-    setYear(d.getFullYear());
-    setMonth(d.getMonth());
-  }
+  const createCycle = async (x: FrontWithRisk) => {
+    setBusy(x.front.id);
+    try { const r = await ensureCycle(x); toast.success(r.created ? "Entrega do ciclo criada" : "A entrega deste ciclo já existe", { description: `${x.brand.name} · ${x.front.name} · ${ddmm(x.period.start)}–${ddmm(x.period.end)}` }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível criar a entrega."); } finally { setBusy(null); }
+  };
 
-  /** Dia do mês exibido (1..days) ou null quando a data cai fora do mês. */
-  function dayInMonth(iso: string | null | undefined) {
-    if (!iso) return null;
-    const d = localDate(iso);
-    if (d.getFullYear() !== year || d.getMonth() !== month) {
-      // antes do mês → 0 (sem cobertura no mês); depois do mês → cobre tudo
-      return d < new Date(year, month, 1) ? 0 : days;
-    }
-    return d.getDate();
-  }
-
-  const count = (value: RiskLevel) => all.filter((item) => item.level === value).length;
+  if (!ready || q.isLoading) return <div className="stack-lg" aria-busy="true"><div className="stat-row four">{LEVELS.map((l) => <Skeleton key={l} h={88} r={20} />)}</div><Skeleton h={420} r={24} /></div>;
+  if (q.isError) return <div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="error" title="Não foi possível carregar o controle" actions={<Button variant="secondary" icon="refresh" onClick={() => q.refetch()}>Tentar novamente</Button>} /></div>;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Workspace"
-        title="Controle"
-        description="Até quando cada cliente está aprovado, quando a próxima pauta precisa começar e qual é o próximo ciclo."
-      />
-
-      <div className="grid gap-3 sm:grid-cols-4">
-        <StatCard label="Coberto" value={count("green")} hint="Cobertura em dia" />
-        <StatCard label="Atenção" value={count("yellow")} hint="Perto da antecedência" />
-        <StatCard label="Produzir agora" value={count("orange")} hint="Dentro da antecedência" />
-        <StatCard label="Sem cobertura" value={count("red")} hint="Prazo aprovado vencido" />
+    <div className="stack-lg">
+      <div className="risk-row" role="group" aria-label="Filtrar por situação">
+        {LEVELS.map((l) => (
+          <button key={l} type="button" className={`risk-tile e-glass${f.level === l ? " on" : ""}`} aria-pressed={f.level === l} style={{ ["--c" as string]: RISK_COLOR[l] }} onClick={() => setF({ ...f, level: f.level === l ? "" : l })}>
+            <span className="risk-n tnum">{count(l)}</span>
+            <span>{RISK_LABELS[l]}</span>
+            <small>{l === "red" ? "aprovação vencida" : l === "orange" ? "dentro da antecedência" : l === "yellow" ? "perto da antecedência" : "cobertura em dia"}</small>
+          </button>
+        ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1 rounded-full border border-border/70 px-1 py-1">
-          <Btn variant="ghost" size="sm" aria-label="Mês anterior" onClick={() => shift(-1)}>
-            <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
-          </Btn>
-          <span className="min-w-[9.5rem] text-center text-[12.5px] font-medium capitalize">
-            {MONTHS[month]} de {year}
-          </span>
-          <Btn variant="ghost" size="sm" aria-label="Próximo mês" onClick={() => shift(1)}>
-            <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-          </Btn>
+      <div className="ctl-bar">
+        <div className="month-nav">
+          <Button size="sm" variant="ghost" icon="chevLeft" aria-label="Mês anterior" onClick={() => shift(-1)} />
+          <span className="month-label">{MONTHS[ym.m][0].toUpperCase() + MONTHS[ym.m].slice(1)} de {ym.y}</span>
+          <Button size="sm" variant="ghost" icon="chevRight" aria-label="Próximo mês" onClick={() => shift(1)} />
+          {!isNow && <Button size="sm" variant="ghost" onClick={() => { setDir(0); setYm({ y: now.getFullYear(), m: now.getMonth() }); }}>Hoje</Button>}
         </div>
-        <SelectInput value={brandId} onChange={(e) => setBrandId(e.target.value)} aria-label="Filtrar por cliente">
-          <option value="">Todos os clientes</option>
-          {brands.map((brand) => (
-            <option key={brand.id} value={brand.id}>{brand.name}</option>
-          ))}
-        </SelectInput>
-        <SelectInput value={recurrence} onChange={(e) => setRecurrence(e.target.value)} aria-label="Filtrar por frente">
-          <option value="">Todas as recorrências</option>
-          {Object.entries(RECURRENCES).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </SelectInput>
-        <SelectInput value={level} onChange={(e) => setLevel(e.target.value)} aria-label="Filtrar por situação">
-          <option value="">Todas as situações</option>
-          {Object.entries(RISK_LABELS).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </SelectInput>
+        <div className="ctl-filters">
+          <Select value={f.brand} onChange={(v) => setF({ ...f, brand: v })} options={[{ value: "", label: "Todos os clientes" }, ...brands.map((b) => ({ value: b.id, label: b.name }))]} />
+          <Select value={f.front} onChange={(v) => setF({ ...f, front: v })} options={[{ value: "", label: "Todas as frentes" }, ...frontNames.map((n) => ({ value: n, label: n }))]} />
+          <Select value={f.rec} onChange={(v) => setF({ ...f, rec: v })} options={[{ value: "", label: "Toda recorrência" }, ...Object.entries(RECURRENCES).map(([value, label]) => ({ value, label }))]} />
+        </div>
+        <span className="e-caption tnum">{visible.length} de {all.length} frentes</span>
       </div>
 
-      {fronts.isLoading ? (
-        <p className="text-sm text-muted-foreground">Carregando cobertura dos clientes…</p>
-      ) : visible.length === 0 ? (
-        <EmptyState
-          title="Nenhuma frente para estes filtros."
-          description="Cadastre as frentes de conteúdo do cliente para acompanhar a cobertura ciclo a ciclo."
-        />
+      {visible.length === 0 ? (
+        <div className="e-glass" style={{ borderRadius: "var(--r-2xl)" }}><EmptyState kind="search" title="Nenhuma frente com esses filtros" actions={<Button variant="secondary" onClick={() => setF({ brand: "", front: "", rec: "", level: "" })}>Limpar filtros</Button>} /></div>
       ) : (
-        <section className="surface overflow-x-auto rounded-2xl p-4 sm:p-5">
-          <div className="min-w-[46rem] space-y-2">
-            <header className="grid grid-cols-[14rem_minmax(0,1fr)] items-end gap-3">
-              <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                Cliente · frente
-              </span>
-              <div className="grid gap-px" style={{ gridTemplateColumns: `repeat(${days}, minmax(0,1fr))` }}>
-                {Array.from({ length: days }, (_, i) => (
-                  <span key={i} className="text-center text-[9px] text-muted-foreground">
-                    {i + 1}
-                  </span>
-                ))}
-              </div>
-            </header>
-
-            {visible.map(({ front, brand, level: risk, slack, period }) => {
-              const coverEnd = dayInMonth(front.approved_until);
-              const startBy = front.approved_until
-                ? dayInMonth(toISO(addDays(localDate(front.approved_until), -Number(front.lead_days ?? 0))))
-                : null;
-              return (
-                <button
-                  key={front.id}
-                  type="button"
-                  onClick={() =>
-                    navigate({
-                      to: "/workspace/cliente/$brandSlug",
-                      params: { brandSlug: brand.slug },
-                      search: { frente: front.id } as never,
-                    })
-                  }
-                  className="grid w-full grid-cols-[14rem_minmax(0,1fr)] items-center gap-3 rounded-xl border border-border/70 bg-card px-3 py-2 text-left transition-colors hover:border-primary/50"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-[13px] font-medium">
-                      {brand.name} <span className="text-muted-foreground">· {front.name}</span>
-                    </p>
-                    <p className="truncate text-[11.5px] text-muted-foreground">
-                      aprovado até {approvedDate(front.approved_until)} · antecedência {front.lead_days ?? 0}d · próxima pauta{" "}
-                      {period.start} a {period.end}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <div
-                      className="relative grid h-5 gap-px overflow-hidden rounded-md bg-muted/60"
-                      style={{ gridTemplateColumns: `repeat(${days}, minmax(0,1fr))` }}
-                      aria-label={`Cobertura de ${brand.name} em ${MONTHS[month]}`}
-                    >
-                      {Array.from({ length: days }, (_, i) => {
-                        const day = i + 1;
-                        const covered = coverEnd !== null && day <= coverEnd;
-                        return (
-                          <span
-                            key={day}
-                            className={cn(
-                              "h-full",
-                              covered ? "bg-emerald-500/70" : "bg-transparent",
-                              todayDay === day && "outline outline-1 outline-offset-[-1px] outline-foreground",
-                              startBy === day && "border-x-2 border-amber-500",
-                            )}
-                          />
-                        );
-                      })}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                      <RiskBadge level={risk} />
-                      {startBy !== null && startBy > 0 && startBy <= days && (
-                        <span>começar até dia {startBy}</span>
-                      )}
-                      <span>
-                        {slack >= 0 ? `${slack} dia(s) de folga` : `atrasado ${Math.abs(slack)} dia(s)`}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-
-            <footer className="flex flex-wrap items-center gap-4 pt-2 text-[11px] text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <span className="h-3 w-5 rounded-sm bg-emerald-500/70" /> cobertura aprovada
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-3 w-5 rounded-sm border-x-2 border-amber-500 bg-muted/60" /> começar a próxima pauta
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-3 w-5 rounded-sm bg-muted/60 outline outline-1 outline-foreground" /> hoje
-              </span>
-            </footer>
+        <div className="ctl e-glass" ref={gridRef} style={{ ["--days" as string]: days }}>
+          <div className="ctl-head">
+            <span className="ctl-label-h">Cliente · frente</span>
+            <div className="ctl-days">
+              {Array.from({ length: days }, (_, i) => {
+                const d = new Date(ym.y, ym.m, i + 1);
+                const wk = d.getDay() === 0 || d.getDay() === 6;
+                return <span key={i} className={`${wk ? "wk" : ""}${isNow && i + 1 === now.getDate() ? " today" : ""}`}>{i + 1}</span>;
+              })}
+            </div>
           </div>
-        </section>
+          {visible.map((x, row) => {
+            const cov = pos(x.front.approved_until);
+            const produce = x.front.approved_until ? toISO(addDays(localDate(x.front.approved_until), -x.front.lead_days)) : null;
+            const pp = pos(produce);
+            const ps = pos(x.period.start, false);
+            const pe = pos(x.period.end);
+            return (
+              <div key={x.front.id} className={`ctl-row${flash.includes(x.front.id) ? " flash" : ""}`} style={{ ["--c" as string]: RISK_COLOR[x.level], ["--i" as string]: row }}>
+                <div className="ctl-label">
+                  <ClientLogo name={x.brand.name} logoUrl={x.brand.logo_url} size="sm" />
+                  <div style={{ minWidth: 0 }}>
+                    <b className="e-ellipsis" style={{ display: "block" }}>{x.brand.name}</b>
+                    <span className="e-caption">{x.front.name} · {recLabel(x.front.recurrence)}</span>
+                  </div>
+                  <Badge tone={RISK_TONE[x.level]} dot>{RISK_LABELS[x.level]}</Badge>
+                </div>
+                <div className="ctl-track" role="img" aria-label={`${x.brand.name} ${x.front.name}: aprovado até ${ddmm(x.front.approved_until)}`}>
+                  {Array.from({ length: days }, (_, i) => { const d = new Date(ym.y, ym.m, i + 1).getDay(); return d === 0 || d === 6 ? <i key={i} className="wk" style={{ gridColumn: i + 1 }} /> : null; })}
+                  {cov !== null && cov > 0 && <span className="cov" style={{ gridColumn: `1 / ${cov + 1}` }} />}
+                  {ps !== null && pe !== null && pe > ps && <span className="pending" style={{ gridColumn: `${ps + 1} / ${pe + 1}` }} title={`Próxima pauta ${ddmm(x.period.start)}–${ddmm(x.period.end)}`} />}
+                  {pp !== null && pp > 0 && pp <= days && produce && localDate(produce) >= first && <span className="mark produce" style={{ gridColumn: pp }} title={`Começar a produzir em ${ddmm(produce)}`}><i /></span>}
+                  {isNow && <span className="mark now" style={{ gridColumn: now.getDate() }} title="Hoje"><i /></span>}
+                </div>
+                <div className="ctl-detail">
+                  <span className="e-caption tnum">aprovado até <b>{ddmm(x.front.approved_until)}</b> · antecedência {x.front.lead_days}d · próxima pauta {ddmm(x.period.start)}–{ddmm(x.period.end)}</span>
+                  <span className="e-row" style={{ gap: 4 }}>
+                    <Button size="sm" variant="secondary" icon="plus" loading={busy === x.front.id} onClick={() => createCycle(x)}>Criar entrega do ciclo</Button>
+                    {isDemoMode() && <Menu align="right" trigger={({ toggle }) => <Button size="sm" variant="ghost" icon="more" aria-label="Mais ações" onClick={toggle} />} items={[
+                      { title: "Demonstração" },
+                      { label: "Simular aprovação no Like (+7 dias)", icon: "heart", onSelect: () => { const base = x.front.approved_until ? localDate(x.front.approved_until) : today(); demoApprove(x.front.id, toISO(addDays(base, 7))); qc.invalidateQueries({ queryKey: ["ops-fronts"] }); pulse(x.front.id); toast.success("Aprovado no Like", { description: `${x.brand.name} · ${x.front.name} coberto até ${ddmm(toISO(addDays(base, 7)))}` }); } },
+                    ]} />}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+          <div className="ctl-legend">
+            <span><i className="lg cov" /> Coberto (aprovado)</span>
+            <span><i className="lg produce" /> Começar a produzir</span>
+            <span><i className="lg pending" /> Próxima pauta</span>
+            <span><i className="lg now" /> Hoje</span>
+          </div>
+        </div>
       )}
+      <p className="e-caption" style={{ margin: 0 }}><Icon name="info" size="sm" /> A cobertura avança sozinha quando o cliente aprova no Like um material com data de publicação.</p>
     </div>
   );
 }
