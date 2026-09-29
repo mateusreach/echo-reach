@@ -264,3 +264,168 @@ export async function saveChannelS(slug: string, brandId: string, id: string | n
   if (id) await db.from("espaco360_channels").update(patch).eq("id", id);
   else await db.from("espaco360_channels").insert({ brand_id: brandId, name: patch.name ?? "Canal", channel_type: patch.channel_type ?? null, status: patch.status ?? "planejado" });
 }
+
+// ----- Campanha (página 17) --------------------------------------------------------------
+
+export type CampaignFull = SCampaign & {
+  priority: string; objective_id: string | null; opportunity: string | null; message: string | null; offer: string | null; products: string | null;
+  target_audience: string | null; context: string | null; channels: string[]; learnings: { date: string; text: string }[]; materials: { title: string; url: string }[];
+};
+export type LikeMaterial = { id: string; title: string; format: string; status: "aguardando" | "aprovado" | "ajustes" | "rascunho"; round: number; campaign_id: string | null; front: string | null };
+const campExtra = new Map<string, Partial<CampaignFull>>();
+
+export async function loadCampaign(slug: string, id: string): Promise<{ space: Space; campaign: CampaignFull; likeMaterials: LikeMaterial[] } | null> {
+  const space = await loadSpace(slug);
+  if (!space) return null;
+  if (isDemoMode()) {
+    const base = space.campaigns.find((c) => c.id === id);
+    if (!base) return null;
+    const ex = campExtra.get(`${slug}:${id}`) ?? (id === "cp1" ? { opportunity: "Outono é a estação de maior busca por fragrâncias quentes.", message: "Sinta a origem do outono.", offer: "Pré-venda com 15% e kit de amostras.", products: "Âmbar & Figo, Couro & Baunilha, Chá Preto", target_audience: "Clientes recorrentes e presenteadores", channels: ["Instagram", "TikTok", "Loja virtual"], learnings: [{ date: iso(-4), text: "Carrossel com notas olfativas teve 2× mais salvamentos." }], materials: [{ title: "Moodboard da coleção", url: "https://example.com/moodboard" }] } : {});
+    return {
+      space,
+      campaign: { priority: "alta", objective_id: null, opportunity: null, message: null, offer: null, products: null, target_audience: null, context: null, channels: [], learnings: [], materials: [], ...base, ...ex },
+      likeMaterials: demoLike(slug).filter((m) => m.campaign_id === id),
+    };
+  }
+  const { data } = await db.from("espaco360_campaigns").select("*").eq("id", id).maybeSingle();
+  if (!data) return null;
+  return {
+    space,
+    campaign: { ...data, channels: data.channels ?? [], learnings: Array.isArray(data.learnings) ? data.learnings : [], materials: Array.isArray(data.materials) ? data.materials : [] },
+    likeMaterials: [], // Vínculo com o Like chega nas páginas 18–19.
+  };
+}
+
+export async function saveCampaign(slug: string, id: string, patch: Partial<CampaignFull>) {
+  const { deriveCampaignStatus } = await import("@/lib/reach-data");
+  const withStatus = patch.stage ? { ...patch, status: deriveCampaignStatus(patch.stage) } : patch;
+  if (isDemoMode()) {
+    const p = demoPlanStore(slug);
+    const base: Record<string, unknown> = {};
+    for (const k of ["title", "stage", "status", "start_date", "end_date", "initiative_id", "description", "responsible", "objective_id"] as const) if (k in withStatus) base[k] = (withStatus as never)[k];
+    p.campaigns = p.campaigns.map((c) => (c.id === id ? { ...c, ...base } : c));
+    const key = `${slug}:${id}`;
+    campExtra.set(key, { ...(campExtra.get(key) ?? {}), ...withStatus });
+    return;
+  }
+  const { error } = await db.from("espaco360_campaigns").update(withStatus).eq("id", id);
+  if (error) throw error;
+}
+
+// ----- Like no 360: materiais e histórico de decisões (demo até as páginas 18–23) --------
+
+export type LikeDecision = { id: string; material: string; front: string; decision: "aprovado" | "ajustes"; sentAt: string; decidedAt: string; round: number };
+const likeStore = new Map<string, { materials: LikeMaterial[]; decisions: LikeDecision[] }>();
+function likeDemo(slug: string) {
+  if (likeStore.has(slug)) return likeStore.get(slug)!;
+  const at = (d: number, h = 10) => new Date(Date.now() + d * 86400e3 + (h - 12) * 3600e3).toISOString();
+  const decisions: LikeDecision[] = [
+    { id: "ld1", material: "Guia: como guardar seu perfume", front: "Feed", decision: "ajustes", sentAt: at(-14), decidedAt: at(-13, 16), round: 1 },
+    { id: "ld2", material: "Guia: como guardar seu perfume", front: "Feed", decision: "aprovado", sentAt: at(-12), decidedAt: at(-12, 18), round: 2 },
+    { id: "ld3", material: "Série educativa · episódio 4", front: "Feed", decision: "aprovado", sentAt: at(-7), decidedAt: at(-6), round: 1 },
+    { id: "ld4", material: "Reels bastidores", front: "TikTok", decision: "aprovado", sentAt: at(-5), decidedAt: at(-4, 14), round: 1 },
+    { id: "ld5", material: "Stories da semana", front: "Stories", decision: "ajustes", sentAt: at(-3), decidedAt: at(-2), round: 1 },
+    { id: "ld6", material: "Stories da semana", front: "Stories", decision: "aprovado", sentAt: at(-2, 15), decidedAt: at(-1), round: 2 },
+  ];
+  const materials: LikeMaterial[] = [
+    { id: "lm1", title: "Carrossel “Notas de outono”", format: "Carrossel", status: "aguardando", round: 1, campaign_id: "cp1", front: "Feed" },
+    { id: "lm2", title: "Reels de lançamento", format: "Vídeo", status: "ajustes", round: 1, campaign_id: "cp1", front: "TikTok" },
+    { id: "lm3", title: "Teaser da coleção", format: "Stories", status: "aprovado", round: 2, campaign_id: "cp1", front: "Stories" },
+    { id: "lm4", title: "Convite do evento", format: "Post", status: "rascunho", round: 0, campaign_id: "cp1", front: "Feed" },
+  ];
+  likeStore.set(slug, { materials, decisions });
+  return likeStore.get(slug)!;
+}
+const demoLike = (slug: string) => likeDemo(slug).materials;
+export const likeDecisionsDemo = (slug: string) => likeDemo(slug).decisions;
+
+/** Indicadores do Like calculados do histórico de decisões. */
+export function likeIndicators(decisions: LikeDecision[], monthPrefix: string) {
+  const inMonth = decisions.filter((d) => d.decidedAt.slice(0, 7) === monthPrefix);
+  const approved = inMonth.filter((d) => d.decision === "aprovado");
+  const byFront = new Map<string, number>();
+  for (const d of approved) byFront.set(d.front, (byFront.get(d.front) ?? 0) + 1);
+  const hours = inMonth.map((d) => (new Date(d.decidedAt).getTime() - new Date(d.sentAt).getTime()) / 3600e3);
+  const materials = [...new Set(inMonth.map((d) => d.material))];
+  const adjustments = inMonth.filter((d) => d.decision === "ajustes").length;
+  return {
+    approved: approved.length,
+    byFront: [...byFront.entries()].sort((a, b) => b[1] - a[1]),
+    avgHours: hours.length ? Math.round(hours.reduce((a, b) => a + b, 0) / hours.length) : null,
+    adjustmentsPerMaterial: materials.length ? Math.round((adjustments / materials.length) * 10) / 10 : 0,
+    decisions: inMonth.length,
+  };
+}
+
+// ----- Agenda (página 17) -----------------------------------------------------------------
+
+export type AgendaItem = { id: string; kind: "compromisso" | "reuniao" | "gravacao" | "publicacao" | "prazo" | "campanha" | "entrega"; title: string; date: string; start?: string | null; end?: string | null; status: string; responsible?: string | null; deliveryTitle?: string | null; deliveryDate?: string | null; auto?: boolean };
+const eventStore = new Map<string, AgendaItem[]>();
+
+export async function loadAgenda(slug: string): Promise<{ space: Space; items: AgendaItem[] } | null> {
+  const space = await loadSpace(slug);
+  if (!space) return null;
+  let events: AgendaItem[] = [];
+  let pubs: AgendaItem[] = [];
+  if (isDemoMode()) {
+    if (!eventStore.has(slug)) eventStore.set(slug, [
+      { id: "ev1", kind: "gravacao", title: "Gravação do Reels no ateliê", date: iso(2), start: "14:00", end: "16:00", status: "confirmado", responsible: "Theo Almeida", deliveryTitle: "Reels de lançamento", deliveryDate: iso(6) },
+      { id: "ev2", kind: "compromisso", title: "Visita à loja", date: iso(5), start: "10:00", end: "11:00", status: "agendado", responsible: "Júlia Castro" },
+    ]);
+    events = structuredClone(eventStore.get(slug)!);
+    pubs = [{ id: "pub1", kind: "publicacao", title: "Teaser da coleção", date: iso(1), status: "agendado", auto: true }, { id: "pub2", kind: "publicacao", title: "Guia: como guardar seu perfume", date: iso(4), status: "agendado", auto: true }];
+  } else {
+    const [ev, cont] = await Promise.all([
+      db.from("espaco360_calendar_events").select("*").eq("brand_id", space.brand.id),
+      db.from("conteudos").select("id, title, publish_date, status").eq("brand_id", space.brand.id).in("status", ["aprovada", "produzida", "publicada"]).not("publish_date", "is", null),
+    ]);
+    events = ((ev.data ?? []) as any[]).map((e) => ({ id: e.id, kind: e.event_type, title: e.title, date: e.event_date, start: e.start_time, end: e.end_time, status: e.status, responsible: e.responsible, deliveryTitle: e.delivery_title, deliveryDate: e.delivery_date }));
+    pubs = ((cont.data ?? []) as any[]).map((c) => ({ id: c.id, kind: "publicacao", title: c.title, date: String(c.publish_date).slice(0, 10), status: c.status === "publicada" ? "concluido" : "agendado", auto: true }));
+  }
+  const items: AgendaItem[] = [
+    ...events, ...pubs,
+    ...space.meetings.map((m) => ({ id: m.id, kind: "reuniao" as const, title: m.title, date: m.meeting_date.slice(0, 10), status: m.meeting_date.slice(0, 10) < iso(0) ? "concluido" : "agendado", auto: true })),
+    ...space.tasks.filter((t) => t.due_date).map((t) => ({ id: t.id, kind: "prazo" as const, title: t.title, date: t.due_date!, status: t.status === "concluida" ? "concluido" : "agendado", auto: true })),
+    ...space.deliveries.filter((d) => d.delivered_at).map((d) => ({ id: d.id, kind: "entrega" as const, title: d.title, date: d.delivered_at!.slice(0, 10), status: "concluido", auto: true })),
+    ...space.campaigns.flatMap((c) => [c.start_date && { id: `${c.id}-s`, kind: "campanha" as const, title: `Início: ${c.title}`, date: c.start_date, status: "agendado", auto: true }, c.end_date && { id: `${c.id}-e`, kind: "campanha" as const, title: `Fim: ${c.title}`, date: c.end_date, status: "agendado", auto: true }].filter(Boolean) as AgendaItem[]),
+  ];
+  return { space, items: items.sort((a, b) => a.date.localeCompare(b.date) || (a.start ?? "").localeCompare(b.start ?? "")) };
+}
+
+export async function saveEvent(slug: string, brandId: string, id: string | null, e: Omit<AgendaItem, "id" | "auto">) {
+  if (isDemoMode()) { const list = eventStore.get(slug) ?? []; if (id) eventStore.set(slug, list.map((x) => (x.id === id ? { ...x, ...e } : x))); else list.push({ ...e, id: uid("ev") }); if (!eventStore.has(slug)) eventStore.set(slug, list); return; }
+  const row = { brand_id: brandId, title: e.title, event_type: e.kind, event_date: e.date, start_time: e.start ?? null, end_time: e.end ?? null, status: e.status, responsible: e.responsible ?? null, delivery_title: e.deliveryTitle ?? null, delivery_date: e.deliveryDate ?? null };
+  const { error } = id ? await db.from("espaco360_calendar_events").update(row).eq("id", id) : await db.from("espaco360_calendar_events").insert(row);
+  if (error) throw error;
+}
+
+// ----- Resultados (página 17) ------------------------------------------------------------
+
+export type Kpi = { id: string; name: string; source: string; target: number | null; value: number; unit: string | null; period: string | null; campaign_id: string | null };
+const kpiStore = new Map<string, Kpi[]>();
+export async function loadResults(slug: string) {
+  const space = await loadSpace(slug);
+  if (!space) return null;
+  if (isDemoMode()) {
+    if (!kpiStore.has(slug)) kpiStore.set(slug, [
+      { id: "k1", name: "Alcance mensal", source: "plataforma", target: 120000, value: 98000, unit: "pessoas", period: "Setembro", campaign_id: null },
+      { id: "k2", name: "Vendas da pré-venda", source: "planilha", target: 300, value: 96, unit: "pedidos", period: "Outono", campaign_id: "cp1" },
+      { id: "k3", name: "Taxa de salvamento", source: "manual", target: 4, value: 5.2, unit: "%", period: "Setembro", campaign_id: null },
+    ]);
+    const p = demoPlanStore(slug);
+    return { space, objectives: structuredClone(p.objectives), kpis: structuredClone(kpiStore.get(slug)!), decisions: likeDecisionsDemo(slug) };
+  }
+  const [obj, k] = await Promise.all([db.from("objectives").select("*").eq("brand_id", space.brand.id), db.from("kpis").select("*").eq("brand_id", space.brand.id)]);
+  return {
+    space, objectives: obj.data ?? [],
+    kpis: ((k.data ?? []) as any[]).map((x) => ({ id: x.id, name: x.name, source: x.source, target: x.target_value, value: x.value, unit: x.unit, period: x.period_label, campaign_id: x.campaign_id })),
+    decisions: [] as LikeDecision[], // Histórico real chega com o Like.
+  };
+}
+
+export async function saveKpi(slug: string, brandId: string, id: string | null, k: Omit<Kpi, "id">) {
+  if (isDemoMode()) { const list = kpiStore.get(slug) ?? []; if (id) kpiStore.set(slug, list.map((x) => (x.id === id ? { ...x, ...k } : x))); else list.push({ ...k, id: uid("k") }); return; }
+  const row = { brand_id: brandId, name: k.name, source: k.source, target_value: k.target, value: k.value, unit: k.unit, period_label: k.period, campaign_id: k.campaign_id };
+  const { error } = id ? await db.from("kpis").update(row).eq("id", id) : await db.from("kpis").insert(row);
+  if (error) throw error;
+}
