@@ -20,7 +20,8 @@ import {
 export const Route = createFileRoute("/like/$brandSlug/enviar")({
   head: () => ({ meta: [{ title: "Enviar para aprovação · Like · Echo" }] }),
   component: SendPage,
-  validateSearch: (s: Record<string, unknown>): { tarefa?: string; conteudo?: string; entrega?: string; item?: string } => ({
+  validateSearch: (s: Record<string, unknown>): { tarefa?: string; conteudo?: string; entrega?: string; item?: string; data?: string } => ({
+    ...(typeof s.data === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.data) ? { data: s.data } : {}),
     ...(typeof s.tarefa === "string" ? { tarefa: s.tarefa } : {}), ...(typeof s.conteudo === "string" ? { conteudo: s.conteudo } : {}),
     ...(typeof s.entrega === "string" ? { entrega: s.entrega } : {}), ...(typeof s.item === "string" ? { item: s.item } : {}),
   }),
@@ -100,7 +101,7 @@ function SendPage() {
     } else if (search.tarefa) { const t = brandTasks.find((x) => x.id === search.tarefa); if (t) list = [fromTask(t)]; }
     else if (search.conteudo) { const d = fromConteudo(search.conteudo); if (d) list = [d]; }
     else if (search.entrega) { const o = ops.data?.orders.find((x) => x.id === search.entrega); list = (o?.tasks ?? []).filter((t) => t.likeMaterial && t.status !== "Concluído").map(fromTask); }
-    if (!list.length) list = [blank()];
+    if (!list.length) list = [blank(search.data ? { publishAt: `${search.data}T11:00` } : {})];
     setDrafts(list); setActive(list[0].key);
   }, [dataReady]);
 

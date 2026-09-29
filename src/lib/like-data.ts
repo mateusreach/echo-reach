@@ -141,8 +141,16 @@ function refreshFront(frontId: string) {
   const f = demoOps().fronts.find((x) => x.front.id === frontId);
   if (f) Object.assign(f, frontRisk(f.front), { period: frontPeriod(f.front) });
 }
+/** Cobertura da frente antes de o Like mexer nela (base para recalcular ao reagendar). */
+const frontBase = new Map<string, string | null>();
+function captureBase(frontId: string) {
+  if (frontBase.has(frontId)) return;
+  const f = demoOps().fronts.find((x) => x.front.id === frontId);
+  if (f) frontBase.set(frontId, f.front.approved_until ?? null);
+}
 function applyApproval(i: Item, v: Version) {
   i.status = "aprovado"; i.decidedAt = nowISO();
+  if (i.frontId) captureBase(i.frontId);
   setTask(i, "Concluído", true);
   if (i.conteudoId) {
     const c = libConteudos(i.brandSlug).find((x) => x.id === i.conteudoId);
@@ -338,6 +346,32 @@ export async function schedule(itemId: string, publishAt: string) {
   if (error) throw error;
 }
 
+/**
+ * Muda só a data de publicação (arrastar na grade ou no calendário), sem mudar o
+ * estado. Se o material já estava aprovado, atualiza a agenda e a cobertura da
+ * frente e avisa o cliente.
+ */
+export async function movePublish(itemId: string, publishAt: string): Promise<{ notifyClient: boolean }> {
+  if (isDemoMode()) {
+    const it = S().items.find((x) => x.id === itemId);
+    if (!it) throw new Error("Material não encontrado.");
+    if (["publicado", "cancelado"].includes(it.status)) throw new Error("Material publicado ou cancelado não muda de data.");
+    const approved = ["aprovado", "agendado"].includes(it.status);
+    it.publishAt = publishAt;
+    if (approved) {
+      demoUpsertEvent(it.brandSlug, { id: `ev-${it.id}`, likeItemId: it.id, kind: "publicacao", title: it.title, date: publishAt.slice(0, 10), start: publishAt.slice(11, 16), status: "agendado", auto: true });
+      if (it.frontId) { captureBase(it.frontId); recomputeFront(it.frontId, frontBase.get(it.frontId) ?? null); }
+    }
+    log(it, it.roundId, "reagendado", demoActor(), { publishAt, notifyClient: approved });
+    return { notifyClient: approved };
+  }
+  const { data: it, error: e1 } = await db.from("like_items").select("status").eq("id", itemId).single();
+  if (e1) throw e1;
+  const { error } = await db.from("like_items").update({ publish_at: publishAt }).eq("id", itemId);
+  if (error) throw error;
+  return { notifyClient: ["aprovado", "agendado"].includes(it.status) };
+}
+
 export async function markPublished(itemId: string, link: string) {
   if (isDemoMode()) {
     const it = S().items.find((x) => x.id === itemId);
@@ -379,6 +413,19 @@ export async function resolveComment(commentId: string, resolved = true, actor: 
   if (isDemoMode()) { const c = S().comments.find((x) => x.id === commentId); if (c) { c.resolvedAt = resolved ? nowISO() : null; c.resolvedBy = resolved ? actor.id : null; } return; }
   const { data: sess } = await supabase.auth.getSession();
   const { error } = await db.from("like_comments").update({ resolved_at: resolved ? nowISO() : null, resolved_by: resolved ? sess.session?.user.id : null }).eq("id", commentId);
+  if (error) throw error;
+}
+
+/** Editar o próprio comentário (só o autor). */
+export async function editComment(commentId: string, body: string, actor: Actor = demoActor()) {
+  if (!body.trim()) throw new Error("Escreva o comentário.");
+  if (isDemoMode()) {
+    const c = S().comments.find((x) => x.id === commentId);
+    if (!c || c.authorId !== actor.id) throw new Error("Só quem escreveu pode editar.");
+    c.body = body.trim(); c.editedAt = nowISO();
+    return;
+  }
+  const { error } = await db.from("like_comments").update({ body: body.trim(), edited_at: nowISO() }).eq("id", commentId);
   if (error) throw error;
 }
 
@@ -492,6 +539,19 @@ export async function markViewed(itemId: string, versionId: string, actor: Actor
   }
   const { data: it } = await db.from("like_items").select("brand_id").eq("id", itemId).single();
   await db.from("like_views").upsert({ item_id: itemId, version_id: versionId, brand_id: it.brand_id, last_seen_at: nowISO() }, { onConflict: "item_id,version_id,user_id" });
+}
+
+/** Lembrete aos aprovadores (fica no histórico; o envio real sai pelas notificações). */
+export async function remindApprovers(itemIds: string[], actor: Actor = demoActor()): Promise<number> {
+  if (isDemoMode()) {
+    let n = 0;
+    for (const id of itemIds) { const it = S().items.find((x) => x.id === id); if (it && PENDING.includes(it.status)) { log(it, it.roundId, "lembrete", actor); n++; } }
+    return n;
+  }
+  const { data } = await db.from("like_items").select("id, brand_id, round_id").in("id", itemIds).in("status", PENDING);
+  const rows = ((data ?? []) as any[]).map((r) => ({ item_id: r.id, brand_id: r.brand_id, round_id: r.round_id, actor_name: actor.name, event: "lembrete", payload: {} }));
+  if (rows.length) await db.from("like_activity").insert(rows);
+  return rows.length;
 }
 
 export async function listApprovers(brandId: string): Promise<Approver[]> {

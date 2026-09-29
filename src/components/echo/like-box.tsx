@@ -12,7 +12,7 @@ import { Badge, Button, ClientLogo, EmptyState, Skeleton } from "./primitives";
 import { Icon } from "./icon";
 import { EchoLogo } from "./logo";
 import { stagger } from "./motion";
-import { EditorialCalendar, MaterialCard } from "./like-cards";
+import { EditorialCalendar, LikeBrandNav, MaterialCard } from "./like-cards";
 import { PeriodNavigator } from "./operations";
 import { FramedImage } from "@/components/reach/framed-image";
 import { useAccess } from "./session";
@@ -69,13 +69,13 @@ export function ClientBox({ brandSlug, roundId }: { brandSlug: string; roundId?:
     const waiting = aprov.filter((a) => !done.has(a.userId));
     return { done: aprov.filter((a) => done.has(a.userId)).map((a) => a.name), waiting: (rule === "sequencial" ? waiting.slice(0, 1) : waiting).map((a) => a.name) };
   };
-  const reviewUrl = (id: string, seq = false) => `/like/${brandSlug}/material/${id}${seq ? "?sequencia=1" : ""}`;
+  const reviewUrl = (id: string, seq = false) => `/like/${brandSlug}/m/${id}${seq ? "?sequencia=1" : ""}`;
   const greeting = now.getHours() < 12 ? "Bom dia" : now.getHours() < 18 ? "Boa tarde" : "Boa noite";
   const counts: Record<Tab, number> = { decidir: pending.length, ajuste: all.filter((i) => ["ajustes", "reprovado"].includes(i.status)).length, aprovados: all.filter((i) => ["aprovado", "agendado"].includes(i.status)).length, publicados: all.filter((i) => i.status === "publicado").length, todos: all.length };
   const brands = spaces.data?.spaces ?? [];
 
   return (
-    <EchoLayout env="like" wide demoData>
+    <EchoLayout env="like" wide demoData nav={<LikeBrandNav slug={brandSlug} team={isTeamPreview} />}>
       <div className="stack-lg">
         <section className="box-head e-glass">
           <div className="box-cover">{b.cover_url ? <FramedImage src={b.cover_url} frame={b.cover_frame} shape="rect" className="box-cover-img" /> : <span className="box-cover-fallback" />}</div>

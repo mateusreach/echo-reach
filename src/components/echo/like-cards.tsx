@@ -8,6 +8,7 @@ import { useState, type DragEvent } from "react";
 import { Badge, type Tone } from "./primitives";
 import { Icon, type IconName } from "./icon";
 import { MaterialFrame } from "./like-preview";
+import { EchoSubnav } from "./layout";
 import { KIND_LABEL, PENDING, STATUS_LABEL, coverCss, type ItemFull, type ItemStatus } from "@/lib/like-data";
 
 export const LIKE_STATUS_TONE: Record<ItemStatus, Tone> = { rascunho: "draft", aguardando: "review", em_revisao: "review", aprovado: "approved", ajustes: "adjust", nova_versao: "doing", reprovado: "late", agendado: "approved", publicado: "done", cancelado: "blocked" };
@@ -55,7 +56,19 @@ const WEEK = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 const toISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 /** Calendário editorial: cada peça no dia de publicação, com a capa real. */
-export function EditorialCalendar({ items, year, month, onOpen, onMove, onAdd, canMove }: { items: ItemFull[]; year: number; month: number; onOpen: (id: string) => void; onMove?: (id: string, dateISO: string) => void; onAdd?: (dateISO: string) => void; canMove?: (i: ItemFull) => boolean }) {
+/** Menu do Like dentro de uma marca: caixa, grade, calendário e histórico (+ envio e painel para a equipe). */
+export function LikeBrandNav({ slug, team }: { slug: string; team?: boolean }) {
+  return (
+    <EchoSubnav label="Like" items={[
+      { to: `/like/${slug}`, label: "Caixa", icon: "inbox", exact: true },
+      { to: `/like/${slug}/grade`, label: "Grade", icon: "grid" },
+      { to: `/like/${slug}/calendario`, label: "Calendário", icon: "calendar" },
+      { to: `/like/${slug}/historico`, label: "Histórico", icon: "history" },
+    ]} secondary={team ? [{ to: `/like/${slug}/enviar`, label: "Enviar", icon: "send" }, { to: "/like/painel", label: "Painel", icon: "kanban" }] : undefined} />
+  );
+}
+
+export function EditorialCalendar({ items, year, month, onOpen, onMove, onAdd, canMove, gaps }: { items: ItemFull[]; year: number; month: number; onOpen: (id: string) => void; onMove?: (id: string, dateISO: string) => void; onAdd?: (dateISO: string) => void; canMove?: (i: ItemFull) => boolean; gaps?: Set<string> }) {
   const [over, setOver] = useState<string | null>(null);
   const first = new Date(year, month, 1);
   const off = (first.getDay() + 6) % 7;
@@ -73,7 +86,7 @@ export function EditorialCalendar({ items, year, month, onOpen, onMove, onAdd, c
         const list = byDay.get(iso) ?? [];
         const out = d.getMonth() !== month;
         return (
-          <div key={iso} className={`ed-day${out ? " out" : ""}${iso === today ? " today" : ""}${iso < today ? " past" : ""}${over === iso ? " over" : ""}`}
+          <div key={iso} className={`ed-day${out ? " out" : ""}${iso === today ? " today" : ""}${iso < today ? " past" : ""}${over === iso ? " over" : ""}${gaps?.has(iso) && !list.length ? " gap" : ""}`} title={gaps?.has(iso) && !list.length ? "Sem publicação prevista neste dia do período contratado" : undefined}
             onDragOver={(e: DragEvent) => { if (onMove && e.dataTransfer.types.includes("text/x-like")) { e.preventDefault(); setOver(iso); } }}
             onDragLeave={() => setOver((o) => (o === iso ? null : o))}
             onDrop={(e: DragEvent) => { const id = e.dataTransfer.getData("text/x-like"); setOver(null); if (id && onMove) { e.preventDefault(); onMove(id, iso); } }}>
