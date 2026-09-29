@@ -84,7 +84,7 @@ function WorkspaceLayout() {
   if (loadError) return <EchoBlocked title="Não foi possível abrir o Workspace" text={loadError} onRetry={() => setRetry((value) => value + 1)} />;
 
   if (!ready) return <EchoLoading label="Carregando Workspace…" />;
-  if (demo && !DEMO_READY.includes(path.replace(/\/$/, ""))) return <EchoBlocked title="Banco não conectado" text="Esta tela do Workspace ainda depende do Supabase. No modo demonstração, abra Equipe ou Configurações." />;
+  if (demo && !DEMO_READY.includes(path.replace(/\/$/, "")) && !path.startsWith("/workspace/cliente/")) return <EchoBlocked title="Banco não conectado" text="Esta tela do Workspace ainda depende do Supabase. No modo demonstração, abra Equipe ou Configurações." />;
 
   return (
     <EchoLayout

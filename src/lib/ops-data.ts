@@ -32,6 +32,14 @@ export type OpsTask = {
   since: string;
   remindedAt: string | null;
   likeMaterial: string | null;
+  time?: string | null;
+  location?: string | null;
+  urgency?: string | null;
+  highlighted?: boolean;
+  pinned?: boolean;
+  reviewChecklist?: string | null;
+  reviewText?: string | null;
+  attachments?: { name: string; url: string }[];
 };
 
 export const DONE: WorkStatus = "Concluído";
@@ -73,6 +81,8 @@ function buildDemo(): DemoOps {
   return { fronts, tasks, cycles: new Map() };
 }
 const demo = () => (store ??= buildDemo());
+/** Acesso ao exemplo em memória para as telas de operação por cliente. */
+export const demoOps = () => demo();
 
 // ----- leitura ----------------------------------------------------------------
 
@@ -90,13 +100,14 @@ export async function listOpsTasks(): Promise<OpsTask[]> {
   if (isDemoMode()) return structuredClone(demo().tasks);
   const { data, error } = await db
     .from("workspace_tasks")
-    .select("id, title, status, owner_name, due_date, sector, note, requires_review, front_id, work_order_id, updated_at, started_at, brands!inner(id, name, slug), workspace_fronts(name)")
+    .select("id, title, status, owner_name, due_date, sector, note, requires_review, front_id, work_order_id, updated_at, started_at, event_time, location, urgency, highlighted, pinned, review_checklist, review_text, attachments, brands!inner(id, name, slug), workspace_fronts(name)")
     .order("due_date", { ascending: true, nullsFirst: false });
   if (error) throw error;
   return ((data ?? []) as any[]).map((t) => ({
     id: t.id, title: t.title, brand: t.brands, frontId: t.front_id, frontName: t.workspace_fronts?.name ?? null, workOrderId: t.work_order_id,
     status: t.status, owner: t.owner_name, due: t.due_date, sector: t.sector, note: t.note, requiresReview: !!t.requires_review,
     since: t.updated_at ?? t.started_at ?? nowISO(), remindedAt: null, likeMaterial: null,
+    time: t.event_time, location: t.location, urgency: t.urgency, highlighted: !!t.highlighted, pinned: !!t.pinned, reviewChecklist: t.review_checklist, reviewText: t.review_text, attachments: Array.isArray(t.attachments) ? t.attachments : [],
   }));
 }
 
@@ -116,7 +127,8 @@ export async function setTaskStatus(id: string, status: WorkStatus) {
   await updateTask(id, { status, ...(status === DONE ? { completed_at: nowISO() } : {}), ...(status === "Iniciada" ? { started_at: nowISO() } : {}) } as never);
 }
 
-export async function patchTask(id: string, patch: Partial<Pick<OpsTask, "owner" | "due" | "note" | "sector" | "title">>) {
+export type TaskPatch = Partial<Pick<OpsTask, "owner" | "due" | "note" | "sector" | "title" | "time" | "location" | "urgency" | "highlighted" | "pinned" | "requiresReview" | "reviewChecklist" | "reviewText">>;
+export async function patchTask(id: string, patch: TaskPatch) {
   if (isDemoMode()) { const t = demo().tasks.find((x) => x.id === id); if (t) Object.assign(t, patch); return; }
   const row: Record<string, unknown> = {};
   if ("owner" in patch) row.owner_name = patch.owner;
@@ -124,6 +136,14 @@ export async function patchTask(id: string, patch: Partial<Pick<OpsTask, "owner"
   if ("note" in patch) row.note = patch.note;
   if ("sector" in patch) row.sector = patch.sector;
   if ("title" in patch) row.title = patch.title;
+  if ("time" in patch) row.event_time = patch.time;
+  if ("location" in patch) row.location = patch.location;
+  if ("urgency" in patch) row.urgency = patch.urgency;
+  if ("highlighted" in patch) row.highlighted = patch.highlighted;
+  if ("pinned" in patch) row.pinned = patch.pinned;
+  if ("requiresReview" in patch) row.requires_review = patch.requiresReview;
+  if ("reviewChecklist" in patch) row.review_checklist = patch.reviewChecklist;
+  if ("reviewText" in patch) row.review_text = patch.reviewText;
   await updateTask(id, row as never);
 }
 
