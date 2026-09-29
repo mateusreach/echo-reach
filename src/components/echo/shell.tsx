@@ -8,6 +8,8 @@ import { EchoLogo, type EchoLogoHandle } from "./logo";
 import { Avatar } from "./primitives";
 import { MIXES, PATHS, resolvedBase, useAppearance, type PathKey } from "./appearance";
 import { viewTransition } from "./motion";
+import { useEchoSession } from "./session";
+import { supabase } from "@/integrations/supabase/client";
 
 export type EnvDef = { id: "brand" | "workspace" | "like" | "e360"; name: string; tagline: string; icon: IconName; color: string; href?: string };
 
@@ -134,14 +136,20 @@ export function EchoTopbar({
   commands = [],
   onSignOut,
 }: {
-  person: { name: string };
+  person?: { name: string };
   activeEnv?: EnvDef["id"];
   envAvailability?: Partial<Record<EnvDef["id"], { available: boolean; reason?: string } | undefined>>;
   commands?: CommandItem[];
   onSignOut?: () => void;
 }) {
   const navigate = useNavigate();
+  const session = useEchoSession();
+  const sess = session.data;
+  person = person ?? { name: sess?.name || "…" };
+  envAvailability = envAvailability ?? sess?.envs;
+  if (!onSignOut && sess?.mode === "live" && sess.signedIn) onSignOut = async () => { await supabase.auth.signOut(); navigate({ to: "/auth" }); };
   const logo = useRef<EchoLogoHandle>(null);
+  const [envOpen, setEnvOpen] = useState(false);
   const [appearOpen, setAppearOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -183,6 +191,28 @@ export function EchoTopbar({
         </nav>
         <span className="sp" />
         <div className="tools">
+          <div className="echo-envmenu" style={{ position: "relative" }}>
+            <button type="button" className="e-btn secondary icon" aria-label="Ambientes" aria-expanded={envOpen} onClick={() => setEnvOpen((v) => !v)}>
+              <Icon name="grid" />
+            </button>
+            {envOpen && (
+              <div className="e-pop right" role="menu" onMouseLeave={() => setEnvOpen(false)}>
+                <div className="e-menu-title e-label">Ambientes</div>
+                {ENVS.map((e) => {
+                  const av = envAvailability?.[e.id];
+                  if (av === undefined && envAvailability) return null;
+                  const locked = !e.href || (av ? !av.available : false);
+                  return (
+                    <button key={e.id} type="button" role="menuitem" className="e-menu-item" disabled={locked} onClick={() => { setEnvOpen(false); navigate({ to: e.href as never }); }}>
+                      <span className="dot" style={{ width: 9, height: 9, borderRadius: "50%", background: e.color, flex: "none" }} />
+                      <span className="e-grow">{e.name}</span>
+                      {locked && <span className="meta">{av?.reason ?? "Em construção"}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <button type="button" className="e-btn secondary sm echo-search" onClick={() => setPaletteOpen(true)} aria-label="Buscar (⌘K)">
             <Icon name="search" /> <span className="lbl">Buscar</span> <span className="e-kbd">⌘K</span>
           </button>

@@ -604,3 +604,80 @@
   --brand: #ffa07a;
   --sidebar-primary: #ffa07a;
 }
+
+
+/* ==========================================================================
+   Ponte piloto → Biblioteca Echo
+   Os tokens do piloto passam a ler os tokens do Echo. Assim as telas antigas
+   acompanham a base (clara/escura) e o caminho de cor de cada pessoa até serem
+   redesenhadas. Especificidade alta para vencer os temas [data-reach-theme].
+   ========================================================================== */
+:root:root[data-base][data-path] {
+  --radius: 1rem;
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--solid);
+  --card-foreground: var(--ink);
+  --popover: var(--solid);
+  --popover-foreground: var(--ink);
+  --primary: var(--e-accent);
+  --primary-foreground: #fff;
+  --primary-soft: var(--accent-soft);
+  --primary-muted: color-mix(in oklab, var(--e-accent) 8%, transparent);
+  --primary-hover: color-mix(in oklab, var(--e-accent) 86%, #fff);
+  --secondary: var(--hover);
+  --secondary-foreground: var(--ink);
+  --muted: var(--hover);
+  --muted-foreground: var(--ink-3);
+  --accent: var(--hover);
+  --accent-foreground: var(--ink);
+  --destructive: var(--danger);
+  --destructive-foreground: #fff;
+  --border: var(--line-2);
+  --input: var(--line-2);
+  --ring: color-mix(in oklab, var(--e-accent) 45%, transparent);
+  --overlay: var(--scrim);
+  --brand: var(--p1);
+  --brand-pink: var(--p2);
+  --success: var(--ok);
+  --warning: var(--warn);
+  --info: var(--e-info);
+  --chart-1: var(--p1);
+  --chart-2: var(--p2);
+  --chart-3: var(--ok);
+  --chart-4: var(--warn);
+  --chart-5: var(--mix);
+  --sidebar: var(--glass-strong);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--e-accent);
+  --sidebar-primary-foreground: #fff;
+  --sidebar-accent: var(--hover);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--e-accent);
+  --gradient-brand: var(--grad);
+  --gradient-app: none;
+  --surface: var(--solid);
+  --surface-elevated: var(--solid);
+  --surface-sunken: var(--solid-2);
+  --glass-bg: var(--glass-strong);
+  --glass-border: var(--line);
+  --shadow-soft: var(--sh-1);
+  --shadow-glow: 0 8px 22px -12px color-mix(in oklab, var(--p1) 60%, transparent);
+  --shadow-modal: var(--sh-4);
+  --reach-coral: var(--e-accent);
+  --reach-coral-soft: var(--accent-soft);
+  --reach-violet: var(--env-brand);
+  --reach-violet-soft: color-mix(in oklab, var(--env-brand) 13%, transparent);
+  --reach-blue: var(--env-workspace);
+  --reach-blue-soft: color-mix(in oklab, var(--env-workspace) 13%, transparent);
+  --reach-amber: var(--warn);
+  --reach-amber-soft: var(--warn-soft);
+  --reach-mint: var(--ok);
+  --reach-mint-soft: var(--ok-soft);
+  --reach-rose: var(--env-like);
+  --reach-rose-soft: color-mix(in oklab, var(--env-like) 13%, transparent);
+  --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+/* O fundo antigo (bolhas) dá lugar à aura do Echo. */
+.bg-canvas { display: none; }

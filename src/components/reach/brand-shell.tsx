@@ -1,14 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { Eye } from "lucide-react";
-import { ReachBackground } from "./background";
 import { BrandSidebar } from "./sidebar";
 import { BrandTopbar } from "./topbar";
+import { EchoTopbar } from "@/components/echo/shell";
+import { ViewAsBanner } from "@/components/echo/layout";
 import { CommandPalette } from "./command-palette";
 import { ModuleNavPanel } from "./module-nav";
 import { cn } from "@/lib/utils";
 import { getModuleNav } from "@/lib/nav";
-import { isViewingAsClient, stopViewAsClient, viewingAsClientBrandName } from "@/lib/view-as";
 import { applyBrandColors, applyTheme, getStoredTheme } from "@/lib/branding";
 import { brandModules, getBrandBySlug, getBrandMembership, logBrandAccess, type Brand, type BrandModules } from "@/lib/reach-data";
 import { getAccess, modulePermissionKey } from "@/lib/agency-data";
@@ -34,8 +33,6 @@ export function BrandShell({
   const [gate, setGate] = useState<"loading" | "allowed" | "blocked">("loading");
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const viewingAsClient = isViewingAsClient();
-  const clientBrandName = viewingAsClientBrandName();
   const slug = basePath.split("/").filter(Boolean)[1] ?? "";
   // A Biblioteca já expõe suas seções no menu lateral global.
   const currentNav = getModuleNav(basePath, pathname);
@@ -118,14 +115,8 @@ export function BrandShell({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, requiredPermission]);
 
-  function exitViewAsClient() {
-    stopViewAsClient();
-    navigate({ to: "/agencia" });
-  }
-
   return (
     <div className="relative min-h-screen">
-      <ReachBackground />
       <BrandSidebar
         basePath={basePath}
         displayName={displayName}
@@ -146,16 +137,9 @@ export function BrandShell({
           expanded ? "pl-[248px]" : "pl-[88px]",
         )}
       >
-        {viewingAsClient && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-reach-amber/30 bg-reach-amber/[0.08] px-4 py-2.5">
-            <span className="inline-flex items-center gap-2 text-[12.5px] font-medium text-reach-amber">
-              <Eye className="h-3.5 w-3.5" /> Visualizando como: {clientBrandName ?? "Cliente"}
-            </span>
-            <button onClick={exitViewAsClient} className="rounded-full bg-reach-amber/20 px-3 py-1 text-[11.5px] font-medium text-reach-amber transition-colors hover:bg-reach-amber/30">
-              Voltar para Agência
-            </button>
-          </div>
-        )}
+        <div style={{ margin: "-12px -8px 8px" }}><EchoTopbar activeEnv="brand" /></div>
+        <ViewAsBanner />
+        {/* Cliente em contexto e atalhos do Brand (barra do piloto, dentro da moldura do Echo). */}
         <BrandTopbar
           basePath={basePath}
           brandName={brand?.name ?? null}

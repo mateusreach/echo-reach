@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Icon } from "@/components/echo/icon";
 import { EchoLogo, OrbitLoader, type EchoLogoHandle } from "@/components/echo/logo";
 import { Badge, Button, EmptyState, ProgressRing, Skeleton } from "@/components/echo/primitives";
-import { DemoBanner, EchoBackdrop, EchoTopbar, ENVS, type CommandItem } from "@/components/echo/shell";
+import { DemoBanner, EchoTopbar, ENVS, type CommandItem } from "@/components/echo/shell";
 import { stagger, useCountUp, enter } from "@/components/echo/motion";
 import { isDemoMode, loadHome, relDay, type EnvSummary, type HomeData, type HomeItem } from "@/lib/home-data";
 
@@ -41,7 +41,8 @@ function EchoHome() {
     try { const r = sessionStorage.getItem(DEMO_ROLE_KEY); if (r === "client" || r === "team") setDemoRole(r); } catch { /* sessão indisponível */ }
     setReady(true);
   }, []);
-  const changeRole = (r: "team" | "client") => { setDemoRole(r); try { sessionStorage.setItem(DEMO_ROLE_KEY, r); } catch { /* ok */ } };
+  const qc = useQueryClient();
+  const changeRole = (r: "team" | "client") => { setDemoRole(r); try { sessionStorage.setItem(DEMO_ROLE_KEY, r); } catch { /* ok */ } qc.invalidateQueries({ queryKey: ["echo-session"] }); };
 
   const q = useQuery({ queryKey: ["echo-home", demo ? demoRole : "live"], queryFn: () => loadHome(demoRole), enabled: ready, staleTime: 30_000, retry: 1 });
 
@@ -61,7 +62,6 @@ function EchoHome() {
 
   return (
     <div className="echo-app">
-      <EchoBackdrop />
       <EchoTopbar
         person={{ name: person.name || (q.isLoading ? "…" : "Você") }}
         envAvailability={availability}

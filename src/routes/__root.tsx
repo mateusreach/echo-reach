@@ -10,7 +10,9 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { useEffect, type ReactNode } from "react";
 import { applyTheme, getStoredTheme } from "@/lib/branding";
-import { ModuleSwitcher } from "@/components/reach/module-switcher";
+import { EchoBackdrop } from "@/components/echo/shell";
+import { AppearanceSync } from "@/components/echo/session";
+import { EmptyState } from "@/components/echo/primitives";
 import { APPEARANCE_BOOT, applyAppearance, readAppearance } from "@/components/echo/appearance";
 
 import appCss from "../styles.css?url";
@@ -18,59 +20,40 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Go home
-          </Link>
-        </div>
+    <div className="echo-center">
+      <div className="e-glass" style={{ borderRadius: "var(--r-2xl)", maxWidth: 520, width: "100%" }}>
+        <EmptyState
+          kind="search"
+          title="Página não encontrada"
+          text="O endereço não existe ou foi movido. Volte para a Home e siga pelos ambientes."
+          actions={<Link to="/" className="e-btn primary">Ir para a Home</Link>}
+        />
       </div>
     </div>
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    reportLovableError(error as Error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => {
-              router.invalidate();
-              reset();
-            }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Try again
-          </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            Go home
-          </a>
-        </div>
+    <div className="echo-center">
+      <div className="e-glass" style={{ borderRadius: "var(--r-2xl)", maxWidth: 520, width: "100%" }}>
+        <EmptyState
+          kind="error"
+          title="Esta página não carregou"
+          text="Algo deu errado do nosso lado. Tente de novo ou volte para a Home."
+          actions={
+            <>
+              <button type="button" className="e-btn secondary" onClick={() => { router.invalidate(); reset(); }}>Tentar novamente</button>
+              <a href="/" className="e-btn ghost">Ir para a Home</a>
+            </>
+          }
+        />
       </div>
     </div>
   );
@@ -143,10 +126,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      {/* Fundo do Echo (aura + grão) comum a todas as telas. */}
+      <EchoBackdrop />
+      <AppearanceSync />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
-      {/* Nível 1 do ecossistema: troca de módulo sem novo login. */}
-      <ModuleSwitcher />
       <Toaster />
     </QueryClientProvider>
   );

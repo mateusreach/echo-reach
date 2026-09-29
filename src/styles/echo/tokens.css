@@ -90,6 +90,7 @@
   --glass-hi: rgba(255, 255, 255, .78);
   --glass-lo: rgba(255, 255, 255, .34);
   --glass-strong: rgba(255, 255, 255, .80);
+  --solid: #FBFBFD; --solid-2: #F3F4F8;
   --glass-tint: rgba(255, 255, 255, .42);
   --glass-edge: rgba(255, 255, 255, .95);
   --glass-edge-2: rgba(255, 255, 255, .35);
@@ -163,6 +164,7 @@
     --line: rgba(255, 255, 255, .07); --line-2: rgba(255, 255, 255, .12); --line-strong: rgba(255, 255, 255, .2);
     --glass: rgba(34, 36, 48, .46); --glass-hi: rgba(62, 64, 80, .5); --glass-lo: rgba(22, 23, 32, .42);
     --glass-strong: rgba(30, 32, 44, .86); --glass-tint: rgba(255, 255, 255, .05);
+    --solid: #181922; --solid-2: #20212C;
     --glass-edge: rgba(255, 255, 255, .26); --glass-edge-2: rgba(255, 255, 255, .06);
     --glass-inset: inset 0 1px 0 rgba(255, 255, 255, .14), inset 0 -1px 0 rgba(255, 255, 255, .03);
     --field: rgba(255, 255, 255, .05);
@@ -189,6 +191,7 @@
   --line: rgba(255, 255, 255, .07); --line-2: rgba(255, 255, 255, .12); --line-strong: rgba(255, 255, 255, .2);
   --glass: rgba(34, 36, 48, .46); --glass-hi: rgba(62, 64, 80, .5); --glass-lo: rgba(22, 23, 32, .42);
   --glass-strong: rgba(30, 32, 44, .86); --glass-tint: rgba(255, 255, 255, .05);
+  --solid: #181922; --solid-2: #20212C;
   --glass-edge: rgba(255, 255, 255, .26); --glass-edge-2: rgba(255, 255, 255, .06);
   --glass-inset: inset 0 1px 0 rgba(255, 255, 255, .14), inset 0 -1px 0 rgba(255, 255, 255, .03);
   --field: rgba(255, 255, 255, .05);
